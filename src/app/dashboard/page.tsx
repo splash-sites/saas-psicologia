@@ -30,6 +30,12 @@ export default async function DashboardPage() {
         >
           Agenda
         </Link>
+        <Link
+          href="/configuracoes"
+          className="rounded-md border px-4 py-2 hover:bg-gray-50"
+        >
+          Configurações
+        </Link>
       </nav>
       <form action={signOut}>
         <button className="w-fit rounded-md border px-4 py-2">Sair</button>

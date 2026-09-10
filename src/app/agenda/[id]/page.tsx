@@ -6,9 +6,11 @@ import {
   MODALIDADE_LABEL,
   CONSULTA_STATUS_LABEL,
   RECORRENCIA_LABEL,
+  SYNC_STATUS_LABEL,
 } from "@/lib/agenda/types";
 import { horaBR, dataLongaBR } from "@/lib/agenda/datas";
-import { cancelarConsulta } from "../actions";
+import { cancelarConsulta, sincronizarConsultaAgora } from "../actions";
+import { CopyButton } from "../CopyButton";
 
 type Row = Consulta & { pacientes: { id: string; nome: string } | null };
 
@@ -82,6 +84,54 @@ export default async function ConsultaDetailPage({
         <section className="flex flex-col gap-1 text-sm">
           <h2 className="font-medium">Observações</h2>
           <p className="whitespace-pre-wrap text-gray-700">{c.observacoes}</p>
+        </section>
+      )}
+
+      {c.modalidade === "online" && c.status !== "cancelada" && (
+        <section className="flex flex-col gap-2 rounded-lg border p-4 text-sm">
+          <h2 className="font-medium">Videochamada</h2>
+          {c.meet_link ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href={c.meet_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-700 underline break-all"
+              >
+                {c.meet_link}
+              </a>
+              <CopyButton value={c.meet_link} />
+            </div>
+          ) : (
+            <p className="text-gray-500">
+              Link do Meet ainda não gerado. Ele aparece após a sincronização com
+              o Google Calendar.
+            </p>
+          )}
+        </section>
+      )}
+
+      {c.status !== "cancelada" && (
+        <section className="flex flex-wrap items-center gap-3 text-sm">
+          <span
+            className={
+              c.sync_status === "erro"
+                ? "text-red-600"
+                : c.sync_status === "sincronizada"
+                  ? "text-green-700"
+                  : "text-gray-500"
+            }
+          >
+            {SYNC_STATUS_LABEL[c.sync_status]}
+            {c.sync_status === "erro" && c.sync_erro ? ` — ${c.sync_erro}` : ""}
+          </span>
+          {c.sync_status !== "desativada" && (
+            <form action={sincronizarConsultaAgora.bind(null, id)}>
+              <button className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50">
+                Sincronizar agora
+              </button>
+            </form>
+          )}
         </section>
       )}
 

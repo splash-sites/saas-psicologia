@@ -16,6 +16,7 @@ import {
   dataBR,
 } from "@/lib/agenda/datas";
 import { sobrepoe } from "@/lib/agenda/overlap";
+import { sincronizarConsulta, sincronizarConsultas } from "@/lib/agenda/sync";
 
 export type FormState = {
   error?: string;
@@ -118,13 +119,23 @@ export async function criarConsulta(
     observacoes: v.observacoes ?? null,
   }));
 
-  const { error } = await supabase.from("consultas").insert(linhas);
+  const { data: inseridas, error } = await supabase
+    .from("consultas")
+    .insert(linhas)
+    .select("id");
   if (error) {
     if (error.code === "23P01") {
       return { error: "Conflito de horário com outra consulta. Recarregue e tente de novo." };
     }
     return { error: "Não foi possível agendar a consulta." };
   }
+
+  // Empurra para o Google Calendar (best-effort — não bloqueia o agendamento).
+  await sincronizarConsultas(
+    supabase,
+    user.id,
+    (inseridas ?? []).map((r) => r.id),
+  );
 
   revalidatePath("/agenda");
   redirect("/agenda");
@@ -135,7 +146,7 @@ export async function atualizarConsulta(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const { supabase } = await requirePsicologa();
+  const { supabase, user } = await requirePsicologa();
 
   const parsed = consultaEdicaoSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -171,6 +182,8 @@ export async function atualizarConsulta(
     return { error: "Não foi possível atualizar a consulta." };
   }
 
+  await sincronizarConsulta(supabase, user.id, id);
+
   revalidatePath("/agenda");
   revalidatePath(`/agenda/${id}`);
   redirect(`/agenda/${id}`);
@@ -181,7 +194,7 @@ export async function cancelarConsulta(
   escopo: "esta" | "serie",
   _formData: FormData,
 ): Promise<void> {
-  const { supabase } = await requirePsicologa();
+  const { supabase, user } = await requirePsicologa();
 
   let query = supabase.from("consultas").update({ status: "cancelada" });
 
@@ -203,9 +216,28 @@ export async function cancelarConsulta(
     query = query.eq("id", id);
   }
 
-  await query;
+  const { data: canceladas } = await query.select("id");
+
+  // Remove os eventos correspondentes no Google Calendar (best-effort).
+  await sincronizarConsultas(
+    supabase,
+    user.id,
+    (canceladas ?? []).map((r) => r.id),
+  );
+
   revalidatePath("/agenda");
   redirect("/agenda");
+}
+
+export async function sincronizarConsultaAgora(
+  id: string,
+  _formData: FormData,
+): Promise<void> {
+  const { supabase, user } = await requirePsicologa();
+  await sincronizarConsulta(supabase, user.id, id);
+  revalidatePath("/agenda");
+  revalidatePath(`/agenda/${id}`);
+  redirect(`/agenda/${id}`);
 }
 
 export async function criarBloqueio(

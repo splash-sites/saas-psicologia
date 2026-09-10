@@ -30,6 +30,21 @@ export const CONSULTA_STATUS_LABEL: Record<ConsultaStatus, string> = {
   cancelada: "Cancelada",
 };
 
+export const SYNC_STATUS = [
+  "pendente",
+  "sincronizada",
+  "erro",
+  "desativada",
+] as const;
+export type SyncStatus = (typeof SYNC_STATUS)[number];
+
+export const SYNC_STATUS_LABEL: Record<SyncStatus, string> = {
+  pendente: "Sincronização pendente",
+  sincronizada: "Sincronizada com o Google",
+  erro: "Erro na sincronização",
+  desativada: "Sincronização desativada",
+};
+
 export type Consulta = {
   id: string;
   psicologa_id: string;
@@ -41,6 +56,11 @@ export type Consulta = {
   recorrencia: Recorrencia;
   serie_id: string | null;
   observacoes: string | null;
+  google_event_id: string | null;
+  meet_link: string | null;
+  sync_status: SyncStatus;
+  sync_erro: string | null;
+  sync_em: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

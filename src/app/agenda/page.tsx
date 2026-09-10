@@ -20,7 +20,7 @@ export const metadata = { title: "Agenda" };
 
 type ConsultaComPaciente = Pick<
   Consulta,
-  "id" | "inicio" | "fim" | "modalidade" | "status"
+  "id" | "inicio" | "fim" | "modalidade" | "status" | "meet_link"
 > & { pacientes: { nome: string } | null };
 
 export default async function AgendaPage({
@@ -47,7 +47,7 @@ export default async function AgendaPage({
   const [{ data: consultas }, { data: bloqueios }] = await Promise.all([
     supabase
       .from("consultas")
-      .select("id, inicio, fim, modalidade, status, pacientes(nome)")
+      .select("id, inicio, fim, modalidade, status, meet_link, pacientes(nome)")
       .is("deleted_at", null)
       .gte("inicio", inicioSemana)
       .lt("inicio", fimSemana)
@@ -120,25 +120,39 @@ export default async function AgendaPage({
                 <p className="text-xs text-gray-400">—</p>
               )}
               {cs.map((c) => (
-                <Link
+                <div
                   key={c.id}
-                  href={`/agenda/${c.id}`}
-                  className={`rounded-md border px-2 py-1.5 text-xs hover:bg-gray-50 ${
-                    c.status === "cancelada"
-                      ? "line-through opacity-50"
-                      : ""
+                  className={`rounded-md border text-xs ${
+                    c.status === "cancelada" ? "opacity-50" : ""
                   }`}
                 >
-                  <div className="font-medium">
-                    {horaBR(c.inicio)}–{horaBR(c.fim)}
-                  </div>
-                  <div>{c.pacientes?.nome ?? "Paciente"}</div>
-                  <div className="text-gray-500">
-                    {MODALIDADE_LABEL[c.modalidade]}
-                    {c.status !== "agendada" &&
-                      ` · ${CONSULTA_STATUS_LABEL[c.status]}`}
-                  </div>
-                </Link>
+                  <Link
+                    href={`/agenda/${c.id}`}
+                    className={`block px-2 py-1.5 hover:bg-gray-50 ${
+                      c.status === "cancelada" ? "line-through" : ""
+                    }`}
+                  >
+                    <div className="font-medium">
+                      {horaBR(c.inicio)}–{horaBR(c.fim)}
+                    </div>
+                    <div>{c.pacientes?.nome ?? "Paciente"}</div>
+                    <div className="text-gray-500">
+                      {MODALIDADE_LABEL[c.modalidade]}
+                      {c.status !== "agendada" &&
+                        ` · ${CONSULTA_STATUS_LABEL[c.status]}`}
+                    </div>
+                  </Link>
+                  {c.meet_link && c.status !== "cancelada" && (
+                    <a
+                      href={c.meet_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block border-t px-2 py-1 text-blue-700 underline hover:bg-gray-50"
+                    >
+                      Entrar no Meet
+                    </a>
+                  )}
+                </div>
               ))}
               {bs.map((b) => (
                 <div
