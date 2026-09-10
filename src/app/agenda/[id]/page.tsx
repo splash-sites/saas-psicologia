@@ -8,7 +8,7 @@ import {
   RECORRENCIA_LABEL,
   SYNC_STATUS_LABEL,
 } from "@/lib/agenda/types";
-import { horaBR, dataLongaBR } from "@/lib/agenda/datas";
+import { horaBR, dataLongaBR, dataChaveBR } from "@/lib/agenda/datas";
 import { cancelarConsulta, sincronizarConsultaAgora } from "../actions";
 import { CopyButton } from "../CopyButton";
 
@@ -79,6 +79,15 @@ export default async function ConsultaDetailPage({
           </div>
         )}
       </dl>
+
+      {c.pacientes && c.status !== "cancelada" && (
+        <Link
+          href={`/pacientes/${c.pacientes.id}/evolucoes/nova?consulta=${id}&data=${dataChaveBR(c.inicio)}`}
+          className="w-fit rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
+        >
+          Registrar evolução desta sessão
+        </Link>
+      )}
 
       {c.observacoes && (
         <section className="flex flex-col gap-1 text-sm">

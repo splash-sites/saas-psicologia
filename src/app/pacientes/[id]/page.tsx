@@ -41,6 +41,14 @@ export default async function PacienteDetailPage({
     .eq("paciente_id", id)
     .maybeSingle();
 
+  const { data: evolucoesRecentes } = await supabase
+    .from("evolucoes")
+    .select("id, data_sessao")
+    .eq("paciente_id", id)
+    .is("deleted_at", null)
+    .order("data_sessao", { ascending: false })
+    .limit(3);
+
   const wa = whatsappLink(paciente.telefone);
 
   return (
@@ -101,6 +109,42 @@ export default async function PacienteDetailPage({
           action={salvarAnamnese.bind(null, id)}
           anamnese={anamneseRow as Anamnese | null}
         />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium">Evoluções</h2>
+          <div className="flex gap-2 text-sm">
+            <Link
+              href={`/pacientes/${id}/evolucoes`}
+              className="text-gray-500 hover:underline"
+            >
+              Ver todas
+            </Link>
+            <Link
+              href={`/pacientes/${id}/evolucoes/nova`}
+              className="rounded-md border px-3 py-1 hover:bg-gray-50"
+            >
+              Nova evolução
+            </Link>
+          </div>
+        </div>
+        {(evolucoesRecentes ?? []).length === 0 ? (
+          <p className="text-sm text-gray-500">Nenhuma evolução registrada.</p>
+        ) : (
+          <ul className="divide-y rounded-lg border text-sm">
+            {(evolucoesRecentes ?? []).map((e) => (
+              <li key={e.id}>
+                <Link
+                  href={`/pacientes/${id}/evolucoes/${e.id}`}
+                  className="block px-4 py-2 hover:bg-gray-50"
+                >
+                  Sessão de {formatarData(e.data_sessao)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="border-t pt-4">
