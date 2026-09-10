@@ -27,4 +27,29 @@ npm run test       # roda uma vez
 npm run test:watch # modo watch
 ```
 
-Os testes de isolamento RLS (`tests/rls/`) exigem uma instância local do Supabase (`npx supabase start` + `npx supabase db reset`) e as variáveis `SUPABASE_TEST_URL`/`SUPABASE_TEST_ANON_KEY`. Sem elas, são pulados automaticamente.
+### Testes de isolamento RLS
+
+Os testes em `tests/rls/` validam que uma psicóloga nunca acessa dados de outra conta. Exigem uma instância local do Supabase (precisa de Docker):
+
+```bash
+npx supabase start          # sobe o stack local (primeira vez baixa imagens)
+npx supabase db reset       # aplica as migrations de supabase/migrations/
+```
+
+Depois, exporte as variáveis apontando para o local e rode a suíte. A anon key sai de `npx supabase status`:
+
+```bash
+# bash
+export SUPABASE_TEST_URL="http://127.0.0.1:54321"
+export SUPABASE_TEST_ANON_KEY="$(npx supabase status -o json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).ANON_KEY))')"
+npm test
+```
+
+```powershell
+# PowerShell
+$env:SUPABASE_TEST_URL = "http://127.0.0.1:54321"
+$env:SUPABASE_TEST_ANON_KEY = (npx supabase status -o json | ConvertFrom-Json).ANON_KEY
+npm test
+```
+
+Sem essas variáveis, os testes de RLS são pulados automaticamente (o resto da suíte roda normal).
