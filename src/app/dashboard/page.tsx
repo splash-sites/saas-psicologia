@@ -31,6 +31,12 @@ export default async function DashboardPage() {
           Agenda
         </Link>
         <Link
+          href="/financeiro"
+          className="rounded-md border px-4 py-2 hover:bg-gray-50"
+        >
+          Financeiro
+        </Link>
+        <Link
           href="/configuracoes"
           className="rounded-md border px-4 py-2 hover:bg-gray-50"
         >

@@ -81,12 +81,20 @@ export default async function ConsultaDetailPage({
       </dl>
 
       {c.pacientes && c.status !== "cancelada" && (
-        <Link
-          href={`/pacientes/${c.pacientes.id}/evolucoes/nova?consulta=${id}&data=${dataChaveBR(c.inicio)}`}
-          className="w-fit rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
-        >
-          Registrar evolução desta sessão
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href={`/pacientes/${c.pacientes.id}/evolucoes/nova?consulta=${id}&data=${dataChaveBR(c.inicio)}`}
+            className="w-fit rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
+            Registrar evolução desta sessão
+          </Link>
+          <Link
+            href={`/financeiro/novo?paciente=${c.pacientes.id}&consulta=${id}&data=${dataChaveBR(c.inicio)}`}
+            className="w-fit rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
+            Lançar pagamento desta sessão
+          </Link>
+        </div>
       )}
 
       {c.observacoes && (
