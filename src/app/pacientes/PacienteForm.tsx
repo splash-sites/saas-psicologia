@@ -130,6 +130,22 @@ export function PacienteForm({
         <FieldError errors={fe.observacoes} />
       </label>
 
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="aceita_lembretes"
+          defaultChecked={paciente?.aceita_lembretes ?? true}
+          className="mt-1"
+        />
+        <span>
+          Aceita receber lembretes de consulta
+          <span className="block text-xs text-gray-500">
+            WhatsApp (enviado por você) e convite por e-mail no Google Agenda.
+            Desmarque se o paciente não quiser ser contatado.
+          </span>
+        </span>
+      </label>
+
       <div className="flex gap-3">
         <button
           type="submit"

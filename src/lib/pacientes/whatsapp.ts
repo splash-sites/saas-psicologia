@@ -17,3 +17,13 @@ export function whatsappLink(telefone: string | null | undefined): string | null
 
   return `https://wa.me/${digits}`;
 }
+
+/** Link wa.me com a mensagem já preenchida (a psicóloga só clica em enviar). */
+export function whatsappLinkComTexto(
+  telefone: string | null | undefined,
+  texto: string,
+): string | null {
+  const base = whatsappLink(telefone);
+  if (!base) return null;
+  return `${base}?text=${encodeURIComponent(texto)}`;
+}

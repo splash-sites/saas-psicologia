@@ -18,6 +18,7 @@ export type Paciente = {
   endereco: string | null;
   status: PacienteStatus;
   observacoes: string | null;
+  aceita_lembretes: boolean;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

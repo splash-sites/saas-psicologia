@@ -44,6 +44,19 @@ export function addDias(dataISO: string, dias: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Início (inclusive) e fim (exclusivo) do dia BRT `dataISO`, em ISO UTC. */
+export function intervaloDiaBR(dataISO: string): { inicio: string; fim: string } {
+  return {
+    inicio: new Date(`${dataISO}T00:00:00${BR_OFFSET}`).toISOString(),
+    fim: new Date(`${addDias(dataISO, 1)}T00:00:00${BR_OFFSET}`).toISOString(),
+  };
+}
+
+/** Dia (BRT) em que cai "agora + antecedência" — o dia dos lembretes a enviar. */
+export function diaAlvoLembrete(agora: Date, antecedenciaHoras: number): string {
+  return dataChaveBR(new Date(agora.getTime() + antecedenciaHoras * 3600_000).toISOString());
+}
+
 /**
  * Gera os pares início/fim de uma série recorrente.
  * `ocorrencias` inclui a primeira. Passo: semanal=7d, quinzenal=14d,

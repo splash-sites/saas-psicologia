@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { integracaoGoogleConfigurada } from "@/lib/google/calendar";
 import { ConectarGoogleButton } from "./ConectarGoogleButton";
-import { desconectarGoogle } from "./actions";
+import { PreferenciasLembreteForm } from "./PreferenciasLembreteForm";
+import { desconectarGoogle, salvarPreferenciasLembrete } from "./actions";
 
 export const metadata = { title: "Configurações" };
 
@@ -17,6 +18,12 @@ export default async function ConfiguracoesPage() {
   const { data: token } = await supabase
     .from("google_oauth_tokens")
     .select("updated_at")
+    .eq("psicologa_id", user.id)
+    .maybeSingle();
+
+  const { data: pref } = await supabase
+    .from("preferencias_lembrete")
+    .select("antecedencia_horas, mensagem_template, convite_google")
     .eq("psicologa_id", user.id)
     .maybeSingle();
 
@@ -57,6 +64,26 @@ export default async function ConfiguracoesPage() {
         ) : (
           <ConectarGoogleButton label="Conectar Google Calendar" />
         )}
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-lg border p-4">
+        <h2 className="font-medium">Lembretes de consulta</h2>
+        <p className="text-sm text-gray-600">
+          Na página{" "}
+          <Link href="/lembretes" className="underline">
+            Lembretes
+          </Link>{" "}
+          você vê as consultas do dia seguinte e envia a mensagem pelo seu
+          próprio WhatsApp com um clique.
+        </p>
+        <PreferenciasLembreteForm
+          action={salvarPreferenciasLembrete}
+          defaults={{
+            antecedencia_horas: pref?.antecedencia_horas ?? 24,
+            mensagem_template: pref?.mensagem_template ?? null,
+            convite_google: pref?.convite_google ?? true,
+          }}
+        />
       </section>
     </main>
   );

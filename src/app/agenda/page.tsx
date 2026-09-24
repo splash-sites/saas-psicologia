@@ -75,6 +75,12 @@ export default async function AgendaPage({
         <h1 className="text-xl font-semibold">Agenda</h1>
         <div className="flex gap-2">
           <Link
+            href="/lembretes"
+            className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
+          >
+            Lembretes
+          </Link>
+          <Link
             href="/agenda/bloqueios"
             className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
           >

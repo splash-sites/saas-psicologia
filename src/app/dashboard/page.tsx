@@ -31,6 +31,12 @@ export default async function DashboardPage() {
           Agenda
         </Link>
         <Link
+          href="/lembretes"
+          className="rounded-md border px-4 py-2 hover:bg-gray-50"
+        >
+          Lembretes
+        </Link>
+        <Link
           href="/financeiro"
           className="rounded-md border px-4 py-2 hover:bg-gray-50"
         >

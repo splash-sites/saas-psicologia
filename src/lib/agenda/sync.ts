@@ -7,20 +7,25 @@ import {
   GoogleNaoConectada,
 } from "@/lib/google/calendar";
 
+type PacienteEmbed = {
+  nome: string;
+  email: string | null;
+  aceita_lembretes: boolean;
+};
+
 type ConsultaRow = {
   id: string;
   inicio: string;
   fim: string;
   modalidade: "online" | "presencial";
   status: "agendada" | "realizada" | "cancelada";
-  observacoes: string | null;
   google_event_id: string | null;
-  pacientes: { nome: string } | { nome: string }[] | null;
+  pacientes: PacienteEmbed | PacienteEmbed[] | null;
 };
 
-function nomePaciente(p: ConsultaRow["pacientes"]): string {
-  if (!p) return "Consulta";
-  return Array.isArray(p) ? (p[0]?.nome ?? "Consulta") : p.nome;
+function paciente(p: ConsultaRow["pacientes"]): PacienteEmbed | null {
+  if (!p) return null;
+  return Array.isArray(p) ? (p[0] ?? null) : p;
 }
 
 async function marcar(
@@ -54,20 +59,35 @@ export async function sincronizarConsulta(
   const { data } = await supabase
     .from("consultas")
     .select(
-      "id, inicio, fim, modalidade, status, observacoes, google_event_id, pacientes(nome)",
+      "id, inicio, fim, modalidade, status, google_event_id, pacientes(nome, email, aceita_lembretes)",
     )
     .eq("id", consultaId)
     .maybeSingle();
 
   if (!data) return;
   const c = data as unknown as ConsultaRow;
+  const pac = paciente(c.pacientes);
 
+  // Convite ao paciente (e-mail do Google Agenda): só se ele aceita lembretes,
+  // tem e-mail, e a psicóloga não desligou o convite. Sem linha de preferência
+  // = padrão ligado.
+  const { data: pref } = await supabase
+    .from("preferencias_lembrete")
+    .select("convite_google")
+    .eq("psicologa_id", psicologaId)
+    .maybeSingle();
+  const conviteLigado = pref?.convite_google ?? true;
+  const convidadoEmail =
+    conviteLigado && pac?.aceita_lembretes && pac.email ? pac.email : null;
+
+  // O evento é visível ao convidado: sem observações da consulta nem nada
+  // clínico. Só nome do paciente, horário e Meet.
   const evento = {
-    titulo: `Consulta — ${nomePaciente(c.pacientes)}`,
-    descricao: c.observacoes,
+    titulo: `Consulta — ${pac?.nome ?? "Paciente"}`,
     inicio: c.inicio,
     fim: c.fim,
     online: c.modalidade === "online",
+    convidadoEmail,
   };
 
   try {

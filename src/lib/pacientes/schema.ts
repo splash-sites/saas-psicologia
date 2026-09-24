@@ -27,6 +27,11 @@ export const pacienteSchema = z.object({
   endereco: optionalText,
   status: z.enum(PACIENTE_STATUS).default("ativo"),
   observacoes: optionalText,
+  // Checkbox de formulário: marcado envia "on", desmarcado não envia nada.
+  aceita_lembretes: z.preprocess(
+    (v) => v === "on" || v === "true" || v === true,
+    z.boolean(),
+  ),
 });
 
 export type PacienteInput = z.infer<typeof pacienteSchema>;

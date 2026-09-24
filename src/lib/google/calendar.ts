@@ -65,6 +65,10 @@ export type EventoInput = {
   inicio: string; // ISO UTC
   fim: string; // ISO UTC
   online: boolean;
+  // E-mail do paciente a convidar (Google envia convite e avisos de remarcação
+  // / cancelamento). Nulo = sem convidados. Nunca colocar dado clínico em
+  // titulo/descricao: o convidado enxerga o evento.
+  convidadoEmail?: string | null;
 };
 
 export function corpoEvento(ev: EventoInput, comConference: boolean) {
@@ -73,6 +77,8 @@ export function corpoEvento(ev: EventoInput, comConference: boolean) {
     description: ev.descricao ?? undefined,
     start: { dateTime: ev.inicio, timeZone: TIMEZONE },
     end: { dateTime: ev.fim, timeZone: TIMEZONE },
+    // Sempre enviado: no PATCH, lista vazia remove um convidado antigo.
+    attendees: ev.convidadoEmail ? [{ email: ev.convidadoEmail }] : [],
   };
   if (comConference && ev.online) {
     body.conferenceData = {
@@ -92,7 +98,7 @@ export async function criarEvento(
   ev: EventoInput,
 ): Promise<ResultadoSync> {
   const token = await getAccessToken(psicologaId);
-  const res = await fetch(`${CAL_BASE}?conferenceDataVersion=1`, {
+  const res = await fetch(`${CAL_BASE}?conferenceDataVersion=1&sendUpdates=all`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -114,7 +120,7 @@ export async function atualizarEvento(
 ): Promise<ResultadoSync> {
   const token = await getAccessToken(psicologaId);
   const res = await fetch(
-    `${CAL_BASE}/${encodeURIComponent(googleEventId)}?conferenceDataVersion=1`,
+    `${CAL_BASE}/${encodeURIComponent(googleEventId)}?conferenceDataVersion=1&sendUpdates=all`,
     {
       method: "PATCH",
       headers: {
@@ -140,10 +146,14 @@ export async function removerEvento(
   googleEventId: string,
 ): Promise<void> {
   const token = await getAccessToken(psicologaId);
-  const res = await fetch(`${CAL_BASE}/${encodeURIComponent(googleEventId)}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  // sendUpdates=all: o convidado recebe o aviso de cancelamento.
+  const res = await fetch(
+    `${CAL_BASE}/${encodeURIComponent(googleEventId)}?sendUpdates=all`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
   // 404/410 = já não existe: ok.
   if (!res.ok && res.status !== 404 && res.status !== 410) {
     throw new Error(`Google Calendar recusou a remoção: ${res.status}`);
