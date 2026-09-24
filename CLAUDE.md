@@ -40,7 +40,7 @@ Diferencial deste produto: ser simples e direto ("sem frufru"), com preço únic
 4. Cadastro de dados pessoais e contato.
 5. Ficha de anamnese/avaliação inicial (demanda, objetivos do trabalho) — preenchida pela psicóloga.
 6. Status do paciente: ativo, inativo, alta.
-7. Botão de contato direto que abre WhatsApp Web com o número do paciente (link `wa.me`, mensagem manual avulsa — não é o lembrete automático do item 13).
+7. Botão de contato direto que abre WhatsApp Web com o número do paciente (link `wa.me`, mensagem manual avulsa — não é o lembrete do item 13).
 
 ### 3. Agenda
 8. Calendário de consultas.
@@ -48,7 +48,10 @@ Diferencial deste produto: ser simples e direto ("sem frufru"), com preço únic
 10. Recorrência (semanal, quinzenal etc.).
 11. Bloqueio de horários/indisponibilidade.
 12. Sincronização automática com Google Agenda — via de mão única (sistema → Google Agenda pessoal da psicóloga). Não importar eventos do Google de volta.
-13. Lembrete automático via WhatsApp Business API antes da consulta. Padrão: 24h antes, configurável pela psicóloga. Mensagem apenas informativa, não pede confirmação/resposta do paciente (não processar respostas recebidas).
+13. Lembrete de consulta **sem custo operacional** (decisão de produto: não usar WhatsApp Business API / Meta / Z-API, que cobram por mensagem ou violam os termos do WhatsApp). Dois mecanismos:
+    - **Lista "Lembretes"** (`/lembretes`): consultas do dia seguinte (antecedência padrão de 24h, configurável pela psicóloga) com botão que abre o WhatsApp Web com a mensagem já preenchida (`wa.me`), enviada do número da própria psicóloga com 1 clique. Registra o envio; remarcar a consulta invalida o registro. É semi-manual — não é automático.
+    - **Convite do Google Agenda** ao paciente por e-mail (automático): o paciente entra como convidado do evento e recebe convite, remarcação e cancelamento. Só para paciente que aceita lembretes, tem e-mail e com o convite ligado; o convidado não pode convidar terceiros nem ver outros convidados.
+    - Mensagem apenas informativa, sem nenhum dado clínico; não pede confirmação/resposta (não processar respostas recebidas). O paciente tem um consentimento "aceita lembretes". O texto da mensagem é configurável.
 
 ### 4. Consultas e evolução (prontuário)
 14. Registro de evolução por sessão, com campos estruturados mínimos (ver seção de compliance acima): demanda/objetivo, procedimentos/o que foi trabalhado, encaminhamentos/decisões.
@@ -68,6 +71,7 @@ Diferencial deste produto: ser simples e direto ("sem frufru"), com preço únic
 ## Fora do escopo do MVP (backlog de Fase 2, não implementar sem validação prévia com o usuário)
 
 - Emissão de recibo/nota fiscal (NF-e/NFS-e).
+- Envio 100% automático de lembretes pelo WhatsApp (WhatsApp Business API / Meta Cloud API): tem custo por mensagem, exige conta Meta Business verificada, número dedicado e templates aprovados. Só considerar quando o produto gerar receita. O código pode ganhar uma camada de provedor sem reescrever a tela de lembretes.
 - Gateway de pagamento para o paciente pagar diretamente pela plataforma.
 - Auto-agendamento pelo paciente (paciente marcando consulta sozinho).
 - App ou portal de acesso para o paciente.
@@ -82,8 +86,8 @@ Diferencial deste produto: ser simples e direto ("sem frufru"), com preço únic
 - **Hospedagem:** Vercel (app) + Supabase Cloud (banco). Ambos com free tier para começar.
 - **Integrações externas:**
   - Asaas API — assinatura recorrente da psicóloga.
-  - Google Calendar API — sincronização de agenda + geração de link do Meet.
-  - WhatsApp Business API (provedor a definir — ex: Z-API ou Meta Cloud API oficial) — lembrete automático de consulta.
+  - Google Calendar API — sincronização de agenda + geração de link do Meet + convite ao paciente (lembrete por e-mail).
+  - WhatsApp: sem API. Lembrete via link `wa.me` pré-preenchido, enviado manualmente pela psicóloga (ver item 13). A WhatsApp Business API oficial (Meta Cloud API) fica no backlog da Fase 2, para quando houver receita que cubra o custo por mensagem.
 
 **Alternativa (Opção 2), caso prefira mais controle e menos dependência de um único provedor:** Next.js + Prisma (ORM) + Postgres via Neon + Auth.js para autenticação. Isolamento multi-tenant precisa ser garantido manualmente no código (filtro por `psicologa_id` em toda query), já que não há RLS automático como no Supabase.
 
@@ -104,10 +108,10 @@ A escolha final do stack deve ser confirmada com o usuário antes de gerar qualq
 
 ## Segurança (complementa a seção de compliance/LGPD acima)
 
-- Nunca commitar segredos ou chaves de API (Asaas, Google, WhatsApp) no repositório — usar variáveis de ambiente, com `.env` no `.gitignore` desde o primeiro commit.
+- Nunca commitar segredos ou chaves de API (Asaas, Google) no repositório — usar variáveis de ambiente, com `.env` no `.gitignore` desde o primeiro commit.
 - Validar e sanitizar toda entrada de usuário no backend, mesmo que já validada no frontend.
 - Nunca expor a `service_role key` do Supabase no frontend — só usar em código server-side.
-- Webhooks (Asaas, e futuramente WhatsApp) devem validar assinatura/origem da requisição antes de processar qualquer evento.
+- Webhooks (Asaas, e qualquer outro que venha a existir) devem validar assinatura/origem da requisição antes de processar qualquer evento.
 - Aplicar rate limiting em endpoints públicos e sensíveis (login, webhooks) para mitigar abuso.
 - Manter dependências atualizadas e rodar auditoria de vulnerabilidades (`npm audit` ou equivalente) periodicamente, principalmente antes de deploys.
 - Qualquer decisão de segurança que envolva trade-off (ex: simplicidade vs. proteção extra) deve ser sinalizada ao usuário, não resolvida silenciosamente.
@@ -121,9 +125,21 @@ A escolha final do stack deve ser confirmada com o usuário antes de gerar qualq
 5. Integração Google Calendar + geração de link do Meet.
 6. Módulo de evolução/prontuário (com soft delete e estrutura mínima exigida).
 7. Módulo financeiro (lançamentos, status de pagamento, painel de ganhos).
-8. Lembrete automático via WhatsApp Business API.
+8. Lembretes de consulta sem custo (lista `wa.me` + convite do Google Agenda).
 
 Desenvolver e validar cada módulo antes de avançar para o próximo — não pedir para o Claude Code implementar o sistema inteiro em uma única tacada.
+
+## Status e decisões já tomadas
+
+Módulos 1, 3, 4, 5, 6, 7 e 8 implementados e testados. **Módulo 2 (assinatura/cobrança via Asaas) foi adiado a pedido do usuário** e continua pendente.
+
+- **Stack:** Opção 1 (Next.js + Supabase). Migrations em `supabase/migrations/`; testes de RLS rodam contra Supabase local (Docker) — ver README.
+- **Dado clínico em repouso:** criptografia do Postgres (provedor) + RLS. Sem cifra na aplicação por coluna, de propósito: perder a chave significaria perder prontuário, o que conflita com a guarda obrigatória de 5 anos. Único segredo cifrado na aplicação: o refresh token do Google (AES-256-GCM, `GOOGLE_TOKEN_ENC_KEY`).
+- **Soft delete:** evolução, paciente, consulta e lançamento financeiro nunca são apagados fisicamente (sem policy de DELETE); "arquivar" seta `deleted_at`.
+- **Financeiro:** status gravado é só `pendente`/`pago`; "atrasado" é derivado (pendente com vencimento passado). O lançamento pergunta "já recebi / ainda vou receber" para preencher tudo uma vez só.
+- **Fuso:** horários são interpretados em Brasília com offset fixo `-03:00` (sem horário de verão desde 2019). Trocar por fuso real se o produto atender outros fusos.
+- **Google Calendar:** sincronização de mão única; falha no Google nunca derruba o agendamento local. O refresh token só é guardado se a permissão da Agenda foi concedida. `observacoes` da consulta **não** vão para o evento (o paciente convidado as veria).
+- **Migrations no cloud** são aplicadas manualmente no SQL Editor do Supabase (CLI não linkada).
 
 <!-- BEGIN:nextjs-agent-rules -->
 
