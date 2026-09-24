@@ -5,6 +5,8 @@ import {
   removerEvento,
   integracaoGoogleConfigurada,
   GoogleNaoConectada,
+  ehErroDeEscopo,
+  MSG_SEM_PERMISSAO_CALENDAR,
 } from "@/lib/google/calendar";
 
 type PacienteEmbed = {
@@ -113,6 +115,7 @@ export async function sincronizarConsulta(
       sync_erro: null,
     });
   } catch (err) {
+    const mensagem = String(err instanceof Error ? err.message : err);
     if (err instanceof GoogleNaoConectada) {
       await marcar(supabase, c.id, {
         sync_status: "desativada",
@@ -120,9 +123,17 @@ export async function sincronizarConsulta(
       });
       return;
     }
+    // 403 por token sem a permissão da Agenda: mensagem clara, sem o JSON cru.
+    if (ehErroDeEscopo(mensagem)) {
+      await marcar(supabase, c.id, {
+        sync_status: "desativada",
+        sync_erro: MSG_SEM_PERMISSAO_CALENDAR,
+      });
+      return;
+    }
     await marcar(supabase, c.id, {
       sync_status: "erro",
-      sync_erro: String(err instanceof Error ? err.message : err).slice(0, 500),
+      sync_erro: mensagem.slice(0, 500),
     });
   }
 }

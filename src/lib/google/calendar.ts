@@ -8,6 +8,29 @@ const TIMEZONE = "America/Sao_Paulo";
 
 export class GoogleNaoConectada extends Error {}
 
+// Permissões aceitas para criar/alterar eventos.
+const ESCOPOS_CALENDAR = [
+  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/calendar.events",
+];
+
+export const MSG_SEM_PERMISSAO_CALENDAR =
+  "O Google não liberou a permissão da Agenda. Reconecte em Configurações e mantenha marcada a permissão de Agenda na tela do Google.";
+
+/** O escopo concedido (string separada por espaço) permite mexer em eventos? */
+export function escopoTemCalendar(scope: string | null | undefined): boolean {
+  if (!scope) return false;
+  const concedidos = scope.split(/\s+/);
+  return ESCOPOS_CALENDAR.some((e) => concedidos.includes(e));
+}
+
+/** Erro 403 do Google por falta de permissão (token sem escopo do Calendar). */
+export function ehErroDeEscopo(mensagem: string): boolean {
+  return /insufficient authentication scopes|ACCESS_TOKEN_SCOPE_INSUFFICIENT/i.test(
+    mensagem,
+  );
+}
+
 /** true se as env vars mínimas para falar com o Google estão presentes. */
 export function integracaoGoogleConfigurada(): boolean {
   return Boolean(
@@ -16,6 +39,34 @@ export function integracaoGoogleConfigurada(): boolean {
       cryptoDisponivel() &&
       adminDisponivel(),
   );
+}
+
+/** Troca um refresh token por access token e devolve o escopo realmente concedido. */
+export async function trocarRefreshToken(
+  refreshToken: string,
+): Promise<{ accessToken: string; scope: string }> {
+  const res = await fetch(TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    // invalid_grant = refresh token revogado/expirado: exige reconexão.
+    if (txt.includes("invalid_grant")) {
+      throw new GoogleNaoConectada("Autorização do Google expirada");
+    }
+    throw new Error(`Falha ao renovar token do Google: ${res.status}`);
+  }
+
+  const json = (await res.json()) as { access_token: string; scope?: string };
+  return { accessToken: json.access_token, scope: json.scope ?? "" };
 }
 
 async function getAccessToken(psicologaId: string): Promise<string> {
@@ -28,35 +79,27 @@ async function getAccessToken(psicologaId: string): Promise<string> {
 
   if (!data) throw new GoogleNaoConectada("Google Calendar não conectado");
 
-  const refreshToken = decrypt(data.refresh_token_cifrado);
-  const body = new URLSearchParams({
-    client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
-    client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
-    refresh_token: refreshToken,
-    grant_type: "refresh_token",
-  });
-
-  const res = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-
-  if (!res.ok) {
-    const txt = await res.text();
-    // invalid_grant = refresh token revogado/expirado: exige reconexão.
-    if (txt.includes("invalid_grant")) {
+  try {
+    const { accessToken, scope } = await trocarRefreshToken(
+      decrypt(data.refresh_token_cifrado),
+    );
+    // Token válido, mas sem a permissão da Agenda (usuária desmarcou no consent).
+    if (!escopoTemCalendar(scope)) {
+      throw new GoogleNaoConectada(MSG_SEM_PERMISSAO_CALENDAR);
+    }
+    return accessToken;
+  } catch (err) {
+    if (
+      err instanceof GoogleNaoConectada &&
+      err.message === "Autorização do Google expirada"
+    ) {
       await admin
         .from("google_oauth_tokens")
         .delete()
         .eq("psicologa_id", psicologaId);
-      throw new GoogleNaoConectada("Autorização do Google expirada");
     }
-    throw new Error(`Falha ao renovar token do Google: ${res.status}`);
+    throw err;
   }
-
-  const json = (await res.json()) as { access_token: string };
-  return json.access_token;
 }
 
 export type EventoInput = {

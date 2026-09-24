@@ -140,15 +140,23 @@ export default async function ConsultaDetailPage({
             }
           >
             {SYNC_STATUS_LABEL[c.sync_status]}
-            {c.sync_status === "erro" && c.sync_erro ? ` — ${c.sync_erro}` : ""}
+            {(c.sync_status === "erro" || c.sync_status === "desativada") &&
+            c.sync_erro
+              ? ` — ${c.sync_erro}`
+              : ""}
           </span>
-          {c.sync_status !== "desativada" && (
-            <form action={sincronizarConsultaAgora.bind(null, id)}>
-              <button className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50">
-                Sincronizar agora
-              </button>
-            </form>
+          {c.sync_status === "desativada" && (
+            <Link href="/configuracoes" className="text-xs underline">
+              Ir para Configurações
+            </Link>
           )}
+          {/* Também disponível quando desativada: serve para tentar de novo
+              depois de reconectar o Google. */}
+          <form action={sincronizarConsultaAgora.bind(null, id)}>
+            <button className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50">
+              Sincronizar agora
+            </button>
+          </form>
         </section>
       )}
 
