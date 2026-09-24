@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { Pagamento } from "@/lib/financeiro/types";
 import type { FormState } from "./actions";
@@ -39,6 +39,13 @@ export function PagamentoForm({
   const hoje = new Date().toISOString().slice(0, 10);
   const dataRef = pagamento?.data_referencia ?? dataPadrao ?? hoje;
 
+  // Novo lançamento começa como "recebido" (caso mais comum: registrar um
+  // pagamento que já caiu). Na edição, reflete o estado atual.
+  const [situacao, setSituacao] = useState<"recebido" | "a_receber">(
+    pagamento ? (pagamento.status === "pago" ? "recebido" : "a_receber") : "recebido",
+  );
+  const recebido = situacao === "recebido";
+
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {state.error && (
@@ -73,21 +80,20 @@ export function PagamentoForm({
         <FieldError errors={fe.paciente_id} />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Valor (R$) *
-        <input
-          name="valor"
-          type="number"
-          step="0.01"
-          min="0.01"
-          required
-          defaultValue={pagamento?.valor ?? ""}
-          className="rounded-md border px-3 py-2"
-        />
-        <FieldError errors={fe.valor} />
-      </label>
-
       <div className="grid grid-cols-2 gap-4">
+        <label className="flex flex-col gap-1 text-sm">
+          Valor (R$) *
+          <input
+            name="valor"
+            type="number"
+            step="0.01"
+            min="0.01"
+            required
+            defaultValue={pagamento?.valor ?? ""}
+            className="rounded-md border px-3 py-2"
+          />
+          <FieldError errors={fe.valor} />
+        </label>
         <label className="flex flex-col gap-1 text-sm">
           Referente a (sessão/mês) *
           <input
@@ -99,6 +105,47 @@ export function PagamentoForm({
           />
           <FieldError errors={fe.data_referencia} />
         </label>
+      </div>
+
+      <fieldset className="flex flex-col gap-2 text-sm">
+        <legend className="mb-1">Situação *</legend>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="situacao"
+              value="recebido"
+              checked={recebido}
+              onChange={() => setSituacao("recebido")}
+            />
+            Já recebi
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="situacao"
+              value="a_receber"
+              checked={!recebido}
+              onChange={() => setSituacao("a_receber")}
+            />
+            Ainda vou receber
+          </label>
+        </div>
+      </fieldset>
+
+      {recebido ? (
+        <label className="flex flex-col gap-1 text-sm">
+          Data do pagamento *
+          <input
+            name="data_pagamento"
+            type="date"
+            required
+            defaultValue={pagamento?.data_pagamento ?? hoje}
+            className="rounded-md border px-3 py-2"
+          />
+          <FieldError errors={fe.data_pagamento} />
+        </label>
+      ) : (
         <label className="flex flex-col gap-1 text-sm">
           Vencimento *
           <input
@@ -110,10 +157,10 @@ export function PagamentoForm({
           />
           <FieldError errors={fe.vencimento} />
         </label>
-      </div>
+      )}
 
       <label className="flex flex-col gap-1 text-sm">
-        Forma de pagamento
+        {recebido ? "Forma de pagamento" : "Forma de pagamento prevista"}
         <input
           name="forma_pagamento"
           placeholder="Pix, dinheiro, cartão..."

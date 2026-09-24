@@ -56,8 +56,10 @@ export async function criarPagamento(
     paciente_id: v.paciente_id,
     consulta_id: v.consulta_id ?? null,
     valor: v.valor,
+    status: v.status,
     data_referencia: v.data_referencia,
     vencimento: v.vencimento,
+    data_pagamento: v.data_pagamento,
     forma_pagamento: v.forma_pagamento ?? null,
     observacoes: v.observacoes ?? null,
   });
@@ -91,8 +93,10 @@ export async function atualizarPagamento(
       paciente_id: v.paciente_id,
       consulta_id: v.consulta_id ?? null,
       valor: v.valor,
+      status: v.status,
       data_referencia: v.data_referencia,
       vencimento: v.vencimento,
+      data_pagamento: v.data_pagamento,
       forma_pagamento: v.forma_pagamento ?? null,
       observacoes: v.observacoes ?? null,
     })

@@ -93,7 +93,10 @@ export default async function PagamentoDetailPage({
             </button>
           </form>
         ) : (
-          <MarcarPagoForm action={marcarComoPago.bind(null, id)} />
+          <MarcarPagoForm
+            action={marcarComoPago.bind(null, id)}
+            formaPadrao={p.forma_pagamento}
+          />
         )}
         <form action={arquivarPagamento.bind(null, id)} className="ml-auto">
           <button className="text-sm text-red-600 hover:underline">

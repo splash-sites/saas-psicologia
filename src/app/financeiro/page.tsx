@@ -15,7 +15,13 @@ export const metadata = { title: "Financeiro" };
 
 type Linha = Pick<
   Pagamento,
-  "id" | "valor" | "status" | "data_referencia" | "vencimento" | "data_pagamento"
+  | "id"
+  | "valor"
+  | "status"
+  | "data_referencia"
+  | "vencimento"
+  | "data_pagamento"
+  | "forma_pagamento"
 > & { pacientes: { nome: string } | null };
 
 export default async function FinanceiroPage({
@@ -39,7 +45,7 @@ export default async function FinanceiroPage({
     supabase
       .from("pagamentos")
       .select(
-        "id, valor, status, data_referencia, vencimento, data_pagamento, pacientes(nome)",
+        "id, valor, status, data_referencia, vencimento, data_pagamento, forma_pagamento, pacientes(nome)",
       )
       .is("deleted_at", null)
       .gte("data_referencia", inicio)
@@ -134,7 +140,10 @@ export default async function FinanceiroPage({
                 </Link>
                 <StatusBadge status={status} />
                 {status !== "pago" && (
-                  <MarcarPagoForm action={marcarComoPago.bind(null, l.id)} />
+                  <MarcarPagoForm
+                    action={marcarComoPago.bind(null, l.id)}
+                    formaPadrao={l.forma_pagamento}
+                  />
                 )}
               </li>
             );

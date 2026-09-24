@@ -5,8 +5,11 @@ import type { FormState } from "./actions";
 
 export function MarcarPagoForm({
   action,
+  formaPadrao,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
+  // Forma já informada no lançamento — vem preenchida, sem redigitar.
+  formaPadrao?: string | null;
 }) {
   const [aberto, setAberto] = useState(false);
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -46,6 +49,7 @@ export function MarcarPagoForm({
         <input
           name="forma_pagamento"
           placeholder="Pix, dinheiro..."
+          defaultValue={formaPadrao ?? ""}
           className="rounded-md border px-2 py-1 text-sm"
         />
       </label>
