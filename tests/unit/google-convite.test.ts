@@ -21,6 +21,13 @@ describe("corpoEvento — convidado", () => {
     expect(corpoEvento(base, true).attendees).toEqual([]);
   });
 
+  it("o convidado não pode convidar terceiros, alterar o evento nem ver outros convidados", () => {
+    const b = corpoEvento({ ...base, convidadoEmail: "m@e.com" }, true);
+    expect(b.guestsCanInviteOthers).toBe(false);
+    expect(b.guestsCanModify).toBe(false);
+    expect(b.guestsCanSeeOtherGuests).toBe(false);
+  });
+
   it("não inclui descrição quando ela não é informada (nada clínico no evento)", () => {
     const b = corpoEvento({ ...base, convidadoEmail: "m@e.com" }, true);
     expect(b.description).toBeUndefined();

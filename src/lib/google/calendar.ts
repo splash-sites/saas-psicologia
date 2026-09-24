@@ -122,6 +122,11 @@ export function corpoEvento(ev: EventoInput, comConference: boolean) {
     end: { dateTime: ev.fim, timeZone: TIMEZONE },
     // Sempre enviado: no PATCH, lista vazia remove um convidado antigo.
     attendees: ev.convidadoEmail ? [{ email: ev.convidadoEmail }] : [],
+    // Consulta é individual e sigilosa: o paciente não convida terceiros, não
+    // altera o evento nem enxerga outros convidados.
+    guestsCanInviteOthers: false,
+    guestsCanModify: false,
+    guestsCanSeeOtherGuests: false,
   };
   if (comConference && ev.online) {
     body.conferenceData = {
