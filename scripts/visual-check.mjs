@@ -56,19 +56,25 @@ const slot = (dia, hora, min = 50) => {
   return { inicio: ini.toISOString(), fim: new Date(ini.getTime() + min * 60000).toISOString() };
 };
 
-async function semear() {
+async function criarUsuario(email, nome) {
   const { data: lista } = await admin.auth.admin.listUsers();
-  const antigo = lista.users.find((u) => u.email === EMAIL);
+  const antigo = lista.users.find((u) => u.email === email);
   if (antigo) await admin.auth.admin.deleteUser(antigo.id);
-
   const { data: criado, error } = await admin.auth.admin.createUser({
-    email: EMAIL,
-    password: PASSWORD,
-    email_confirm: true,
-    user_metadata: { full_name: "Camila Ribeiro Duarte" },
+    email, password: PASSWORD, email_confirm: true, user_metadata: { full_name: nome },
   });
   if (error) throw error;
-  const pid = criado.user.id;
+  return criado.user.id;
+}
+
+// Horário relativo a agora (para exercitar sessão encerrada / próxima / futura).
+const rel = (minutos, duracao = 50) => {
+  const ini = new Date(Date.now() + minutos * 60_000);
+  return { inicio: ini.toISOString(), fim: new Date(ini.getTime() + duracao * 60_000).toISOString() };
+};
+
+async function semear() {
+  const pid = await criarUsuario(EMAIL, "Camila Ribeiro Duarte");
 
   const pac = async (p) =>
     (await admin.from("pacientes").insert({ psicologa_id: pid, ...p }).select("id").single()).data.id;
@@ -83,9 +89,15 @@ async function semear() {
     }).select("id").single()).data.id;
 
   const meet = "https://meet.google.com/abc-defg-hij";
-  const consultaLaura = await cons(laura, hoje, "09:00", { modalidade: "online", meet_link: meet, sync_status: "sincronizada" });
-  await cons(marcos, hoje, "10:30");
-  await cons(ana, hoje, "15:00", { modalidade: "online", meet_link: meet });
+  const ins = async (paciente, quando, extra = {}) =>
+    (await admin.from("consultas").insert({
+      psicologa_id: pid, paciente_id: paciente, modalidade: "presencial", ...quando, ...extra,
+    }).select("id").single()).data.id;
+  // encerrada com evolução | encerrada SEM evolução | começa em 5 min (Meet em destaque) | mais tarde
+  const consultaLaura = await ins(laura, rel(-180), { modalidade: "online", meet_link: meet, sync_status: "sincronizada" });
+  await ins(marcos, rel(-90));
+  await ins(ana, rel(5), { modalidade: "online", meet_link: meet });
+  await ins(laura, rel(180), { modalidade: "online", meet_link: meet });
   await cons(laura, somaDias(1), "14:00", { modalidade: "online", meet_link: meet });
   await cons(marcos, somaDias(2), "08:00", { status: "cancelada" });
   await cons(laura, somaDias(3), "16:00");
@@ -112,9 +124,9 @@ async function semear() {
 }
 
 // ---------- cookie de sessão (formato do @supabase/ssr) ----------
-async function cookiesDeSessao() {
+async function cookiesDeSessao(email) {
   const anon = createClient(SUPABASE_URL, status.ANON_KEY, { auth: { persistSession: false } });
-  const { data, error } = await anon.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
+  const { data, error } = await anon.auth.signInWithPassword({ email, password: PASSWORD });
   if (error) throw error;
   const nome = `sb-${new URL(SUPABASE_URL).hostname.split(".")[0]}-auth-token`;
   const valor = "base64-" + Buffer.from(JSON.stringify(data.session)).toString("base64url");
@@ -151,8 +163,17 @@ function subirApp() {
 }
 
 // ---------- execução ----------
+// Consultas "de hoje" são relativas a agora; perto da meia-noite elas caem em
+// outro dia e o painel não reflete o cenário pretendido.
+const horaBRT = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(new Date()));
+if (horaBRT < 4 || horaBRT >= 20) console.warn("Aviso: horário perto da virada do dia; os estados do painel podem não aparecer como esperado.");
+
 const { laura, consultaLaura } = await semear();
-const cookies = await cookiesDeSessao();
+const cookies = await cookiesDeSessao(EMAIL);
+// Usuária sem nenhum dado: exercita os estados vazios do painel.
+const EMAIL_VAZIO = "visual-vazio@teste.local";
+await criarUsuario(EMAIL_VAZIO, "Paula Sem Dados");
+const cookiesVazio = await cookiesDeSessao(EMAIL_VAZIO);
 const servidor = await subirApp();
 
 rmSync(OUT, { recursive: true, force: true });
@@ -197,6 +218,16 @@ try {
       await page.screenshot({ path: `${OUT}/${vp.nome}-${nome}.png`, fullPage: true });
       await page.close();
     }
+
+    // painel de quem ainda não tem consultas
+    const ctxVazio = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: vp.isMobile, deviceScaleFactor: vp.deviceScaleFactor });
+    await ctxVazio.addCookies(cookiesVazio);
+    const pVazio = await ctxVazio.newPage();
+    await pVazio.goto(`${BASE}/dashboard`, { waitUntil: "networkidle", timeout: 90_000 });
+    const medidas = await pVazio.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
+    if (medidas.sw > medidas.iw + 1) problemas.push(`${vp.nome} /dashboard (sem dados): rolagem horizontal`);
+    await pVazio.screenshot({ path: `${OUT}/${vp.nome}-painel-vazio.png`, fullPage: true });
+    await ctxVazio.close();
 
     if (vp.width < 768) {
       const page = await ctx.newPage();
