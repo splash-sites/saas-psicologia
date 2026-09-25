@@ -1,35 +1,38 @@
-"use client";
+import { LoginButton } from "./LoginButton";
 
-import { createClient } from "@/lib/supabase/client";
+export const metadata = { title: "Entrar" };
 
-export default function LoginPage() {
-  async function handleGoogleLogin() {
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        // Escopo do Calendar solicitado já no login para reaproveitar
-        // o mesmo consentimento OAuth na integração de Agenda/Meet (item 12/17 do MVP).
-        scopes: "https://www.googleapis.com/auth/calendar",
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
-        },
-      },
-    });
-  }
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <div className="flex w-full max-w-sm flex-col gap-6 rounded-lg border p-8">
-        <h1 className="text-xl font-semibold">Entrar</h1>
-        <button
-          onClick={handleGoogleLogin}
-          className="rounded-md bg-black px-4 py-2 text-white hover:bg-black/80"
-        >
-          Entrar com Google
-        </button>
+    <main className="flex min-h-screen items-center justify-center p-4">
+      <div className="card flex w-full max-w-sm flex-col gap-6 p-6 sm:p-8">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-semibold text-teal-800">
+            Gestão para Psicólogas
+          </h1>
+          <p className="text-sm text-slate-500">
+            Agenda, prontuário e financeiro do seu consultório em um só lugar.
+          </p>
+        </div>
+
+        {error && (
+          <p className="alert alert-error" role="alert">
+            Não foi possível entrar. Tente novamente.
+          </p>
+        )}
+
+        <LoginButton />
+
+        <p className="text-xs text-slate-400">
+          Ao entrar você autoriza o acesso à sua Google Agenda, usado para
+          sincronizar consultas e gerar links do Meet.
+        </p>
       </div>
     </main>
   );

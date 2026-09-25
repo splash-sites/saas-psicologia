@@ -1,26 +1,90 @@
 @import "tailwindcss";
 
+/* Tema único (claro): ferramenta de trabalho clínica, sem variação por SO.
+   O modo escuro do modelo original deixava botões e textos ilegíveis. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Tailwind v4 usa currentColor como cor de borda padrão (bordas pretas).
+   Uma borda cinza-clara neutra em tudo que não define cor própria. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-slate-200);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Componentes reutilizáveis. Tamanhos pensados para toque: 44px no celular,
+   40px em telas maiores. Fonte 16px em campos no celular evita o zoom
+   automático do iOS ao focar. */
+@layer components {
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium
+      transition-colors focus-visible:outline-2 focus-visible:outline-offset-2
+      focus-visible:outline-teal-600 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10;
+  }
+  .btn-primary {
+    @apply bg-teal-700 text-white hover:bg-teal-800;
+  }
+  .btn-outline {
+    @apply border border-slate-300 bg-white text-slate-800 hover:bg-slate-50;
+  }
+  .btn-success-outline {
+    @apply border border-green-600 bg-white text-green-700 hover:bg-green-50;
+  }
+  .btn-success {
+    @apply bg-green-600 text-white hover:bg-green-700;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+  .btn-sm {
+    @apply min-h-9 px-3 py-1 text-xs sm:min-h-8;
+  }
+
+  .input {
+    @apply w-full min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-900
+      placeholder:text-slate-400 focus:border-teal-600 focus:outline-none focus:ring-2
+      focus:ring-teal-600/20 sm:min-h-10 sm:text-sm;
+  }
+  textarea.input {
+    @apply min-h-0;
+  }
+
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm;
+  }
+
+  .alert {
+    @apply rounded-lg px-3 py-2 text-sm;
+  }
+  .alert-error {
+    @apply bg-red-50 text-red-700;
+  }
+  .alert-success {
+    @apply bg-green-50 text-green-700;
+  }
+  .alert-warning {
+    @apply bg-amber-50 text-amber-800;
+  }
 }

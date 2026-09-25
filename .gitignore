@@ -45,3 +45,8 @@ next-env.d.ts
 
 # Vercel
 .vercel
+
+# Screenshots do teste visual (scripts/visual-check.mjs)
+.visual/
+.visual-run.log
+.visual-prev/

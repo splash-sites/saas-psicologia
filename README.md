@@ -53,3 +53,12 @@ npm test
 ```
 
 Sem essas variáveis, os testes de RLS são pulados automaticamente (o resto da suíte roda normal).
+
+## Teste visual de responsividade
+
+```bash
+npx supabase start   # precisa do Docker
+npm run visual
+```
+
+Sobe o app em outra porta (3100) apontando para o Supabase **local**, cria um usuário e dados fictícios, abre 12 telas no Chrome em celular (390px), tablet (768px) e desktop (1366px), salva prints em `.visual/` e falha se alguma tela tiver rolagem horizontal. Recusa qualquer Supabase que não seja o local. Feche o `npm run dev` antes de rodar.
