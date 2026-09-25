@@ -5,13 +5,20 @@ import {
   CalendarClock,
   CalendarPlus,
   Check,
+  ChevronRight,
   FileText,
   Receipt,
   UserPlus,
   Video,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { MODALIDADE_LABEL, type Modalidade } from "@/lib/agenda/types";
+import {
+  MODALIDADE_LABEL,
+  type ConsultaStatus,
+  type Modalidade,
+} from "@/lib/agenda/types";
+import { estadoVisual, exigeEvolucao } from "@/lib/agenda/grade";
+import { EstadoBadge } from "@/app/(app)/agenda/estilos";
 import {
   addDias,
   dataChaveBR,
@@ -44,6 +51,8 @@ type ConsultaHoje = {
   inicio: string;
   fim: string;
   modalidade: Modalidade;
+  status: ConsultaStatus;
+  confirmada_em: string | null;
   meet_link: string | null;
   pacientes: PacienteRef | PacienteRef[] | null;
 };
@@ -101,13 +110,15 @@ export default async function DashboardPage() {
     { data: passadasRaw },
     { data: consultasAlvoRaw },
     { data: recebidosRaw },
+    { data: aReceberRaw },
     { count: atrasados },
   ] = await Promise.all([
     supabase.from("psicologas").select("nome").eq("id", user.id).maybeSingle(),
     supabase
       .from("consultas")
-      .select("id, inicio, fim, modalidade, meet_link, pacientes(id, nome)")
-      .neq("status", "cancelada")
+      .select(
+        "id, inicio, fim, modalidade, status, confirmada_em, meet_link, pacientes(id, nome)",
+      )
       .is("deleted_at", null)
       .gte("inicio", diaIni)
       .lt("inicio", diaFim)
@@ -121,11 +132,11 @@ export default async function DashboardPage() {
       .lt("inicio", limiteProximos)
       .order("inicio")
       .limit(MAX_PROXIMOS),
-    // Sessões já encerradas (não canceladas) nos últimos DIAS_PENDENCIA dias.
+    // Sessões já encerradas (sem canceladas e faltas) nos últimos DIAS_PENDENCIA dias.
     supabase
       .from("consultas")
       .select("id, inicio, fim, pacientes(id, nome)")
-      .neq("status", "cancelada")
+      .in("status", ["agendada", "realizada"])
       .is("deleted_at", null)
       .gte("inicio", desdePendencias)
       .lt("fim", agora.toISOString())
@@ -145,6 +156,14 @@ export default async function DashboardPage() {
       .eq("status", "pago")
       .gte("data_pagamento", primeiroDia(mes))
       .lte("data_pagamento", ultimoDia(mes)),
+    // A receber no mês: lançamentos pendentes que vencem neste mês.
+    supabase
+      .from("pagamentos")
+      .select("valor")
+      .is("deleted_at", null)
+      .eq("status", "pendente")
+      .gte("vencimento", primeiroDia(mes))
+      .lte("vencimento", ultimoDia(mes)),
     supabase
       .from("pagamentos")
       .select("id", { count: "exact", head: true })
@@ -153,9 +172,15 @@ export default async function DashboardPage() {
       .lt("vencimento", hoje),
   ]);
 
-  const consultasHoje = (consultasHojeRaw ?? []) as unknown as ConsultaHoje[];
+  const consultasDoDia = (consultasHojeRaw ?? []) as unknown as ConsultaHoje[];
+  const consultasHoje = consultasDoDia.filter((c) => c.status !== "cancelada");
+  const proximaHoje = consultasHoje.find(
+    (c) => c.status === "agendada" && new Date(c.inicio) > agora,
+  );
   const proximas = (proximasRaw ?? []) as unknown as ConsultaProxima[];
   const recebido = (recebidosRaw ?? []).reduce((s, r) => s + Number(r.valor), 0);
+  const aReceber = (aReceberRaw ?? []).reduce((s, r) => s + Number(r.valor), 0);
+  const previsto = recebido + aReceber;
 
   const passadas = (passadasRaw ?? []) as unknown as ConsultaPassada[];
 
@@ -252,7 +277,8 @@ export default async function DashboardPage() {
 
       <div>
         <h1 className="text-xl font-semibold sm:text-2xl">
-          Olá{nome ? `, ${nome}` : ""}
+          {saudacao(agora)}
+          {nome ? `, ${nome}` : ""}
         </h1>
         <p className="text-sm first-letter:uppercase text-slate-500">
           {dataLongaBR(`${hoje}T12:00:00${BR_OFFSET}`)}
@@ -264,16 +290,24 @@ export default async function DashboardPage() {
           rotulo="Consultas hoje"
           valor={String(consultasHoje.length)}
           href="/agenda"
+          sub={
+            proximaHoje
+              ? `Próxima às ${horaBR(proximaHoje.inicio)}`
+              : consultasHoje.length > 0
+                ? "Nenhuma restante hoje"
+                : undefined
+          }
         />
         <Indicador
           rotulo="Evoluções pendentes"
-          valor={String(evolucoesPendentes)}
+          valor={evolucoesPendentes > 0 ? String(evolucoesPendentes) : null}
           href="#pendentes"
           destaque={evolucoesPendentes > 0 ? "amber" : undefined}
+          sub={evolucoesPendentes > 0 ? `Últimos ${DIAS_PENDENCIA} dias` : undefined}
         />
         <Indicador
           rotulo="Lembretes a enviar"
-          valor={String(lembretesAEnviar)}
+          valor={lembretesAEnviar > 0 ? String(lembretesAEnviar) : null}
           href="/lembretes"
           destaque={lembretesAEnviar > 0 ? "amber" : undefined}
         />
@@ -282,6 +316,9 @@ export default async function DashboardPage() {
           valor={formatarBRL(recebido)}
           href="/financeiro"
           destaque="green"
+          sensivel
+          sub={previsto > recebido ? `de ${formatarBRL(previsto)} previstos` : undefined}
+          progresso={previsto > 0 ? recebido / previsto : undefined}
         />
       </div>
 
@@ -334,7 +371,9 @@ export default async function DashboardPage() {
                   className="flex items-center justify-between gap-3 px-4 py-3"
                 >
                   <span className="min-w-0 break-words text-sm">
-                    <span className="font-medium">{pac.nome}</span>
+                    <span className="font-medium" data-sensivel>
+                      {pac.nome}
+                    </span>
                     <span className="block text-xs text-slate-500">
                       {rotuloPassado(dataChaveBR(c.inicio))} · {horaBR(c.inicio)}
                     </span>
@@ -373,7 +412,7 @@ export default async function DashboardPage() {
             )}
           </h2>
 
-          {consultasHoje.length === 0 ? (
+          {consultasDoDia.length === 0 ? (
             <EstadoVazio
               icon={CalendarCheck}
               titulo="Sem consultas hoje"
@@ -393,46 +432,63 @@ export default async function DashboardPage() {
             </EstadoVazio>
           ) : (
             <ul className="card divide-y p-0">
-              {consultasHoje.map((c) => {
+              {consultasDoDia.map((c) => {
                 const pac = unico(c.pacientes);
                 const estado = estadoSessao(c.inicio, c.fim, agora);
+                const visual = estadoVisual(c, agora);
                 const evolucaoId = evolucaoDe(c);
                 const min = minutosAteInicio(c.inicio, agora);
+                const ativa = c.status !== "cancelada" && c.status !== "falta";
+                const proxima = proximaHoje?.id === c.id;
 
                 return (
                   <li
                     key={c.id}
-                    className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    className={`flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${
+                      c.status === "cancelada" ? "opacity-70" : ""
+                    } ${proxima && meetEmDestaque(estado) ? "bg-teal-50/60" : ""}`}
                   >
                     <Link
-                      href={`/agenda/${c.id}`}
-                      className="flex min-w-0 flex-col hover:underline"
+                      href={`/agenda?consulta=${c.id}`}
+                      className="flex min-w-0 items-start gap-3 hover:underline"
                     >
-                      <span className="break-words font-medium">
-                        {horaBR(c.inicio)}–{horaBR(c.fim)} · {pac?.nome ?? "Paciente"}
+                      <span className="flex w-12 shrink-0 flex-col text-sm">
+                        <span className="font-semibold">{horaBR(c.inicio)}</span>
+                        <span className="text-xs text-slate-500">{horaBR(c.fim)}</span>
                       </span>
-                      <span className="text-xs text-slate-500">
-                        {MODALIDADE_LABEL[c.modalidade]}
-                        {estado === "em_andamento" && (
-                          <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-800">
-                            Em andamento
-                          </span>
-                        )}
-                        {(estado === "proxima" || (estado === "futura" && min <= 60)) && (
-                          <span className="ml-2 text-teal-700">
-                            Começa em {min} min
-                          </span>
-                        )}
-                        {estado === "encerrada" && !evolucaoId && (
-                          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
-                            Evolução pendente
-                          </span>
-                        )}
+                      <span className="flex min-w-0 flex-col">
+                        <span className="break-words font-medium" data-sensivel>
+                          {pac?.nome ?? "Paciente"}
+                        </span>
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                          {MODALIDADE_LABEL[c.modalidade]}
+                          <EstadoBadge estado={visual} />
+                          {ativa && estado === "em_andamento" && (
+                            <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-800">
+                              Em andamento
+                            </span>
+                          )}
+                          {c.status === "agendada" &&
+                            (estado === "proxima" || (estado === "futura" && min <= 60)) && (
+                              <span className="font-medium text-teal-800">
+                                Começa em {min} min
+                              </span>
+                            )}
+                          {!evolucaoId && exigeEvolucao(c, agora) && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
+                              Evolução pendente
+                            </span>
+                          )}
+                        </span>
                       </span>
                     </Link>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      {estado === "encerrada" ? (
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                      {c.status === "cancelada" ? (
+                        <Link href={`/agenda/${c.id}/editar`} className="btn btn-outline btn-sm">
+                          Remarcar
+                        </Link>
+                      ) : c.status === "falta" ? null : estado === "encerrada" ? (
                         evolucaoId && pac ? (
                           <Link
                             href={`/pacientes/${pac.id}/evolucoes/${evolucaoId}`}
@@ -504,12 +560,12 @@ export default async function DashboardPage() {
                     {lista.map((c) => (
                       <li key={c.id}>
                         <Link
-                          href={`/agenda/${c.id}`}
+                          href={`/agenda?consulta=${c.id}`}
                           className="flex items-baseline justify-between gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-slate-50"
                         >
                           <span className="min-w-0 break-words">
-                            <span className="font-medium">{horaBR(c.inicio)}</span>{" "}
-                            · {unico(c.pacientes)?.nome ?? "Paciente"}
+                            <span className="font-medium">{horaBR(c.inicio)}</span> ·{" "}
+                            <span data-sensivel>{unico(c.pacientes)?.nome ?? "Paciente"}</span>
                           </span>
                           <span className="shrink-0 text-xs text-slate-500">
                             {MODALIDADE_LABEL[c.modalidade]}
@@ -528,16 +584,29 @@ export default async function DashboardPage() {
   );
 }
 
+function saudacao(agora: Date): string {
+  const h = Number(horaBR(agora.toISOString()).slice(0, 2));
+  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+}
+
 function Indicador({
   rotulo,
   valor,
   href,
   destaque,
+  sub,
+  sensivel = false,
+  progresso,
 }: {
   rotulo: string;
-  valor: string;
+  /** null = nada pendente: mostra "Tudo em dia". */
+  valor: string | null;
   href: string;
   destaque?: "green" | "amber" | "red";
+  sub?: string;
+  sensivel?: boolean;
+  /** 0–1: barra de progresso abaixo do valor. */
+  progresso?: number;
 }) {
   const tom = {
     green: "text-green-700",
@@ -545,15 +614,42 @@ function Indicador({
     red: "text-red-700",
   }[destaque ?? "green"];
   return (
-    <Link href={href} className="card block hover:border-teal-300">
-      <div className="text-xs text-slate-500">{rotulo}</div>
-      <div
-        className={`mt-1 text-xl font-semibold sm:text-2xl ${
-          destaque ? tom : "text-slate-900"
-        }`}
-      >
-        {valor}
-      </div>
+    <Link
+      href={href}
+      className="card flex flex-col gap-1 hover:border-teal-300"
+    >
+      <span className="flex items-center justify-between text-xs text-slate-500">
+        {rotulo}
+        <ChevronRight className="size-4" aria-hidden />
+      </span>
+      {valor === null ? (
+        <span className="flex items-center gap-1.5 text-lg font-semibold text-teal-700 sm:text-xl">
+          <Check className="size-5" aria-hidden />
+          Tudo em dia
+        </span>
+      ) : (
+        <span
+          className={`text-xl font-semibold sm:text-2xl ${
+            destaque ? tom : "text-slate-900"
+          }`}
+          data-sensivel={sensivel || undefined}
+        >
+          {valor}
+        </span>
+      )}
+      {sub && (
+        <span className="text-xs text-slate-500" data-sensivel={sensivel || undefined}>
+          {sub}
+        </span>
+      )}
+      {progresso !== undefined && (
+        <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-slate-200">
+          <span
+            className="block h-full rounded-full bg-teal-700"
+            style={{ width: `${Math.min(100, Math.round(progresso * 100))}%` }}
+          />
+        </span>
+      )}
     </Link>
   );
 }

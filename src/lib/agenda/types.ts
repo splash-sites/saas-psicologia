@@ -1,7 +1,12 @@
 export const MODALIDADES = ["online", "presencial"] as const;
 export type Modalidade = (typeof MODALIDADES)[number];
 
-export const CONSULTA_STATUS = ["agendada", "realizada", "cancelada"] as const;
+export const CONSULTA_STATUS = [
+  "agendada",
+  "realizada",
+  "falta",
+  "cancelada",
+] as const;
 export type ConsultaStatus = (typeof CONSULTA_STATUS)[number];
 
 export const RECORRENCIAS = [
@@ -27,6 +32,7 @@ export const MODALIDADE_LABEL: Record<Modalidade, string> = {
 export const CONSULTA_STATUS_LABEL: Record<ConsultaStatus, string> = {
   agendada: "Agendada",
   realizada: "Realizada",
+  falta: "Faltou",
   cancelada: "Cancelada",
 };
 
@@ -55,6 +61,8 @@ export type Consulta = {
   status: ConsultaStatus;
   recorrencia: Recorrencia;
   serie_id: string | null;
+  /** Marcada à mão pela psicóloga quando o paciente confirma; remarcar limpa. */
+  confirmada_em: string | null;
   observacoes: string | null;
   google_event_id: string | null;
   meet_link: string | null;

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { LogOut, Menu, X } from "lucide-react";
 import { NavLinks } from "./NavLinks";
+import { ModoPrivado } from "./ModoPrivado";
 import { signOut } from "@/app/(app)/dashboard/actions";
 
 // Barra superior + menu deslizante, só em telas < md (no desktop existe a
@@ -28,15 +29,18 @@ export function MobileNav({ email }: { email: string }) {
         <span className="text-sm font-semibold text-teal-800">
           Gestão para Psicólogas
         </span>
-        <button
-          type="button"
-          aria-label="Abrir menu"
-          aria-expanded={aberto}
-          onClick={() => setAberto(true)}
-          className="btn btn-outline size-11 !min-h-0 !p-0"
-        >
-          <Menu className="size-5" aria-hidden />
-        </button>
+        <div className="flex items-center gap-2">
+          <ModoPrivado compacto />
+          <button
+            type="button"
+            aria-label="Abrir menu"
+            aria-expanded={aberto}
+            onClick={() => setAberto(true)}
+            className="btn btn-outline size-11 !min-h-0 !p-0"
+          >
+            <Menu className="size-5" aria-hidden />
+          </button>
+        </div>
       </header>
 
       {aberto && (

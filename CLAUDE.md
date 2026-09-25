@@ -140,6 +140,10 @@ Módulos 1, 3, 4, 5, 6, 7 e 8 implementados e testados. **Módulo 2 (assinatura/
 - **Fuso:** horários são interpretados em Brasília com offset fixo `-03:00` (sem horário de verão desde 2019). Trocar por fuso real se o produto atender outros fusos.
 - **Google Calendar:** sincronização de mão única; falha no Google nunca derruba o agendamento local. O refresh token só é guardado se a permissão da Agenda foi concedida. `observacoes` da consulta **não** vão para o evento (o paciente convidado as veria).
 - **Migrations no cloud** são aplicadas manualmente no SQL Editor do Supabase (CLI não linkada).
+- **Confirmação de presença é manual** (`consultas.confirmada_em`): a psicóloga marca "paciente confirmou" no painel da consulta. O lembrete continua só informativo e o sistema não lê respostas. Remarcar limpa a confirmação.
+- **Status `falta`**: paciente não compareceu. Ocupa o horário e não gera pendência de evolução.
+- **Agenda:** grade semanal de horários (tablet/desktop) e visão Dia (celular); painel lateral da consulta via `?consulta=<id>`. Arrastar para remarcar ficou para depois.
+- **Modo privado (Alt+O):** borra tudo marcado com `data-sensivel` (nomes de pacientes, valores), para compartilhar a tela. Preferência só no navegador (localStorage).
 
 <!-- BEGIN:nextjs-agent-rules -->
 

@@ -31,7 +31,14 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Modo privado (Alt+O): borra nomes e valores para compartilhar a tela. */
+html[data-privado] [data-sensivel] {
+  filter: blur(6px);
+  user-select: none;
 }
 
 /* Componentes reutilizáveis. Tamanhos pensados para toque: 44px no celular,

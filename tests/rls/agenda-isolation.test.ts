@@ -108,4 +108,44 @@ describe.skipIf(!hasLocalSupabase)("RLS: consultas e bloqueios", () => {
       .eq("id", bloq!.id);
     expect(aindaExiste).toHaveLength(1);
   });
+
+  it("psicóloga A não confirma nem marca falta em consulta da psicóloga B", async () => {
+    const s = Date.now();
+    const a = await signUpPsicologa(`ag-a5-${s}@teste.local`);
+    const b = await signUpPsicologa(`ag-b5-${s}@teste.local`);
+    const ca = userClient(a.accessToken);
+    const cb = userClient(b.accessToken);
+
+    const pacB = await criarPaciente(cb, b.id);
+    const { data: consulta } = await cb
+      .from("consultas")
+      .insert({
+        psicologa_id: b.id,
+        paciente_id: pacB,
+        inicio: "2026-03-13T13:00:00Z",
+        fim: "2026-03-13T13:50:00Z",
+        modalidade: "presencial",
+      })
+      .select("id")
+      .single();
+
+    await ca
+      .from("consultas")
+      .update({ confirmada_em: new Date().toISOString(), status: "falta" })
+      .eq("id", consulta!.id);
+
+    const { data: depois } = await cb
+      .from("consultas")
+      .select("status, confirmada_em")
+      .eq("id", consulta!.id)
+      .single();
+    expect(depois).toEqual({ status: "agendada", confirmada_em: null });
+
+    // A dona consegue.
+    const { error } = await cb
+      .from("consultas")
+      .update({ status: "falta" })
+      .eq("id", consulta!.id);
+    expect(error).toBeNull();
+  });
 });

@@ -163,6 +163,15 @@ export async function atualizarConsulta(
     }
   }
 
+  // Remarcou? A confirmação do paciente era para o horário antigo.
+  const { data: atual } = await supabase
+    .from("consultas")
+    .select("inicio")
+    .eq("id", id)
+    .maybeSingle();
+  const remarcou =
+    !atual || new Date(atual.inicio).getTime() !== inicio.getTime();
+
   const { error } = await supabase
     .from("consultas")
     .update({
@@ -171,6 +180,7 @@ export async function atualizarConsulta(
       modalidade: v.modalidade,
       status: v.status,
       observacoes: v.observacoes ?? null,
+      ...(remarcou ? { confirmada_em: null } : {}),
     })
     .eq("id", id)
     .is("deleted_at", null);
@@ -227,6 +237,59 @@ export async function cancelarConsulta(
 
   revalidatePath("/agenda");
   redirect("/agenda");
+}
+
+// Para onde voltar depois de uma ação rápida (painel lateral da agenda ou
+// painel inicial). Só caminhos internos conhecidos — nunca um redirect aberto.
+function destinoSeguro(voltar: string): string {
+  return /^\/(agenda|dashboard)(\/|\?|$)/.test(voltar) && !voltar.includes("//")
+    ? voltar
+    : "/agenda";
+}
+
+/** Marca uma sessão como realizada, falta ou de volta para agendada. */
+export async function definirStatusConsulta(
+  id: string,
+  status: "realizada" | "falta" | "agendada",
+  voltar: string,
+  _formData: FormData,
+): Promise<void> {
+  const { supabase } = await requirePsicologa();
+  if (!["realizada", "falta", "agendada"].includes(status)) redirect("/agenda");
+
+  await supabase
+    .from("consultas")
+    .update({ status })
+    .eq("id", id)
+    .neq("status", "cancelada")
+    .is("deleted_at", null);
+
+  revalidatePath("/agenda");
+  revalidatePath("/dashboard");
+  revalidatePath(`/agenda/${id}`);
+  redirect(destinoSeguro(voltar));
+}
+
+/** Confirmação manual: a psicóloga registra que o paciente confirmou. */
+export async function definirConfirmacao(
+  id: string,
+  confirmada: boolean,
+  voltar: string,
+  _formData: FormData,
+): Promise<void> {
+  const { supabase } = await requirePsicologa();
+
+  await supabase
+    .from("consultas")
+    .update({ confirmada_em: confirmada ? new Date().toISOString() : null })
+    .eq("id", id)
+    .eq("status", "agendada")
+    .is("deleted_at", null);
+
+  revalidatePath("/agenda");
+  revalidatePath("/dashboard");
+  revalidatePath(`/agenda/${id}`);
+  redirect(destinoSeguro(voltar));
 }
 
 export async function sincronizarConsultaAgora(

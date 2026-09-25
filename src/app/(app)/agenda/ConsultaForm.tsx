@@ -13,6 +13,9 @@ import type { FormState } from "./actions";
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   pacientes: { id: string; nome: string }[];
+  /** Vindos do clique num horário vazio da agenda. */
+  dataPadrao?: string;
+  horaPadrao?: string;
 };
 
 function FieldError({ errors }: { errors?: string[] }) {
@@ -20,7 +23,7 @@ function FieldError({ errors }: { errors?: string[] }) {
   return <p className="mt-1 text-xs text-red-600">{errors[0]}</p>;
 }
 
-export function ConsultaForm({ action, pacientes }: Props) {
+export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
     {},
@@ -55,6 +58,7 @@ export function ConsultaForm({ action, pacientes }: Props) {
           <input
             name="data"
             type="date"
+            defaultValue={dataPadrao}
             required
             className="input"
           />
@@ -65,6 +69,7 @@ export function ConsultaForm({ action, pacientes }: Props) {
           <input
             name="hora"
             type="time"
+            defaultValue={horaPadrao}
             required
             className="input"
           />

@@ -1,194 +1,390 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Bloqueio, Consulta } from "@/lib/agenda/types";
-import {
-  MODALIDADE_LABEL,
-  CONSULTA_STATUS_LABEL,
-} from "@/lib/agenda/types";
 import {
   segundaDaSemana,
   diasDaSemana,
   addDias,
-  horaBR,
-  dataLongaBR,
   dataChaveBR,
   BR_OFFSET,
 } from "@/lib/agenda/datas";
+import {
+  estadoVisual,
+  exigeEvolucao,
+  faixaDeHoras,
+} from "@/lib/agenda/grade";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { GradeSemana } from "./GradeSemana";
+import { DiaLista } from "./DiaLista";
+import { PainelConsulta } from "./PainelConsulta";
+import { EstadoBadge, HACHURA_BLOQUEIO } from "./estilos";
+import {
+  agendaHref,
+  type ItemBloqueio,
+  type ItemConsulta,
+  type ParamsAgenda,
+} from "./tipos";
 
 export const metadata = { title: "Agenda" };
 
-type ConsultaComPaciente = Pick<
+type ConsultaRow = Pick<
   Consulta,
-  "id" | "inicio" | "fim" | "modalidade" | "status" | "meet_link"
-> & { pacientes: { nome: string } | null };
+  | "id"
+  | "inicio"
+  | "fim"
+  | "modalidade"
+  | "status"
+  | "recorrencia"
+  | "serie_id"
+  | "confirmada_em"
+  | "meet_link"
+> & { pacientes: { id: string; nome: string } | { id: string; nome: string }[] | null };
+
+const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+
+function unico<T>(v: T | T[] | null): T | null {
+  if (!v) return null;
+  return Array.isArray(v) ? (v[0] ?? null) : v;
+}
 
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ semana?: string }>;
+  searchParams: Promise<{
+    semana?: string;
+    dia?: string;
+    consulta?: string;
+    canceladas?: string;
+  }>;
 }) {
-  const { semana } = await searchParams;
+  const sp = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const segunda = /^\d{4}-\d{2}-\d{2}$/.test(semana ?? "")
-    ? semana!
-    : segundaDaSemana();
-  const dias = diasDaSemana(segunda);
-  const hoje = dataChaveBR(new Date().toISOString());
-  const inicioSemana = new Date(`${segunda}T00:00:00${BR_OFFSET}`).toISOString();
-  const fimSemana = new Date(
-    `${addDias(segunda, 7)}T00:00:00${BR_OFFSET}`,
-  ).toISOString();
+  const agora = new Date();
+  const agoraISO = agora.toISOString();
+  const hoje = dataChaveBR(agoraISO);
+  const consultaSel = sp.consulta && UUID_RE.test(sp.consulta) ? sp.consulta : undefined;
 
-  const [{ data: consultas }, { data: bloqueios }] = await Promise.all([
-    supabase
+  // Link direto para uma consulta (?consulta=) sem semana: abre a semana dela.
+  let segunda = sp.semana && DATA_RE.test(sp.semana) ? sp.semana : undefined;
+  let diaPadrao: string | undefined;
+  if (!segunda && consultaSel) {
+    const { data: alvo } = await supabase
       .from("consultas")
-      .select("id, inicio, fim, modalidade, status, meet_link, pacientes(nome)")
+      .select("inicio")
+      .eq("id", consultaSel)
       .is("deleted_at", null)
-      .gte("inicio", inicioSemana)
-      .lt("inicio", fimSemana)
-      .order("inicio"),
-    supabase
-      .from("bloqueios")
-      .select("id, inicio, fim, motivo")
-      .gte("inicio", inicioSemana)
-      .lt("inicio", fimSemana)
-      .order("inicio"),
+      .maybeSingle();
+    if (alvo) {
+      segunda = segundaDaSemana(new Date(alvo.inicio));
+      diaPadrao = dataChaveBR(alvo.inicio);
+    }
+  }
+  segunda ??= segundaDaSemana(agora);
+
+  const semana = diasDaSemana(segunda);
+  const dia =
+    sp.dia && semana.includes(sp.dia)
+      ? sp.dia
+      : (diaPadrao ?? (semana.includes(hoje) ? hoje : semana[0]));
+  const params: ParamsAgenda = {
+    semana: segunda,
+    dia: sp.dia && semana.includes(sp.dia) ? sp.dia : undefined,
+    consulta: consultaSel,
+    ocultarCanceladas: sp.canceladas === "0",
+  };
+
+  const inicioSemana = new Date(`${segunda}T00:00:00${BR_OFFSET}`).toISOString();
+  const fimSemana = new Date(`${addDias(segunda, 7)}T00:00:00${BR_OFFSET}`).toISOString();
+
+  const [{ data: consultasRaw }, { data: bloqueiosRaw }, { data: evolucoesRaw }] =
+    await Promise.all([
+      supabase
+        .from("consultas")
+        .select(
+          "id, inicio, fim, modalidade, status, recorrencia, serie_id, confirmada_em, meet_link, pacientes(id, nome)",
+        )
+        .is("deleted_at", null)
+        .gte("inicio", inicioSemana)
+        .lt("inicio", fimSemana)
+        .order("inicio"),
+      supabase
+        .from("bloqueios")
+        .select("id, inicio, fim, motivo")
+        .gte("inicio", inicioSemana)
+        .lt("inicio", fimSemana)
+        .order("inicio"),
+      supabase
+        .from("evolucoes")
+        .select("id, consulta_id, paciente_id, data_sessao")
+        .is("deleted_at", null)
+        .gte("data_sessao", semana[0])
+        .lte("data_sessao", semana[6]),
+    ]);
+
+  const rows = (consultasRaw ?? []) as unknown as ConsultaRow[];
+  const ids = rows.map((r) => r.id);
+
+  const [{ data: pagamentosRaw }, { data: lembreteRaw }] = await Promise.all([
+    ids.length
+      ? supabase
+          .from("pagamentos")
+          .select("id, consulta_id, valor, status, vencimento, created_at")
+          .is("deleted_at", null)
+          .in("consulta_id", ids)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as never[] }),
+    consultaSel
+      ? supabase
+          .from("lembretes")
+          .select("consulta_inicio, enviado_em")
+          .eq("consulta_id", consultaSel)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
-  const consultasPorDia = agrupar(
-    (consultas ?? []) as unknown as ConsultaComPaciente[],
-    (c) => dataChaveBR(c.inicio),
-  );
-  const bloqueiosPorDia = agrupar(
-    (bloqueios ?? []) as Pick<Bloqueio, "id" | "inicio" | "fim" | "motivo">[],
-    (b) => dataChaveBR(b.inicio),
-  );
+  // Evolução da sessão: ligada à consulta, ou do mesmo paciente no mesmo dia
+  // (evolução criada pela página do paciente não fica ligada à consulta).
+  const evoPorConsulta = new Map<string, string>();
+  const evoPorPacienteDia = new Map<string, string>();
+  for (const e of evolucoesRaw ?? []) {
+    if (e.consulta_id) evoPorConsulta.set(e.consulta_id as string, e.id as string);
+    evoPorPacienteDia.set(`${e.paciente_id}|${e.data_sessao}`, e.id as string);
+  }
+  // Mais recente primeiro: o primeiro visto por consulta é o que vale.
+  type Pag = { id: string; valor: number; status: "pendente" | "pago"; vencimento: string };
+  const pagPorConsulta = new Map<string, Pag>();
+  for (const p of pagamentosRaw ?? []) {
+    const cid = p.consulta_id as string;
+    if (!pagPorConsulta.has(cid)) {
+      pagPorConsulta.set(cid, {
+        id: p.id as string,
+        valor: Number(p.valor),
+        status: p.status as Pag["status"],
+        vencimento: p.vencimento as string,
+      });
+    }
+  }
+
+  const todas: ItemConsulta[] = rows.map((r) => {
+    const paciente = unico(r.pacientes);
+    const evolucaoId =
+      evoPorConsulta.get(r.id) ??
+      (paciente
+        ? evoPorPacienteDia.get(`${paciente.id}|${dataChaveBR(r.inicio)}`)
+        : undefined);
+    return {
+      id: r.id,
+      inicio: r.inicio,
+      fim: r.fim,
+      modalidade: r.modalidade,
+      status: r.status,
+      recorrencia: r.recorrencia,
+      serie_id: r.serie_id,
+      confirmada_em: r.confirmada_em,
+      meet_link: r.meet_link,
+      paciente,
+      estado: estadoVisual(r, agora),
+      evolucaoId,
+      evolucaoPendente: !evolucaoId && exigeEvolucao(r, agora),
+      pagamentoPendente: pagPorConsulta.get(r.id)?.status === "pendente",
+    };
+  });
+
+  const visiveis = params.ocultarCanceladas
+    ? todas.filter((c) => c.status !== "cancelada" || c.id === consultaSel)
+    : todas;
+  const bloqueios = (bloqueiosRaw ?? []) as Pick<
+    Bloqueio,
+    "id" | "inicio" | "fim" | "motivo"
+  >[] as ItemBloqueio[];
+
+  const consultasPorDia = agrupar(visiveis, (c) => dataChaveBR(c.inicio));
+  const bloqueiosPorDia = agrupar(bloqueios, (b) => dataChaveBR(b.inicio));
+
+  // Domingo só aparece na grade se houver algo nele.
+  const domingo = semana[6];
+  const diasGrade =
+    consultasPorDia.has(domingo) || bloqueiosPorDia.has(domingo)
+      ? semana
+      : semana.slice(0, 6);
+  const faixa = faixaDeHoras([...visiveis, ...bloqueios]);
+
+  const contagem = {
+    ativas: todas.filter((c) => c.status !== "cancelada").length,
+    confirmadas: todas.filter((c) => c.estado === "confirmada").length,
+    aConfirmar: todas.filter((c) => c.estado === "a_confirmar").length,
+    canceladas: todas.filter((c) => c.status === "cancelada").length,
+    faltas: todas.filter((c) => c.status === "falta").length,
+  };
+
+  const selecionada = consultaSel ? todas.find((c) => c.id === consultaSel) : undefined;
+  const lembrete = lembreteRaw as { consulta_inicio: string; enviado_em: string } | null;
+  const lembreteValido =
+    selecionada &&
+    lembrete &&
+    new Date(lembrete.consulta_inicio).getTime() === new Date(selecionada.inicio).getTime()
+      ? lembrete.enviado_em
+      : null;
 
   return (
-    <div className="flex w-full max-w-6xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-4">
+      <AutoRefresh />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Agenda</h1>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/lembretes"
-            className="btn btn-outline"
-          >
-            Lembretes
-          </Link>
-          <Link
-            href="/agenda/bloqueios"
-            className="btn btn-outline"
-          >
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <h1 className="text-xl font-semibold sm:text-2xl">Agenda</h1>
+          <div className="flex items-center gap-1">
+            <Link
+              href={agendaHref({ semana: addDias(segunda, -7), ocultarCanceladas: params.ocultarCanceladas })}
+              className="btn btn-outline size-10 !min-h-0 !p-0"
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft className="size-4" aria-hidden />
+            </Link>
+            <Link
+              href={params.ocultarCanceladas ? "/agenda?canceladas=0" : "/agenda"}
+              className="btn btn-outline"
+            >
+              Hoje
+            </Link>
+            <Link
+              href={agendaHref({ semana: addDias(segunda, 7), ocultarCanceladas: params.ocultarCanceladas })}
+              className="btn btn-outline size-10 !min-h-0 !p-0"
+              aria-label="Próxima semana"
+            >
+              <ChevronRight className="size-4" aria-hidden />
+            </Link>
+          </div>
+          <span className="text-base font-semibold">{rotuloSemana(semana)}</span>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/agenda/bloqueios" className="btn btn-outline">
             Bloqueios
           </Link>
-          <Link
-            href="/agenda/nova"
-            className="btn btn-primary"
-          >
+          <Link href="/agenda/nova" className="btn btn-primary">
+            <Plus className="size-4" aria-hidden />
             Nova consulta
           </Link>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Link
-          href={`/agenda?semana=${addDias(segunda, -7)}`}
-          className="btn btn-outline"
-          aria-label="Semana anterior"
-        >
-          <span aria-hidden>←</span>
-          <span className="hidden sm:inline">Semana anterior</span>
-        </Link>
-        <Link href="/agenda" className="btn btn-outline">
-          Hoje
-        </Link>
-        <Link
-          href={`/agenda?semana=${addDias(segunda, 7)}`}
-          className="btn btn-outline"
-          aria-label="Próxima semana"
-        >
-          <span className="hidden sm:inline">Próxima semana</span>
-          <span aria-hidden>→</span>
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-700">
+        <div className="flex flex-wrap gap-2">
+          <Chip>
+            <b>{contagem.ativas}</b> {contagem.ativas === 1 ? "consulta" : "consultas"}
+          </Chip>
+          {contagem.confirmadas + contagem.aConfirmar > 0 && (
+            <Chip>
+              <b>{contagem.confirmadas}</b> confirmada{contagem.confirmadas === 1 ? "" : "s"} ·{" "}
+              <b>{contagem.aConfirmar}</b> a confirmar
+            </Chip>
+          )}
+          {contagem.canceladas + contagem.faltas > 0 && (
+            <Chip>
+              <b>{contagem.canceladas}</b> cancelada{contagem.canceladas === 1 ? "" : "s"} ·{" "}
+              <b>{contagem.faltas}</b> falta{contagem.faltas === 1 ? "" : "s"}
+            </Chip>
+          )}
+        </div>
+        {contagem.canceladas > 0 && (
+          <Link
+            href={agendaHref({ ...params, consulta: undefined, ocultarCanceladas: !params.ocultarCanceladas })}
+            scroll={false}
+            className="text-sm font-medium text-teal-800 hover:underline"
+          >
+            {params.ocultarCanceladas ? "Mostrar canceladas" : "Ocultar canceladas"}
+          </Link>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
-        {dias.map((dia) => {
-          const cs = consultasPorDia.get(dia) ?? [];
-          const bs = bloqueiosPorDia.get(dia) ?? [];
-          return (
-            <div
-              key={dia}
-              className={`flex flex-col gap-2 rounded-xl border p-3 ${
-                dia === hoje
-                  ? "border-teal-500 bg-teal-50/50"
-                  : "bg-white"
-              }`}
-            >
-              <h2 className="text-xs font-semibold first-letter:uppercase text-slate-600">
-                {dataLongaBR(`${dia}T12:00:00${BR_OFFSET}`)}
-              </h2>
-              {cs.length === 0 && bs.length === 0 && (
-                <p className="text-xs text-slate-400">—</p>
-              )}
-              {cs.map((c) => (
-                <div
-                  key={c.id}
-                  className={`rounded-md border text-xs ${
-                    c.status === "cancelada" ? "opacity-50" : ""
-                  }`}
-                >
-                  <Link
-                    href={`/agenda/${c.id}`}
-                    className={`block px-2 py-1.5 hover:bg-slate-50 ${
-                      c.status === "cancelada" ? "line-through" : ""
-                    }`}
-                  >
-                    <div className="font-medium">
-                      {horaBR(c.inicio)}–{horaBR(c.fim)}
-                    </div>
-                    <div>{c.pacientes?.nome ?? "Paciente"}</div>
-                    <div className="text-slate-500">
-                      {MODALIDADE_LABEL[c.modalidade]}
-                      {c.status !== "agendada" &&
-                        ` · ${CONSULTA_STATUS_LABEL[c.status]}`}
-                    </div>
-                  </Link>
-                  {c.meet_link && c.status !== "cancelada" && (
-                    <a
-                      href={c.meet_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block border-t px-2 py-1 text-blue-700 underline hover:bg-slate-50"
-                    >
-                      Entrar no Meet
-                    </a>
-                  )}
-                </div>
-              ))}
-              {bs.map((b) => (
-                <div
-                  key={b.id}
-                  className="rounded-md border border-dashed bg-slate-50 px-2 py-1.5 text-xs text-slate-500"
-                >
-                  <div className="font-medium">
-                    {horaBR(b.inicio)}–{horaBR(b.fim)}
-                  </div>
-                  <div>Bloqueado{b.motivo ? ` · ${b.motivo}` : ""}</div>
-                </div>
-              ))}
-            </div>
-          );
-        })}
+      <div className="hidden md:block">
+        <GradeSemana
+          dias={diasGrade}
+          hoje={hoje}
+          agoraISO={agoraISO}
+          consultasPorDia={consultasPorDia}
+          bloqueiosPorDia={bloqueiosPorDia}
+          faixa={faixa}
+          params={params}
+        />
       </div>
+      <div className="md:hidden">
+        <DiaLista
+          semana={semana}
+          dia={dia}
+          hoje={hoje}
+          agoraISO={agoraISO}
+          consultasPorDia={consultasPorDia}
+          bloqueiosPorDia={bloqueiosPorDia}
+          params={params}
+        />
+      </div>
+
+      <Legenda />
+
+      {selecionada && (
+        <PainelConsulta
+          c={selecionada}
+          pagamento={pagPorConsulta.get(selecionada.id) ?? null}
+          lembreteEnviadoEm={lembreteValido}
+          hoje={hoje}
+          agoraISO={agoraISO}
+          fecharHref={agendaHref({ ...params, consulta: undefined })}
+          aquiHref={agendaHref(params)}
+        />
+      )}
     </div>
   );
+}
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 [&_b]:font-bold [&_b]:text-slate-900">
+      {children}
+    </span>
+  );
+}
+
+function Legenda() {
+  return (
+    <div className="hidden flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-600 md:flex">
+      <EstadoBadge estado="confirmada" />
+      <EstadoBadge estado="a_confirmar" />
+      <EstadoBadge estado="realizada" />
+      <EstadoBadge estado="falta" />
+      <EstadoBadge estado="cancelada" />
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-3 w-4 rounded border border-slate-200" style={HACHURA_BLOQUEIO} />
+        Bloqueio
+      </span>
+      <span className="ml-auto text-slate-500">
+        Clique num horário vazio para agendar
+      </span>
+    </div>
+  );
+}
+
+const MESES = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
+/** "21 – 27 de setembro de 2026" ou "28 de setembro – 4 de outubro de 2026". */
+function rotuloSemana(semana: string[]): string {
+  const [a, b] = [semana[0], semana[6]];
+  const [ya, ma, da] = a.split("-").map(Number);
+  const [yb, mb, db] = b.split("-").map(Number);
+  if (ya !== yb) return `${da} de ${MESES[ma - 1]} de ${ya} – ${db} de ${MESES[mb - 1]} de ${yb}`;
+  if (ma !== mb) return `${da} de ${MESES[ma - 1]} – ${db} de ${MESES[mb - 1]} de ${yb}`;
+  return `${da} – ${db} de ${MESES[mb - 1]} de ${yb}`;
 }
 
 function agrupar<T>(itens: T[], chave: (t: T) => string): Map<string, T[]> {

@@ -8,6 +8,7 @@ import {
   ehErroDeEscopo,
   MSG_SEM_PERMISSAO_CALENDAR,
 } from "@/lib/google/calendar";
+import type { ConsultaStatus } from "./types";
 
 type PacienteEmbed = {
   nome: string;
@@ -20,7 +21,7 @@ type ConsultaRow = {
   inicio: string;
   fim: string;
   modalidade: "online" | "presencial";
-  status: "agendada" | "realizada" | "cancelada";
+  status: ConsultaStatus;
   google_event_id: string | null;
   pacientes: PacienteEmbed | PacienteEmbed[] | null;
 };

@@ -6,7 +6,12 @@ import { ConsultaForm } from "../ConsultaForm";
 
 export const metadata = { title: "Nova consulta" };
 
-export default async function NovaConsultaPage() {
+export default async function NovaConsultaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ data?: string; hora?: string }>;
+}) {
+  const { data: dataQ, hora: horaQ } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,7 +38,12 @@ export default async function NovaConsultaPage() {
           </Link>
         </p>
       ) : (
-        <ConsultaForm action={criarConsulta} pacientes={lista} />
+        <ConsultaForm
+          action={criarConsulta}
+          pacientes={lista}
+          dataPadrao={dataQ && /^\d{4}-\d{2}-\d{2}$/.test(dataQ) ? dataQ : undefined}
+          horaPadrao={horaQ && /^\d{2}:\d{2}$/.test(horaQ) ? horaQ : undefined}
+        />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MODALIDADES, RECORRENCIAS } from "./types";
+import { CONSULTA_STATUS, MODALIDADES, RECORRENCIAS } from "./types";
 
 const dataStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
 const horaStr = z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida");
@@ -32,7 +32,7 @@ export const consultaEdicaoSchema = z.object({
   hora: horaStr,
   duracao_min: z.coerce.number().int().min(15).max(480),
   modalidade: z.enum(MODALIDADES),
-  status: z.enum(["agendada", "realizada", "cancelada"]),
+  status: z.enum(CONSULTA_STATUS),
   observacoes: z
     .string()
     .trim()

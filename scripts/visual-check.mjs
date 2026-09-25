@@ -57,7 +57,8 @@ const slot = (dia, hora, min = 50) => {
 };
 
 async function criarUsuario(email, nome) {
-  const { data: lista } = await admin.auth.admin.listUsers();
+  // perPage alto: os testes de RLS criam muitos usuários e a lista pagina.
+  const { data: lista } = await admin.auth.admin.listUsers({ perPage: 10000 });
   const antigo = lista.users.find((u) => u.email === email);
   if (antigo) await admin.auth.admin.deleteUser(antigo.id);
   const { data: criado, error } = await admin.auth.admin.createUser({
@@ -96,12 +97,16 @@ async function semear() {
   // encerrada com evolução | encerrada SEM evolução | começa em 5 min (Meet em destaque) | mais tarde
   const consultaLaura = await ins(laura, rel(-180), { modalidade: "online", meet_link: meet, sync_status: "sincronizada" });
   await ins(marcos, rel(-90));
-  await ins(ana, rel(5), { modalidade: "online", meet_link: meet });
+  // começa em 5 min, paciente já confirmou (painel lateral da agenda abre nela)
+  const consultaAna = await ins(ana, rel(5), {
+    modalidade: "online", meet_link: meet, confirmada_em: new Date().toISOString(),
+  });
   await ins(laura, rel(180), { modalidade: "online", meet_link: meet });
   // pendências de dias anteriores (sessões encerradas sem evolução)
   await ins(marcos, rel(-26 * 60));
   await ins(laura, rel(-3 * 24 * 60), { modalidade: "online", meet_link: meet });
   await ins(ana, rel(-9 * 24 * 60));
+  await ins(marcos, rel(-2 * 24 * 60), { status: "falta" });
   await cons(laura, somaDias(1), "14:00", { modalidade: "online", meet_link: meet });
   await cons(marcos, somaDias(2), "08:00", { status: "cancelada" });
   await cons(laura, somaDias(3), "16:00");
@@ -124,7 +129,7 @@ async function semear() {
     pag(ana, 150, "pendente", somaDias(-20), somaDias(-10)),
   ]);
 
-  return { pid, laura, consultaLaura };
+  return { pid, laura, consultaLaura, consultaAna };
 }
 
 // ---------- cookie de sessão (formato do @supabase/ssr) ----------
@@ -172,7 +177,7 @@ function subirApp() {
 const horaBRT = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(new Date()));
 if (horaBRT < 4 || horaBRT >= 20) console.warn("Aviso: horário perto da virada do dia; os estados do painel podem não aparecer como esperado.");
 
-const { laura, consultaLaura } = await semear();
+const { laura, consultaLaura, consultaAna } = await semear();
 const cookies = await cookiesDeSessao(EMAIL);
 // Usuária sem nenhum dado: exercita os estados vazios do painel.
 const EMAIL_VAZIO = "visual-vazio@teste.local";
@@ -190,6 +195,7 @@ const browser = await chromium.launch({ executablePath: executavel });
 const TELAS = [
   ["painel", "/dashboard"],
   ["agenda", "/agenda"],
+  ["agenda-painel", `/agenda?consulta=${consultaAna}`],
   ["agenda-nova", "/agenda/nova"],
   ["consulta", `/agenda/${consultaLaura}`],
   ["pacientes", "/pacientes"],
