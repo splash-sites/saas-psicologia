@@ -36,3 +36,17 @@ export function minutosAteInicio(inicioISO: string, agora: Date): number {
   const diff = new Date(inicioISO).getTime() - agora.getTime();
   return diff <= 0 ? 0 : Math.ceil(diff / 60_000);
 }
+
+/** Janela (em dias) em que uma sessão sem evolução aparece como pendência. */
+export const DIAS_PENDENCIA = 14;
+
+/**
+ * Sessões cuja evolução ainda não foi registrada. `idsComEvolucao` são os ids
+ * de consulta que já têm uma evolução ativa vinculada.
+ */
+export function consultasSemEvolucao<T extends { id: string }>(
+  consultas: T[],
+  idsComEvolucao: Set<string>,
+): T[] {
+  return consultas.filter((c) => !idsComEvolucao.has(c.id));
+}

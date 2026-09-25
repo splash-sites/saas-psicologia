@@ -59,3 +59,28 @@ describe("minutosAteInicio", () => {
     expect(minutosAteInicio(inicio, em("2026-03-10T13:05:00.000Z"))).toBe(0);
   });
 });
+
+import { consultasSemEvolucao, DIAS_PENDENCIA } from "@/lib/agenda/estado";
+
+describe("consultasSemEvolucao", () => {
+  const consultas = [{ id: "a" }, { id: "b" }, { id: "c" }];
+
+  it("devolve só as sessões sem evolução, na mesma ordem", () => {
+    expect(consultasSemEvolucao(consultas, new Set(["b"]))).toEqual([
+      { id: "a" },
+      { id: "c" },
+    ]);
+  });
+
+  it("sem nenhuma evolução, todas estão pendentes", () => {
+    expect(consultasSemEvolucao(consultas, new Set())).toHaveLength(3);
+  });
+
+  it("com todas registradas, não sobra pendência", () => {
+    expect(consultasSemEvolucao(consultas, new Set(["a", "b", "c"]))).toEqual([]);
+  });
+
+  it("a janela de pendência é de 14 dias", () => {
+    expect(DIAS_PENDENCIA).toBe(14);
+  });
+});

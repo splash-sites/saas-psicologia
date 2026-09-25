@@ -22,6 +22,8 @@ import {
   BR_OFFSET,
 } from "@/lib/agenda/datas";
 import {
+  DIAS_PENDENCIA,
+  consultasSemEvolucao,
   estadoSessao,
   meetEmDestaque,
   minutosAteInicio,
@@ -53,6 +55,13 @@ type ConsultaProxima = {
   pacientes: PacienteRef | PacienteRef[] | null;
 };
 
+type ConsultaPassada = {
+  id: string;
+  inicio: string;
+  fim: string;
+  pacientes: PacienteRef | PacienteRef[] | null;
+};
+
 function unico<T>(v: T | T[] | null): T | null {
   if (!v) return null;
   return Array.isArray(v) ? (v[0] ?? null) : v;
@@ -73,6 +82,9 @@ export default async function DashboardPage() {
   const { inicio: diaIni, fim: diaFim } = intervaloDiaBR(hoje);
   const limiteProximos = intervaloDiaBR(addDias(hoje, DIAS_PROXIMOS + 1)).inicio;
   const mes = mesAtual();
+  const desdePendencias = new Date(
+    agora.getTime() - DIAS_PENDENCIA * 86_400_000,
+  ).toISOString();
 
   const { data: pref } = await supabase
     .from("preferencias_lembrete")
@@ -86,6 +98,7 @@ export default async function DashboardPage() {
     { data: psicologa },
     { data: consultasHojeRaw },
     { data: proximasRaw },
+    { data: passadasRaw },
     { data: consultasAlvoRaw },
     { data: recebidosRaw },
     { count: atrasados },
@@ -108,6 +121,16 @@ export default async function DashboardPage() {
       .lt("inicio", limiteProximos)
       .order("inicio")
       .limit(MAX_PROXIMOS),
+    // Sessões já encerradas (não canceladas) nos últimos DIAS_PENDENCIA dias.
+    supabase
+      .from("consultas")
+      .select("id, inicio, fim, pacientes(id, nome)")
+      .neq("status", "cancelada")
+      .is("deleted_at", null)
+      .gte("inicio", desdePendencias)
+      .lt("fim", agora.toISOString())
+      .order("inicio", { ascending: false })
+      .limit(60),
     supabase
       .from("consultas")
       .select("id, inicio, pacientes(telefone, aceita_lembretes)")
@@ -134,20 +157,36 @@ export default async function DashboardPage() {
   const proximas = (proximasRaw ?? []) as unknown as ConsultaProxima[];
   const recebido = (recebidosRaw ?? []).reduce((s, r) => s + Number(r.valor), 0);
 
-  // Evolução já registrada para cada consulta de hoje (para saber o que falta).
-  const { data: evolucoesRaw } = consultasHoje.length
-    ? await supabase
-        .from("evolucoes")
-        .select("id, consulta_id")
-        .is("deleted_at", null)
-        .in(
-          "consulta_id",
-          consultasHoje.map((c) => c.id),
-        )
-    : { data: [] };
-  const evolucaoDaConsulta = new Map(
-    (evolucoesRaw ?? []).map((e) => [e.consulta_id as string, e.id as string]),
-  );
+  const passadas = (passadasRaw ?? []) as unknown as ConsultaPassada[];
+
+  // Evoluções recentes: dizem o que já foi registrado. Uma sessão conta como
+  // registrada se há evolução ligada a ela OU do mesmo paciente na mesma data
+  // (evolução criada pela página do paciente não fica ligada à consulta).
+  const { data: evolucoesRaw } = await supabase
+    .from("evolucoes")
+    .select("id, consulta_id, paciente_id, data_sessao")
+    .is("deleted_at", null)
+    .gte("data_sessao", addDias(hoje, -(DIAS_PENDENCIA + 1)))
+    .limit(1000);
+  const evolucaoPorConsulta = new Map<string, string>();
+  const evolucaoPorPacienteDia = new Map<string, string>();
+  for (const e of evolucoesRaw ?? []) {
+    if (e.consulta_id) evolucaoPorConsulta.set(e.consulta_id as string, e.id as string);
+    evolucaoPorPacienteDia.set(`${e.paciente_id}|${e.data_sessao}`, e.id as string);
+  }
+  const evolucaoDe = (c: {
+    id: string;
+    inicio: string;
+    pacientes: PacienteRef | PacienteRef[] | null;
+  }): string | undefined => {
+    const pac = unico(c.pacientes);
+    return (
+      evolucaoPorConsulta.get(c.id) ??
+      (pac
+        ? evolucaoPorPacienteDia.get(`${pac.id}|${dataChaveBR(c.inicio)}`)
+        : undefined)
+    );
+  };
 
   // Lembretes a enviar: consultas do dia-alvo com paciente que aceita, telefone
   // válido e sem registro de envio para o horário atual.
@@ -180,11 +219,12 @@ export default async function DashboardPage() {
     );
   }).length;
 
-  const evolucoesPendentes = consultasHoje.filter(
-    (c) =>
-      estadoSessao(c.inicio, c.fim, agora) === "encerrada" &&
-      !evolucaoDaConsulta.has(c.id),
-  ).length;
+  const pendentes = consultasSemEvolucao(
+    passadas,
+    new Set(passadas.filter((c) => evolucaoDe(c)).map((c) => c.id)),
+  );
+  const evolucoesPendentes = pendentes.length;
+  const MAX_PENDENTES_LISTADAS = 6;
 
   const nome = psicologa?.nome ? primeiroNome(psicologa.nome) : "";
   const proximaConsulta = proximas[0];
@@ -195,6 +235,12 @@ export default async function DashboardPage() {
     const chave = dataChaveBR(c.inicio);
     proximasPorDia.set(chave, [...(proximasPorDia.get(chave) ?? []), c]);
   }
+  const rotuloPassado = (chave: string) =>
+    chave === hoje
+      ? "Hoje"
+      : chave === addDias(hoje, -1)
+        ? "Ontem"
+        : dataLongaBR(`${chave}T12:00:00${BR_OFFSET}`);
   const rotuloDia = (chave: string) =>
     chave === addDias(hoje, 1)
       ? "Amanhã"
@@ -220,9 +266,9 @@ export default async function DashboardPage() {
           href="/agenda"
         />
         <Indicador
-          rotulo="Evoluções pendentes hoje"
+          rotulo="Evoluções pendentes"
           valor={String(evolucoesPendentes)}
-          href="#hoje"
+          href="#pendentes"
           destaque={evolucoesPendentes > 0 ? "amber" : undefined}
         />
         <Indicador
@@ -260,6 +306,61 @@ export default async function DashboardPage() {
         )}
       </div>
 
+      {pendentes.length > 0 && (
+        <section
+          id="pendentes"
+          className="flex scroll-mt-4 flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4"
+        >
+          <div>
+            <h2 className="font-medium text-amber-900">
+              Evoluções pendentes
+              <span className="ml-2 text-sm font-normal text-amber-800">
+                {pendentes.length} {pendentes.length === 1 ? "sessão" : "sessões"} sem
+                registro nos últimos {DIAS_PENDENCIA} dias
+              </span>
+            </h2>
+            <p className="text-sm text-amber-800">
+              O registro documental de cada atendimento é obrigatório (CFP
+              01/2009).
+            </p>
+          </div>
+          <ul className="divide-y divide-amber-200 rounded-lg border border-amber-200 bg-white">
+            {pendentes.slice(0, MAX_PENDENTES_LISTADAS).map((c) => {
+              const pac = unico(c.pacientes);
+              if (!pac) return null;
+              return (
+                <li
+                  key={c.id}
+                  className="flex items-center justify-between gap-3 px-4 py-3"
+                >
+                  <span className="min-w-0 break-words text-sm">
+                    <span className="font-medium">{pac.nome}</span>
+                    <span className="block text-xs text-slate-500">
+                      {rotuloPassado(dataChaveBR(c.inicio))} · {horaBR(c.inicio)}
+                    </span>
+                  </span>
+                  <Link
+                    href={`/pacientes/${pac.id}/evolucoes/nova?consulta=${c.id}&data=${dataChaveBR(c.inicio)}`}
+                    className="btn btn-primary btn-sm shrink-0"
+                  >
+                    <FileText className="size-4" aria-hidden />
+                    <span>
+                      Registrar<span className="hidden sm:inline"> evolução</span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          {pendentes.length > MAX_PENDENTES_LISTADAS && (
+            <p className="text-xs text-amber-800">
+              + {pendentes.length - MAX_PENDENTES_LISTADAS} sessões mais antigas
+              ainda sem evolução. Registre estas para ver as demais.
+            </p>
+          )}
+        </section>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <section id="hoje" className="flex scroll-mt-4 flex-col gap-3">
           <h2 className="font-medium">
@@ -295,7 +396,7 @@ export default async function DashboardPage() {
               {consultasHoje.map((c) => {
                 const pac = unico(c.pacientes);
                 const estado = estadoSessao(c.inicio, c.fim, agora);
-                const evolucaoId = evolucaoDaConsulta.get(c.id);
+                const evolucaoId = evolucaoDe(c);
                 const min = minutosAteInicio(c.inicio, agora);
 
                 return (

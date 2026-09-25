@@ -98,6 +98,10 @@ async function semear() {
   await ins(marcos, rel(-90));
   await ins(ana, rel(5), { modalidade: "online", meet_link: meet });
   await ins(laura, rel(180), { modalidade: "online", meet_link: meet });
+  // pendências de dias anteriores (sessões encerradas sem evolução)
+  await ins(marcos, rel(-26 * 60));
+  await ins(laura, rel(-3 * 24 * 60), { modalidade: "online", meet_link: meet });
+  await ins(ana, rel(-9 * 24 * 60));
   await cons(laura, somaDias(1), "14:00", { modalidade: "online", meet_link: meet });
   await cons(marcos, somaDias(2), "08:00", { status: "cancelada" });
   await cons(laura, somaDias(3), "16:00");
