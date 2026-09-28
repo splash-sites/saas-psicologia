@@ -131,7 +131,7 @@ Desenvolver e validar cada módulo antes de avançar para o próximo — não pe
 
 ## Status e decisões já tomadas
 
-Módulos 1, 3, 4, 5, 6, 7 e 8 implementados e testados. **Módulo 2 (assinatura/cobrança via Asaas) foi adiado a pedido do usuário** e continua pendente.
+Módulos 1, 3, 4, 5, 6, 7 e 8 implementados e testados. **Módulo 2 (assinatura/cobrança via Asaas) retomado em 2026-09-28**, sem CNPJ ainda (ver seção de nota fiscal abaixo).
 
 - **Stack:** Opção 1 (Next.js + Supabase). Migrations em `supabase/migrations/`; testes de RLS rodam contra Supabase local (Docker) — ver README.
 - **Dado clínico em repouso:** criptografia do Postgres (provedor) + RLS. Sem cifra na aplicação por coluna, de propósito: perder a chave significaria perder prontuário, o que conflita com a guarda obrigatória de 5 anos. Único segredo cifrado na aplicação: o refresh token do Google (AES-256-GCM, `GOOGLE_TOKEN_ENC_KEY`).
@@ -144,6 +144,10 @@ Módulos 1, 3, 4, 5, 6, 7 e 8 implementados e testados. **Módulo 2 (assinatura/
 - **Status `falta`**: paciente não compareceu. Ocupa o horário e não gera pendência de evolução.
 - **Agenda:** grade semanal de horários (tablet/desktop) e visão Dia (celular); painel lateral da consulta via `?consulta=<id>`. Arrastar para remarcar ficou para depois.
 - **Modo privado (Alt+O):** borra tudo marcado com `data-sensivel` (nomes de pacientes, valores), para compartilhar a tela. Preferência só no navegador (localStorage).
+- **Assinatura via Asaas, sem CNPJ:** a empresa ainda não tem CNPJ (decisão do usuário, 2026-09-28) — cobrança recebida via Asaas como **pessoa física**; **nota fiscal fica de fora até o CNPJ existir** (MEI ou ME/Simples Nacional — decisão de contador, cidade é Torres/RS). Preço R$ 49,90/mês, **14 dias de teste grátis a partir do cadastro** (trigger cria a assinatura junto com a psicóloga), **sem carência** — vencer já restringe —, mas a restrição é **somente leitura**, nunca bloqueio total (a psicóloga precisa poder consultar/exportar o próprio prontuário mesmo inadimplente, por causa da guarda de 5 anos).
+- **A trava de escrita é aplicada no RLS** (`assinatura_permite_escrita()`, nas policies de insert/update de pacientes/anamneses/consultas/bloqueios/evolucoes/pagamentos), não só na aplicação — consistente com o resto do projeto. Ela só entra em vigor se `app_config.assinatura_enforcement_ativo = true` (**começa desligada**, de propósito: sem isso, qualquer ambiente sem o Asaas configurado trancaria todo mundo sozinho 14 dias depois do primeiro cadastro). Ligar em produção só depois de validar a integração de ponta a ponta.
+- **Webhook do Asaas** (`/api/asaas/webhook`): valida o `asaas-access-token` (comparação resistente a timing attack), nunca confia só no corpo — reconsulta o pagamento na API antes de liberar acesso —, é idempotente (`assinatura_eventos.chave_idempotencia`) e tem um rate limit simples baseado no próprio log (funciona entre instâncias serverless).
+- **Modo simulado do Asaas** (`ASAAS_MODE=mock`, automático sem `ASAAS_API_KEY`): mesmo padrão do Google — o resto do app funciona sem a integração real. Tem um botão "Simular pagamento confirmado" em `/assinatura`, só existe nesse modo (o servidor confere de novo, nunca confia em o botão não aparecer).
 
 <!-- BEGIN:nextjs-agent-rules -->
 

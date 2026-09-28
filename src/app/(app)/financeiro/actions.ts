@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { mensagemErroEscrita } from "@/lib/assinatura/guard";
 import {
   pagamentoSchema,
   marcarPagoSchema,
@@ -64,7 +65,7 @@ export async function criarPagamento(
     observacoes: v.observacoes ?? null,
   });
 
-  if (error) return { error: "Não foi possível lançar o pagamento." };
+  if (error) return { error: mensagemErroEscrita(error, "Não foi possível lançar o pagamento.") };
 
   revalidatePath("/financeiro");
   redirect("/financeiro");
@@ -103,7 +104,7 @@ export async function atualizarPagamento(
     .eq("id", id)
     .is("deleted_at", null);
 
-  if (error) return { error: "Não foi possível atualizar o lançamento." };
+  if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar o lançamento.") };
 
   revalidatePath("/financeiro");
   revalidatePath(`/financeiro/${id}`);
@@ -133,7 +134,7 @@ export async function marcarComoPago(
     .eq("id", id)
     .is("deleted_at", null);
 
-  if (error) return { error: "Não foi possível confirmar o pagamento." };
+  if (error) return { error: mensagemErroEscrita(error, "Não foi possível confirmar o pagamento.") };
 
   revalidatePath("/financeiro");
   revalidatePath(`/financeiro/${id}`);

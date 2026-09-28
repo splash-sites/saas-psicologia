@@ -205,6 +205,7 @@ const TELAS = [
   ["lancamento-novo", "/financeiro/novo"],
   ["historico", "/financeiro/historico"],
   ["lembretes", "/lembretes"],
+  ["assinatura", "/assinatura"],
   ["configuracoes", "/configuracoes"],
 ];
 

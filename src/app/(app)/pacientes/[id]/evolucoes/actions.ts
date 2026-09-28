@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { mensagemErroEscrita } from "@/lib/assinatura/guard";
 import { evolucaoSchema, arquivarSchema } from "@/lib/prontuario/schema";
 
 export type FormState = {
@@ -58,7 +59,7 @@ export async function criarEvolucao(
     .select("id")
     .single();
 
-  if (error) return { error: "Não foi possível salvar a evolução." };
+  if (error) return { error: mensagemErroEscrita(error, "Não foi possível salvar a evolução.") };
 
   revalidatePath(`/pacientes/${pacienteId}`);
   revalidatePath(`/pacientes/${pacienteId}/evolucoes`);
@@ -94,7 +95,7 @@ export async function atualizarEvolucao(
     .eq("paciente_id", pacienteId)
     .is("deleted_at", null);
 
-  if (error) return { error: "Não foi possível atualizar a evolução." };
+  if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar a evolução.") };
 
   revalidatePath(`/pacientes/${pacienteId}/evolucoes`);
   revalidatePath(`/pacientes/${pacienteId}/evolucoes/${evolucaoId}`);
@@ -125,7 +126,7 @@ export async function arquivarEvolucao(
     .eq("paciente_id", pacienteId)
     .is("deleted_at", null);
 
-  if (error) return { error: "Não foi possível arquivar a evolução." };
+  if (error) return { error: mensagemErroEscrita(error, "Não foi possível arquivar a evolução.") };
 
   revalidatePath(`/pacientes/${pacienteId}/evolucoes`);
   redirect(`/pacientes/${pacienteId}/evolucoes`);

@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  CreditCard,
   LayoutDashboard,
   MessageCircle,
   Settings,
@@ -16,6 +17,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/pacientes", label: "Pacientes", icon: Users },
   { href: "/lembretes", label: "Lembretes", icon: MessageCircle },
   { href: "/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/assinatura", label: "Assinatura", icon: CreditCard },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 

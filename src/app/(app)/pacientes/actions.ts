@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { mensagemErroEscrita } from "@/lib/assinatura/guard";
 import {
   pacienteSchema,
   anamneseSchema,
@@ -40,7 +41,7 @@ export async function criarPaciente(
     .select("id")
     .single();
 
-  if (error) return { error: "Não foi possível salvar o paciente." };
+  if (error) return { error: mensagemErroEscrita(error, "Não foi possível salvar o paciente.") };
 
   revalidatePath("/pacientes");
   redirect(`/pacientes/${data.id}`);
@@ -64,7 +65,7 @@ export async function atualizarPaciente(
     .eq("id", id)
     .is("deleted_at", null);
 
-  if (error) return { error: "Não foi possível atualizar o paciente." };
+  if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar o paciente.") };
 
   revalidatePath("/pacientes");
   revalidatePath(`/pacientes/${id}`);
@@ -110,7 +111,7 @@ export async function salvarAnamnese(
     { onConflict: "paciente_id" },
   );
 
-  if (error) return { error: "Não foi possível salvar a anamnese." };
+  if (error) return { error: mensagemErroEscrita(error, "Não foi possível salvar a anamnese.") };
 
   revalidatePath(`/pacientes/${pacienteId}`);
   return {};

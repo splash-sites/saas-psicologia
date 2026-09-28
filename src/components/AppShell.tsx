@@ -8,9 +8,11 @@ import { signOut } from "@/app/(app)/dashboard/actions";
 // superior com menu deslizante no celular.
 export function AppShell({
   email,
+  banner,
   children,
 }: {
   email: string;
+  banner?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -38,6 +40,7 @@ export function AppShell({
       <MobileNav email={email} />
 
       <main className="min-w-0 flex-1">
+        {banner}
         <div className="mx-auto w-full max-w-6xl p-4 sm:p-6 lg:p-8">
           {children}
         </div>

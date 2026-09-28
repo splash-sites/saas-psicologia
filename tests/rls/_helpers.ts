@@ -3,7 +3,17 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const url = process.env.SUPABASE_TEST_URL;
 export const anonKey = process.env.SUPABASE_TEST_ANON_KEY;
+export const serviceRoleKey = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;
 export const hasLocalSupabase = Boolean(url && anonKey);
+export const hasAdmin = Boolean(url && serviceRoleKey);
+
+// Client com service_role — ignora RLS. Só para ajustar estado de teste que
+// nenhum client autenticado consegue tocar (ex: app_config).
+export function adminClient(): SupabaseClient {
+  return createClient(url!, serviceRoleKey!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 // Client anônimo sem persistência de sessão — usado só para signUp.
 export function anonClient(): SupabaseClient {

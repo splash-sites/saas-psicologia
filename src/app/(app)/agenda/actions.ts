@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { mensagemErroEscrita } from "@/lib/assinatura/guard";
 import {
   consultaSchema,
   consultaEdicaoSchema,
@@ -127,7 +128,7 @@ export async function criarConsulta(
     if (error.code === "23P01") {
       return { error: "Conflito de horário com outra consulta. Recarregue e tente de novo." };
     }
-    return { error: "Não foi possível agendar a consulta." };
+    return { error: mensagemErroEscrita(error, "Não foi possível agendar a consulta.") };
   }
 
   // Empurra para o Google Calendar (best-effort — não bloqueia o agendamento).
@@ -189,7 +190,7 @@ export async function atualizarConsulta(
     if (error.code === "23P01") {
       return { error: "Conflito de horário com outra consulta." };
     }
-    return { error: "Não foi possível atualizar a consulta." };
+    return { error: mensagemErroEscrita(error, "Não foi possível atualizar a consulta.") };
   }
 
   await sincronizarConsulta(supabase, user.id, id);
@@ -336,7 +337,7 @@ export async function criarBloqueio(
     if (error.code === "23P01") {
       return { error: "Esse intervalo já está bloqueado." };
     }
-    return { error: "Não foi possível criar o bloqueio." };
+    return { error: mensagemErroEscrita(error, "Não foi possível criar o bloqueio.") };
   }
 
   revalidatePath("/agenda");
