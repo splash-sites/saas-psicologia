@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { configurarAssinatura, type FormState } from "./actions";
 
 export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string }) {
@@ -8,9 +8,25 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string })
     configurarAssinatura,
     {},
   );
+  // Guarda a aba aberta no clique — só dá pra abrir popup como reação direta
+  // ao gesto do usuário; se esperasse a resposta do servidor pra abrir, a
+  // maioria dos navegadores bloqueia.
+  const abaPagamento = useRef<Window | null>(null);
+
+  useEffect(() => {
+    if (state.url && abaPagamento.current && !abaPagamento.current.closed) {
+      abaPagamento.current.location.href = state.url;
+    }
+  }, [state.url]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form
+      action={formAction}
+      onSubmit={() => {
+        abaPagamento.current = window.open("about:blank", "_blank");
+      }}
+      className="flex flex-col gap-4"
+    >
       {state.error && <p className="alert alert-error">{state.error}</p>}
 
       <label className="flex max-w-xs flex-col gap-1 text-sm">
@@ -35,9 +51,10 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string })
         {pending ? "Preparando pagamento..." : "Assinar plano"}
       </button>
       <p className="text-xs text-slate-500">
-        Você será levada para a página de pagamento do Asaas (Pix, boleto ou
-        cartão). A primeira cobrança acontece em {vencimento}, quando o teste
-        grátis termina.
+        Abrimos uma nova aba com o pagamento do Asaas (Pix, boleto ou cartão).
+        Se o navegador bloquear a aba, o link aparece aqui embaixo depois de
+        confirmar. A primeira cobrança acontece em {vencimento}, quando o
+        teste grátis termina.
       </p>
     </form>
   );

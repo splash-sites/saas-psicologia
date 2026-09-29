@@ -17,6 +17,9 @@ import { PRECO_MENSAL } from "@/lib/assinatura/types";
 export type FormState = {
   error?: string;
   fieldErrors?: Record<string, string[]>;
+  // Link de pagamento pronto: o client abre numa aba própria (aberta no clique,
+  // antes deste retorno — senão o navegador bloqueia o popup).
+  url?: string;
 };
 
 async function requirePsicologa() {
@@ -101,11 +104,10 @@ export async function configurarAssinatura(
   }
 
   revalidatePath("/assinatura");
-  // Caminho normal: já manda direto pra página de pagamento do Asaas — 1
-  // clique em vez de 2. Se a cobrança ainda não tiver ficado pronta (raro),
-  // cai no fallback: a tela mostra o link assim que ele aparecer.
-  if (urlDaCobranca) redirect(urlDaCobranca);
-  return {};
+  // Devolve o link pro client abrir na aba que ele já preparou no clique.
+  // Se a cobrança ainda não tiver ficado pronta (raro), a seção "Cobrança" na
+  // tela mostra o link assim que ele aparecer (fallback na mesma aba).
+  return { url: urlDaCobranca ?? undefined };
 }
 
 export async function cancelarAssinatura(): Promise<void> {
