@@ -1,32 +1,36 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { configurarAssinatura, type FormState } from "./actions";
 
 export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string }) {
-  const [state, formAction, pending] = useActionState<FormState, FormData>(
-    configurarAssinatura,
-    {},
-  );
-  // Guarda a aba aberta no clique — só dá pra abrir popup como reação direta
-  // ao gesto do usuário; se esperasse a resposta do servidor pra abrir, a
-  // maioria dos navegadores bloqueia.
-  const abaPagamento = useRef<Window | null>(null);
+  const [state, setState] = useState<FormState>({});
+  const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (state.url && abaPagamento.current && !abaPagamento.current.closed) {
-      abaPagamento.current.location.href = state.url;
-    }
-  }, [state.url]);
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+
+    // Só dá pra abrir popup como reação direta ao clique — se esperasse a
+    // resposta do servidor pra abrir, o navegador bloqueia. Por isso a ação
+    // do servidor é chamada aqui dentro (não via `action` do form): assim o
+    // resultado chega direto pra esta função, sem depender de a página não
+    // trocar de seção no meio do caminho (o que aconteceria com useActionState
+    // — a seção "Cobrança" substitui este formulário assim que a assinatura
+    // é configurada, e desmontaria o componente antes de mirar a aba).
+    const aba = window.open("about:blank", "_blank");
+
+    startTransition(async () => {
+      const resultado = await configurarAssinatura({}, formData);
+      setState(resultado);
+      if (resultado.url && aba && !aba.closed) {
+        aba.location.href = resultado.url;
+      }
+    });
+  }
 
   return (
-    <form
-      action={formAction}
-      onSubmit={() => {
-        abaPagamento.current = window.open("about:blank", "_blank");
-      }}
-      className="flex flex-col gap-4"
-    >
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {state.error && <p className="alert alert-error">{state.error}</p>}
 
       <label className="flex max-w-xs flex-col gap-1 text-sm">
