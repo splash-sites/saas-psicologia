@@ -149,6 +149,12 @@ Módulos 1, 3, 4, 5, 6, 7 e 8 implementados e testados. **Módulo 2 (assinatura/
 - **Webhook do Asaas** (`/api/asaas/webhook`): valida o `asaas-access-token` (comparação resistente a timing attack), nunca confia só no corpo — reconsulta o pagamento na API antes de liberar acesso —, é idempotente (`assinatura_eventos.chave_idempotencia`) e tem um rate limit simples baseado no próprio log (funciona entre instâncias serverless).
 - **Modo simulado do Asaas** (`ASAAS_MODE=mock`, automático sem `ASAAS_API_KEY`): mesmo padrão do Google — o resto do app funciona sem a integração real. Tem um botão "Simular pagamento confirmado" em `/assinatura`, só existe nesse modo (o servidor confere de novo, nunca confia em o botão não aparecer).
 
+## Checklist antes de produção (não fazer em dev/teste — só antes de ir ao ar)
+
+- [ ] **Rotacionar `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_OAUTH_CLIENT_SECRET`, `ASAAS_API_KEY` e `GOOGLE_TOKEN_ENC_KEY`.** Em 2026-09-29, um comando de debug (`cat` num `.env.local`) imprimiu essas 4 chaves em texto puro nesta conversa. Decisão do usuário: aceitável por enquanto (ambiente de testes), mas rotacionar antes de produção. Trocar `GOOGLE_TOKEN_ENC_KEY` invalida o refresh token do Google já salvo — reconectar em `/configuracoes` depois.
+- [ ] Ligar a trava de assinatura (`update app_config set assinatura_enforcement_ativo = true`) só depois de validar o fluxo do Asaas de ponta a ponta.
+- [ ] Trocar `ASAAS_MODE`/chave de sandbox para produção quando a empresa estiver pronta para cobrar de verdade.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
