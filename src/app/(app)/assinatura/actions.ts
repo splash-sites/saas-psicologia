@@ -22,6 +22,25 @@ export type FormState = {
   url?: string;
 };
 
+function esperar(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Busca o link da primeira cobrança, tentando de novo se o Asaas ainda não
+ * tiver indexado o pagamento (instantes depois de criar a assinatura). */
+async function buscarUrlComRetentativa(
+  subscriptionId: string,
+  tentativas = 4,
+  esperaMs = 800,
+): Promise<string | null> {
+  for (let i = 0; i < tentativas; i++) {
+    const cobranca = await primeiraCobrancaDaAssinatura(subscriptionId);
+    if (cobranca?.invoiceUrl) return cobranca.invoiceUrl;
+    if (i < tentativas - 1) await esperar(esperaMs);
+  }
+  return null;
+}
+
 async function requirePsicologa() {
   const supabase = await createClient();
   const {
@@ -68,8 +87,6 @@ export async function configurarAssinatura(
   const hoje = new Date().toISOString().slice(0, 10);
   const primeiroVencimento = atual.trial_fim > hoje ? atual.trial_fim : hoje;
 
-  // redirect() lança por dentro — precisa ficar fora do try/catch, senão o
-  // catch engoliria o próprio redirecionamento como se fosse um erro.
   let urlDaCobranca: string | null = null;
 
   try {
@@ -83,8 +100,10 @@ export async function configurarAssinatura(
       valor: PRECO_MENSAL,
       primeiroVencimento,
     });
-    const cobranca = await primeiraCobrancaDaAssinatura(assinatura.id);
-    urlDaCobranca = cobranca?.invoiceUrl ?? null;
+    // O Asaas leva um instante pra indexar a primeira cobrança depois de criar
+    // a assinatura — sem isso, às vezes vem vazia na primeira consulta e a
+    // psicóloga fica sem link nenhum pra pagar. Tenta mais algumas vezes.
+    urlDaCobranca = await buscarUrlComRetentativa(assinatura.id);
 
     const admin = createAdminClient();
     await admin
@@ -165,6 +184,15 @@ export async function verificarPagamentoAgora(): Promise<{
 
   const pago = cobranca.status === "RECEIVED" || cobranca.status === "CONFIRMED";
   if (!pago) {
+    // Aproveita a consulta pra preencher o link, caso ele não tivesse vindo
+    // na hora de configurar (o Asaas às vezes demora a indexar a cobrança).
+    if (cobranca.invoiceUrl && adminDisponivel()) {
+      await createAdminClient()
+        .from("assinaturas")
+        .update({ invoice_url_atual: cobranca.invoiceUrl })
+        .eq("psicologa_id", user.id);
+      revalidatePath("/assinatura");
+    }
     return {
       ok: false,
       mensagem: "Ainda não identifiquei o pagamento. Aguarde alguns minutos após pagar.",
