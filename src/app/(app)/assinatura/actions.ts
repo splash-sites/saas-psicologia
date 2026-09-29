@@ -164,7 +164,10 @@ export async function verificarPagamentoAgora(): Promise<{
   }
 
   const admin = createAdminClient();
-  await admin.from("assinaturas").update({ status: "ativa" }).eq("psicologa_id", user.id);
+  await admin
+    .from("assinaturas")
+    .update({ status: "ativa", invoice_url_atual: null })
+    .eq("psicologa_id", user.id);
   revalidatePath("/assinatura");
   return { ok: true, mensagem: "Pagamento confirmado! Acesso liberado." };
 }
