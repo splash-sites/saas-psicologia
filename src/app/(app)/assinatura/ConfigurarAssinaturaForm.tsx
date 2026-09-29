@@ -32,11 +32,12 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string })
       </label>
 
       <button type="submit" disabled={pending} className="btn btn-primary w-fit">
-        {pending ? "Configurando..." : "Confirmar forma de pagamento"}
+        {pending ? "Preparando pagamento..." : "Assinar plano"}
       </button>
       <p className="text-xs text-slate-500">
-        A primeira cobrança acontece em {vencimento}, quando o teste grátis
-        termina.
+        Você será levada para a página de pagamento do Asaas (Pix, boleto ou
+        cartão). A primeira cobrança acontece em {vencimento}, quando o teste
+        grátis termina.
       </p>
     </form>
   );

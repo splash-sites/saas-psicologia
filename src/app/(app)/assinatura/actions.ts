@@ -65,6 +65,10 @@ export async function configurarAssinatura(
   const hoje = new Date().toISOString().slice(0, 10);
   const primeiroVencimento = atual.trial_fim > hoje ? atual.trial_fim : hoje;
 
+  // redirect() lança por dentro — precisa ficar fora do try/catch, senão o
+  // catch engoliria o próprio redirecionamento como se fosse um erro.
+  let urlDaCobranca: string | null = null;
+
   try {
     const cliente = await criarClienteAsaas({
       nome: psicologa?.nome ?? user.email ?? "Psicóloga",
@@ -77,6 +81,7 @@ export async function configurarAssinatura(
       primeiroVencimento,
     });
     const cobranca = await primeiraCobrancaDaAssinatura(assinatura.id);
+    urlDaCobranca = cobranca?.invoiceUrl ?? null;
 
     const admin = createAdminClient();
     await admin
@@ -85,7 +90,7 @@ export async function configurarAssinatura(
         cpf_cnpj: validado.digitos,
         asaas_customer_id: cliente.id,
         asaas_subscription_id: assinatura.id,
-        invoice_url_atual: cobranca?.invoiceUrl ?? null,
+        invoice_url_atual: urlDaCobranca,
         status: "trial",
       })
       .eq("psicologa_id", user.id);
@@ -96,6 +101,10 @@ export async function configurarAssinatura(
   }
 
   revalidatePath("/assinatura");
+  // Caminho normal: já manda direto pra página de pagamento do Asaas — 1
+  // clique em vez de 2. Se a cobrança ainda não tiver ficado pronta (raro),
+  // cai no fallback: a tela mostra o link assim que ele aparecer.
+  if (urlDaCobranca) redirect(urlDaCobranca);
   return {};
 }
 
