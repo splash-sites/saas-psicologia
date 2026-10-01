@@ -6,7 +6,7 @@ import {
   ASSINATURA_STATUS_LABEL,
   diasRestantesTrial,
   formatarCpfCnpj,
-  PRECO_MENSAL,
+  PLANOS,
 } from "@/lib/assinatura/types";
 import { asaasConfigurada, asaasModo } from "@/lib/asaas/client";
 import { ConfigurarAssinaturaForm } from "./ConfigurarAssinaturaForm";
@@ -86,7 +86,10 @@ export default async function AssinaturaPage() {
 
       <section className="card flex flex-col gap-3">
         <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-          <Item rotulo="Valor" valor={`R$ ${PRECO_MENSAL.toFixed(2).replace(".", ",")}/mês`} />
+          <Item
+            rotulo="Plano"
+            valor={`${PLANOS[assinatura.plano].label} — R$ ${assinatura.valor.toFixed(2).replace(".", ",")}`}
+          />
           <Item
             rotulo="Teste grátis até"
             valor={`${dataBR(assinatura.trial_fim)}${

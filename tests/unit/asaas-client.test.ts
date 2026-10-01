@@ -59,6 +59,7 @@ describe("modo simulado — nenhuma chamada de rede", () => {
       customerId: "mock_cus_x",
       valor: 49.9,
       primeiroVencimento: "2026-04-01",
+      ciclo: "MONTHLY",
     });
     expect(r.id).toMatch(/^mock_sub_/);
   });

@@ -12,7 +12,7 @@ import {
   primeiraCobrancaDaAssinatura,
   asaasModo,
 } from "@/lib/asaas/client";
-import { PRECO_MENSAL } from "@/lib/assinatura/types";
+import { PLANOS, ASSINATURA_PLANO, type AssinaturaPlano } from "@/lib/assinatura/types";
 
 export type FormState = {
   error?: string;
@@ -60,6 +60,11 @@ export async function configurarAssinatura(
   if (!validado.valido) {
     return { fieldErrors: { cpf_cnpj: ["CPF ou CNPJ inválido."] } };
   }
+  const planoEscolhido = String(formData.get("plano") ?? "mensal") as AssinaturaPlano;
+  if (!ASSINATURA_PLANO.includes(planoEscolhido)) {
+    return { error: "Plano inválido." };
+  }
+  const plano = PLANOS[planoEscolhido];
   if (!adminDisponivel()) {
     return {
       error: "Cobrança indisponível neste ambiente (faltam variáveis de servidor).",
@@ -97,8 +102,9 @@ export async function configurarAssinatura(
     });
     const assinatura = await criarAssinaturaAsaas({
       customerId: cliente.id,
-      valor: PRECO_MENSAL,
+      valor: plano.valor,
       primeiroVencimento,
+      ciclo: plano.cicloAsaas,
     });
     // O Asaas leva um instante pra indexar a primeira cobrança depois de criar
     // a assinatura — sem isso, às vezes vem vazia na primeira consulta e a
@@ -114,6 +120,8 @@ export async function configurarAssinatura(
         asaas_subscription_id: assinatura.id,
         invoice_url_atual: urlDaCobranca,
         status: "trial",
+        plano: planoEscolhido,
+        valor: plano.valor,
       })
       .eq("psicologa_id", user.id);
   } catch {
@@ -217,12 +225,19 @@ export async function verificarPagamentoAgora(): Promise<{
  * simplesmente não aparecer na tela.
  */
 export async function simularPagamentoConfirmado(): Promise<void> {
-  const { user } = await requirePsicologa();
+  const { supabase, user } = await requirePsicologa();
   if (asaasModo() !== "mock") redirect("/assinatura");
 
   if (adminDisponivel()) {
+    const { data: atual } = await supabase
+      .from("assinaturas")
+      .select("plano")
+      .eq("psicologa_id", user.id)
+      .maybeSingle();
+    const meses = PLANOS[(atual?.plano ?? "mensal") as AssinaturaPlano].meses;
+
     const proximo = new Date();
-    proximo.setMonth(proximo.getMonth() + 1);
+    proximo.setMonth(proximo.getMonth() + meses);
     const admin = createAdminClient();
     await admin
       .from("assinaturas")

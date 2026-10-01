@@ -8,6 +8,7 @@ import {
   statusIndicaPago,
   proximoMesDe,
 } from "@/lib/asaas/webhook";
+import { PLANOS, type AssinaturaPlano } from "@/lib/assinatura/types";
 
 const LIMITE_EVENTOS_POR_MINUTO = 120;
 
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
 
   const { data: assinatura } = await admin
     .from("assinaturas")
-    .select("psicologa_id")
+    .select("psicologa_id, plano")
     .eq("asaas_subscription_id", pagamento.subscription ?? "")
     .maybeSingle();
 
@@ -95,11 +96,12 @@ export async function POST(request: Request) {
   }
 
   if (classe === "confirma_pagamento" && statusIndicaPago(statusReal)) {
+    const meses = PLANOS[(assinatura.plano ?? "mensal") as AssinaturaPlano].meses;
     await admin
       .from("assinaturas")
       .update({
         status: "ativa",
-        proximo_vencimento: pagamento.dueDate ? proximoMesDe(pagamento.dueDate) : null,
+        proximo_vencimento: pagamento.dueDate ? proximoMesDe(pagamento.dueDate, meses) : null,
         invoice_url_atual: null,
       })
       .eq("psicologa_id", assinatura.psicologa_id);

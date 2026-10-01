@@ -1,6 +1,35 @@
 export const PRECO_MENSAL = 49.9;
 export const DIAS_TRIAL = 14;
 
+export const ASSINATURA_PLANO = ["mensal", "trimestral", "semestral"] as const;
+export type AssinaturaPlano = (typeof ASSINATURA_PLANO)[number];
+
+/**
+ * Ciclo Asaas de cada plano — precisa bater com os valores aceitos pela API
+ * (`cycle` em /subscriptions). Valor cobrado de uma vez no ciclo (não por
+ * mês): trimestral e semestral têm desconto sobre 3x/6x o preço mensal.
+ */
+export const PLANOS: Record<
+  AssinaturaPlano,
+  { label: string; valor: number; meses: number; cicloAsaas: "MONTHLY" | "QUARTERLY" | "SEMIANNUALLY"; economia?: string }
+> = {
+  mensal: { label: "Mensal", valor: 49.9, meses: 1, cicloAsaas: "MONTHLY" },
+  trimestral: {
+    label: "Trimestral",
+    valor: 134.73, // 3 × 49,90 com 10% de desconto
+    meses: 3,
+    cicloAsaas: "QUARTERLY",
+    economia: "10% off (R$44,91/mês)",
+  },
+  semestral: {
+    label: "Semestral",
+    valor: 254.49, // 6 × 49,90 com 15% de desconto
+    meses: 6,
+    cicloAsaas: "SEMIANNUALLY",
+    economia: "15% off (R$42,42/mês)",
+  },
+};
+
 export const ASSINATURA_STATUS = ["trial", "ativa", "atrasada", "cancelada"] as const;
 export type AssinaturaStatus = (typeof ASSINATURA_STATUS)[number];
 
@@ -14,6 +43,7 @@ export const ASSINATURA_STATUS_LABEL: Record<AssinaturaStatus, string> = {
 export type Assinatura = {
   psicologa_id: string;
   status: AssinaturaStatus;
+  plano: AssinaturaPlano;
   valor: number;
   trial_fim: string;
   proximo_vencimento: string | null;

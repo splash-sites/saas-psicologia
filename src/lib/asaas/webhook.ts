@@ -44,10 +44,11 @@ export function statusIndicaPago(status: string | null | undefined): boolean {
   return Boolean(status && STATUS_PAGO.has(status));
 }
 
-/** Próxima data de vencimento (mesmo dia, mês seguinte) — usada como estimativa
- * de exibição; quem manda de verdade é sempre o próximo webhook do Asaas. */
-export function proximoMesDe(dataISO: string): string {
+/** Próxima data de vencimento (mesmo dia, `meses` adiante — 1/3/6 conforme o
+ * plano) — usada como estimativa de exibição; quem manda de verdade é sempre
+ * o próximo webhook do Asaas. */
+export function proximoMesDe(dataISO: string, meses = 1): string {
   const d = new Date(`${dataISO}T00:00:00Z`);
-  d.setUTCMonth(d.getUTCMonth() + 1);
+  d.setUTCMonth(d.getUTCMonth() + meses);
   return d.toISOString().slice(0, 10);
 }

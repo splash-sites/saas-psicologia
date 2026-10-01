@@ -2,10 +2,12 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { configurarAssinatura, type FormState } from "./actions";
+import { ASSINATURA_PLANO, PLANOS, type AssinaturaPlano } from "@/lib/assinatura/types";
 
 export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string }) {
   const [state, setState] = useState<FormState>({});
   const [pending, startTransition] = useTransition();
+  const [plano, setPlano] = useState<AssinaturaPlano>("mensal");
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,6 +34,37 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string })
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {state.error && <p className="alert alert-error">{state.error}</p>}
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium">Plano</legend>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {ASSINATURA_PLANO.map((id) => {
+            const p = PLANOS[id];
+            const selecionado = plano === id;
+            return (
+              <label
+                key={id}
+                className={`flex cursor-pointer flex-col gap-1 rounded-xl border bg-white p-3 text-sm shadow-sm ${
+                  selecionado ? "border-teal-600 ring-1 ring-teal-600" : "border-slate-200"
+                }`}
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <input
+                    type="radio"
+                    name="plano"
+                    value={id}
+                    checked={selecionado}
+                    onChange={() => setPlano(id)}
+                  />
+                  {p.label}
+                </span>
+                <span>R$ {p.valor.toFixed(2).replace(".", ",")}</span>
+                {p.economia && <span className="text-xs text-teal-700">{p.economia}</span>}
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
 
       <label className="flex max-w-xs flex-col gap-1 text-sm">
         CPF ou CNPJ *

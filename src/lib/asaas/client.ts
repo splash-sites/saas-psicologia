@@ -70,6 +70,7 @@ export async function criarAssinaturaAsaas(dados: {
   customerId: string;
   valor: number;
   primeiroVencimento: string; // YYYY-MM-DD
+  ciclo: "MONTHLY" | "QUARTERLY" | "SEMIANNUALLY";
 }): Promise<AssinaturaAsaas> {
   if (asaasModo() === "mock") return { id: `mock_sub_${randomUUID()}` };
   return chamar<AssinaturaAsaas>("/subscriptions", {
@@ -79,7 +80,7 @@ export async function criarAssinaturaAsaas(dados: {
       // UNDEFINED = a psicóloga escolhe Pix, boleto ou cartão na página
       // hospedada pelo Asaas; nenhum dado de pagamento passa pelo nosso servidor.
       billingType: "UNDEFINED",
-      cycle: "MONTHLY",
+      cycle: dados.ciclo,
       value: dados.valor,
       nextDueDate: dados.primeiroVencimento,
       description: "Assinatura — Gestão para Psicólogas",
