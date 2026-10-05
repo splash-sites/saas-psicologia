@@ -28,23 +28,36 @@ function lerEstado(): boolean {
   return "privado" in document.documentElement.dataset;
 }
 
+// AppShell (sidebar desktop) e MobileNav (cabeçalho mobile) ficam os dois
+// sempre montados ao mesmo tempo — só escondidos por CSS conforme o tamanho
+// da tela, nunca desmontados. Sem essa trava, cada <ModoPrivado> registraria
+// seu próprio listener de Alt+O: num atalho só, os dois disparariam no mesmo
+// keydown e um desfaria o toggle do outro (liga, depois desliga de novo —
+// efeito líquido nenhum). Só a primeira instância montada cuida do atalho.
+let instanciasMontadas = 0;
+
 export function ModoPrivado({ compacto = false }: { compacto?: boolean }) {
   const [ligado, setLigado] = useState(false);
 
   useEffect(() => {
     const sync = () => setLigado(lerEstado());
     sync();
+    window.addEventListener(CHAVE, sync);
+
+    instanciasMontadas++;
+    const donaDoAtalho = instanciasMontadas === 1;
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === "KeyO") {
         e.preventDefault();
         aplicar(!lerEstado());
       }
     };
-    window.addEventListener(CHAVE, sync);
-    document.addEventListener("keydown", onKey);
+    if (donaDoAtalho) document.addEventListener("keydown", onKey);
+
     return () => {
       window.removeEventListener(CHAVE, sync);
-      document.removeEventListener("keydown", onKey);
+      instanciasMontadas--;
+      if (donaDoAtalho) document.removeEventListener("keydown", onKey);
     };
   }, []);
 
