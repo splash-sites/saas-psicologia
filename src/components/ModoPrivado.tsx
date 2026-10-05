@@ -91,11 +91,11 @@ export function ModoPrivado({ compacto = false }: { compacto?: boolean }) {
         ligado ? "border border-teal-600 bg-teal-50 text-teal-800" : "btn-outline"
       }`}
     >
-      <span className="inline-flex items-center gap-2">
-        <Icone className="size-4" aria-hidden />
+      <span className="inline-flex items-center gap-2 whitespace-nowrap">
+        <Icone className="size-4 shrink-0" aria-hidden />
         {rotulo}
       </span>
-      <kbd className="rounded border border-slate-300 bg-white px-1.5 text-[11px] font-semibold text-slate-500">
+      <kbd className="shrink-0 whitespace-nowrap rounded border border-slate-300 bg-white px-1.5 text-[11px] font-semibold text-slate-500">
         Alt O
       </kbd>
     </button>
