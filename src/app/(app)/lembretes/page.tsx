@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { MODALIDADE_LABEL, type Modalidade } from "@/lib/agenda/types";
 import {
@@ -125,7 +126,7 @@ export default async function LembretesPage({
           className="btn btn-outline"
           aria-label="Dia anterior"
         >
-          <span aria-hidden>←</span>
+          <ChevronLeft className="size-4" aria-hidden />
           <span className="hidden sm:inline">Dia anterior</span>
         </Link>
         <Link href="/lembretes" className="btn btn-outline">
@@ -137,7 +138,7 @@ export default async function LembretesPage({
           aria-label="Dia seguinte"
         >
           <span className="hidden sm:inline">Dia seguinte</span>
-          <span aria-hidden>→</span>
+          <ChevronRight className="size-4" aria-hidden />
         </Link>
         <Link
           href="/configuracoes"

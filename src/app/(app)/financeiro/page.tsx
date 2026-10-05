@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import {
   formatarBRL,
@@ -98,7 +99,7 @@ export default async function FinanceiroPage({
           className="btn btn-outline"
           aria-label="Mês anterior"
         >
-          <span aria-hidden>←</span>
+          <ChevronLeft className="size-4" aria-hidden />
           <span className="hidden sm:inline">Mês anterior</span>
         </Link>
         <span className="font-medium first-letter:uppercase">{rotuloMes(mes)}</span>
@@ -108,7 +109,7 @@ export default async function FinanceiroPage({
           aria-label="Próximo mês"
         >
           <span className="hidden sm:inline">Próximo mês</span>
-          <span aria-hidden>→</span>
+          <ChevronRight className="size-4" aria-hidden />
         </Link>
       </div>
 
