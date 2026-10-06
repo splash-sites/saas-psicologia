@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { Pagamento } from "@/lib/financeiro/types";
 import type { ConsultaDisponivel } from "@/lib/financeiro/consultasDisponiveis";
-import { dataBR, horaBR } from "@/lib/agenda/datas";
+import { dataBR, dataChaveBR, horaBR } from "@/lib/agenda/datas";
 import type { FormState } from "./actions";
 
 type Props = {
@@ -41,7 +41,7 @@ export function PagamentoForm({
   );
   const fe = state.fieldErrors ?? {};
   const hoje = new Date().toISOString().slice(0, 10);
-  const dataRef = pagamento?.data_referencia ?? dataPadrao ?? hoje;
+  const dataRefInicial = pagamento?.data_referencia ?? dataPadrao ?? hoje;
 
   // Novo lançamento começa como "recebido" (caso mais comum: registrar um
   // pagamento que já caiu). Na edição, reflete o estado atual.
@@ -49,6 +49,19 @@ export function PagamentoForm({
     pagamento ? (pagamento.status === "pago" ? "recebido" : "a_receber") : "recebido",
   );
   const recebido = situacao === "recebido";
+
+  // Paciente e data de referência ficam controlados só pra poder autopreencher
+  // quando a psicóloga escolhe uma consulta vinculada (ela já diz o paciente e
+  // o dia — não faz sentido digitar de novo).
+  const [pacienteId, setPacienteId] = useState(pagamento?.paciente_id ?? pacienteIdPadrao ?? "");
+  const [dataRef, setDataRef] = useState(dataRefInicial);
+
+  function aoEscolherConsulta(consultaId: string) {
+    const c = consultas.find((c) => c.id === consultaId);
+    if (!c) return; // "Nenhuma — lançamento avulso": mantém o que já tinha.
+    setPacienteId(c.paciente_id);
+    setDataRef(dataChaveBR(c.inicio));
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -63,6 +76,7 @@ export function PagamentoForm({
         <select
           name="consulta_id"
           defaultValue={pagamento?.consulta_id ?? consultaIdPadrao ?? ""}
+          onChange={(e) => aoEscolherConsulta(e.target.value)}
           className="input"
         >
           <option value="">Nenhuma — lançamento avulso</option>
@@ -82,7 +96,8 @@ export function PagamentoForm({
         <select
           name="paciente_id"
           required
-          defaultValue={pagamento?.paciente_id ?? pacienteIdPadrao ?? ""}
+          value={pacienteId}
+          onChange={(e) => setPacienteId(e.target.value)}
           className="input"
         >
           <option value="">Selecione...</option>
@@ -115,7 +130,8 @@ export function PagamentoForm({
             name="data_referencia"
             type="date"
             required
-            defaultValue={dataRef}
+            value={dataRef}
+            onChange={(e) => setDataRef(e.target.value)}
             className="input"
           />
           <FieldError errors={fe.data_referencia} />
