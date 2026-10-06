@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 // `vincular`: quando a conta logada ainda não tem NENHUMA identidade Google
@@ -19,7 +20,10 @@ export function ConectarGoogleButton({
   label: string;
   vincular?: boolean;
 }) {
+  const [erro, setErro] = useState<string | null>(null);
+
   async function conectar() {
+    setErro(null);
     const supabase = createClient();
     const credenciais = {
       provider: "google" as const,
@@ -29,16 +33,26 @@ export function ConectarGoogleButton({
         queryParams: { access_type: "offline", prompt: "consent" },
       },
     };
-    if (vincular) {
-      await supabase.auth.linkIdentity(credenciais);
-    } else {
-      await supabase.auth.signInWithOAuth(credenciais);
-    }
+    // linkIdentity()/signInWithOAuth() só redirecionam pro Google quando dão
+    // certo — se falharem antes disso (ex: "Manual linking is disabled" no
+    // projeto Supabase), devolvem o erro aqui em vez de redirecionar, e sem
+    // checar isso o clique no botão não fazia nada visível.
+    const { error } = vincular
+      ? await supabase.auth.linkIdentity(credenciais)
+      : await supabase.auth.signInWithOAuth(credenciais);
+    if (error) setErro(error.message);
   }
 
   return (
-    <button onClick={conectar} className="w-fit btn btn-primary">
-      {label}
-    </button>
+    <div className="flex flex-col gap-2">
+      <button onClick={conectar} className="w-fit btn btn-primary">
+        {label}
+      </button>
+      {erro && (
+        <p className="alert alert-error" role="alert">
+          {erro}
+        </p>
+      )}
+    </div>
   );
 }
