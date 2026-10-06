@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { VoltarLink } from "@/components/VoltarLink";
 import type { Consulta } from "@/lib/agenda/types";
 import {
   MODALIDADE_LABEL,
@@ -38,9 +39,7 @@ export default async function ConsultaDetailPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <Link href="/agenda" className="text-sm text-slate-500 hover:underline">
-        ← Agenda
-      </Link>
+      <VoltarLink href="/agenda">Agenda</VoltarLink>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

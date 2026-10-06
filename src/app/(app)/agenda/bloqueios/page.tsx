@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { VoltarLink } from "@/components/VoltarLink";
 import type { Bloqueio } from "@/lib/agenda/types";
 import { horaBR, dataLongaBR } from "@/lib/agenda/datas";
 import { excluirBloqueio } from "../actions";
@@ -33,9 +34,7 @@ export default async function BloqueiosPage() {
           Novo bloqueio
         </Link>
       </div>
-      <Link href="/agenda" className="text-sm text-slate-500 hover:underline">
-        ← Agenda
-      </Link>
+      <VoltarLink href="/agenda">Agenda</VoltarLink>
 
       {lista.length === 0 ? (
         <p className="text-sm text-slate-500">Nenhum bloqueio futuro.</p>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 
 export const metadata = { title: "Termos de Uso" };
 
@@ -10,8 +11,9 @@ export default function TermosDeUsoPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-6 text-sm leading-relaxed text-slate-700 sm:p-10">
       <div>
-        <Link href="/login" className="text-xs text-teal-700 underline">
-          ← Voltar
+        <Link href="/login" className="inline-flex items-center gap-1 text-xs text-teal-700 underline">
+          <ChevronLeft className="size-3.5" aria-hidden />
+          Voltar
         </Link>
         <h1 className="mt-2 text-xl font-semibold text-slate-900">Termos de Uso</h1>
         <p className="mt-1 text-xs text-slate-400">Última atualização: outubro de 2026.</p>

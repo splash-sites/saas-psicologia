@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { VoltarLink } from "@/components/VoltarLink";
 import { formatarBRL } from "@/lib/financeiro/types";
 import { mesAtual, primeiroDia, rotuloMes, ultimosMeses } from "@/lib/financeiro/mes";
 
@@ -43,9 +44,7 @@ export default async function HistoricoFinanceiroPage() {
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <Link href="/financeiro" className="text-sm text-slate-500 hover:underline">
-        ← Financeiro
-      </Link>
+      <VoltarLink href="/financeiro">Financeiro</VoltarLink>
       <h1 className="text-xl font-semibold">Histórico financeiro</h1>
       <p className="text-sm text-slate-500">
         Últimos {N_MESES} meses · total recebido no período:{" "}

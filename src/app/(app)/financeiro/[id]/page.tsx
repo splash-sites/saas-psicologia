@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { VoltarLink } from "@/components/VoltarLink";
 import { formatarBRL, statusExibicao, type Pagamento } from "@/lib/financeiro/types";
 import { StatusBadge } from "../StatusBadge";
 import { MarcarPagoForm } from "../MarcarPagoForm";
@@ -38,9 +39,7 @@ export default async function PagamentoDetailPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <Link href="/financeiro" className="text-sm text-slate-500 hover:underline">
-        ← Financeiro
-      </Link>
+      <VoltarLink href="/financeiro">Financeiro</VoltarLink>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

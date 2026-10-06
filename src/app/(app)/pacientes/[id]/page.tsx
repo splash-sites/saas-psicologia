@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { VoltarLink } from "@/components/VoltarLink";
 import type { Anamnese, Paciente } from "@/lib/pacientes/types";
 import { whatsappLink } from "@/lib/pacientes/whatsapp";
 import { StatusBadge } from "../StatusBadge";
@@ -54,9 +55,7 @@ export default async function PacienteDetailPage({
   return (
     <div className="flex w-full max-w-2xl flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <Link href="/pacientes" className="text-sm text-slate-500 hover:underline">
-          ← Pacientes
-        </Link>
+        <VoltarLink href="/pacientes">Pacientes</VoltarLink>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="flex items-center gap-3 text-xl font-semibold">
             {paciente.nome}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { VoltarLink } from "@/components/VoltarLink";
 import { CAMPOS_EVOLUCAO, type Evolucao } from "@/lib/prontuario/types";
 import { arquivarEvolucao } from "../actions";
 import { ArquivarForm } from "./ArquivarForm";
@@ -46,12 +47,7 @@ export default async function EvolucaoDetailPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <Link
-        href={`/pacientes/${id}/evolucoes`}
-        className="text-sm text-slate-500 hover:underline"
-      >
-        ← Evoluções
-      </Link>
+      <VoltarLink href={`/pacientes/${id}/evolucoes`}>Evoluções</VoltarLink>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

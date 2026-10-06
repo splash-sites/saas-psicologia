@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { VoltarLink } from "@/components/VoltarLink";
 import type { Evolucao } from "@/lib/prontuario/types";
 
 export const metadata = { title: "Evoluções" };
@@ -50,12 +51,7 @@ export default async function EvolucoesTimelinePage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <Link
-        href={`/pacientes/${id}`}
-        className="text-sm text-slate-500 hover:underline"
-      >
-        ← {paciente.nome}
-      </Link>
+      <VoltarLink href={`/pacientes/${id}`}>{paciente.nome}</VoltarLink>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">
