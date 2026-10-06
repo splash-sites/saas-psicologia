@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { consultasDisponiveis } from "@/lib/financeiro/consultasDisponiveis";
 import { criarPagamento } from "../actions";
 import { PagamentoForm } from "../PagamentoForm";
 
@@ -18,11 +19,10 @@ export default async function NovoPagamentoPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: pacientes } = await supabase
-    .from("pacientes")
-    .select("id, nome")
-    .is("deleted_at", null)
-    .order("nome");
+  const [{ data: pacientes }, consultas] = await Promise.all([
+    supabase.from("pacientes").select("id, nome").is("deleted_at", null).order("nome"),
+    consultasDisponiveis(supabase),
+  ]);
 
   const lista = (pacientes ?? []) as { id: string; nome: string }[];
 
@@ -40,6 +40,7 @@ export default async function NovoPagamentoPage({
         <PagamentoForm
           action={criarPagamento}
           pacientes={lista}
+          consultas={consultas}
           pacienteIdPadrao={paciente}
           consultaIdPadrao={consulta}
           dataPadrao={data && /^\d{4}-\d{2}-\d{2}$/.test(data) ? data : undefined}

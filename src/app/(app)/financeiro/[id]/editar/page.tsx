@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Pagamento } from "@/lib/financeiro/types";
+import { consultasDisponiveis } from "@/lib/financeiro/consultasDisponiveis";
 import { atualizarPagamento } from "../../actions";
 import { PagamentoForm } from "../../PagamentoForm";
 
@@ -30,6 +31,8 @@ export default async function EditarPagamentoPage({
 
   if (!pagamentoRow) notFound();
 
+  const consultas = await consultasDisponiveis(supabase, pagamentoRow.consulta_id);
+
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
       <h1 className="text-xl font-semibold">Editar lançamento</h1>
@@ -37,6 +40,7 @@ export default async function EditarPagamentoPage({
         action={atualizarPagamento.bind(null, id)}
         pagamento={pagamentoRow as Pagamento}
         pacientes={(pacientes ?? []) as { id: string; nome: string }[]}
+        consultas={consultas}
         submitLabel="Salvar alterações"
         cancelHref={`/financeiro/${id}`}
       />

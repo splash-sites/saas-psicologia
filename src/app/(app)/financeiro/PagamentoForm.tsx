@@ -3,11 +3,14 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { Pagamento } from "@/lib/financeiro/types";
+import type { ConsultaDisponivel } from "@/lib/financeiro/consultasDisponiveis";
+import { dataBR, horaBR } from "@/lib/agenda/datas";
 import type { FormState } from "./actions";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   pacientes: { id: string; nome: string }[];
+  consultas: ConsultaDisponivel[];
   pagamento?: Pagamento;
   pacienteIdPadrao?: string;
   consultaIdPadrao?: string;
@@ -24,6 +27,7 @@ function FieldError({ errors }: { errors?: string[] }) {
 export function PagamentoForm({
   action,
   pacientes,
+  consultas,
   pagamento,
   pacienteIdPadrao,
   consultaIdPadrao,
@@ -54,13 +58,24 @@ export function PagamentoForm({
         </p>
       )}
 
-      {(pagamento?.consulta_id ?? consultaIdPadrao) && (
-        <input
-          type="hidden"
+      <label className="flex flex-col gap-1 text-sm">
+        Consulta vinculada (opcional)
+        <select
           name="consulta_id"
-          value={pagamento?.consulta_id ?? consultaIdPadrao}
-        />
-      )}
+          defaultValue={pagamento?.consulta_id ?? consultaIdPadrao ?? ""}
+          className="input"
+        >
+          <option value="">Nenhuma — lançamento avulso</option>
+          {consultas.map((c) => (
+            <option key={c.id} value={c.id}>
+              {dataBR(c.inicio)} {horaBR(c.inicio)} · {c.pacienteNome}
+            </option>
+          ))}
+        </select>
+        <span className="text-xs text-slate-500">
+          Só mostra consultas que ainda não têm nenhum lançamento.
+        </span>
+      </label>
 
       <label className="flex flex-col gap-1 text-sm">
         Paciente *
