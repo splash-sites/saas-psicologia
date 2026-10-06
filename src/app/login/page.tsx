@@ -16,7 +16,7 @@ export default async function LoginPage({
       <div className="card flex w-full max-w-sm flex-col gap-6 p-6 sm:p-8">
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold text-teal-800">
-            Gestão para Psicólogas
+            Gestão para Psicólogos
           </h1>
           <p className="text-sm text-slate-500">
             Agenda, prontuário e financeiro do seu consultório em um só lugar.

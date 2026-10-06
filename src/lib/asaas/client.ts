@@ -83,7 +83,7 @@ export async function criarAssinaturaAsaas(dados: {
       cycle: dados.ciclo,
       value: dados.valor,
       nextDueDate: dados.primeiroVencimento,
-      description: "Assinatura — Gestão para Psicólogas",
+      description: "Assinatura — Gestão para Psicólogos",
     }),
   });
 }

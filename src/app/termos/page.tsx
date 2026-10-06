@@ -19,7 +19,7 @@ export default function TermosDeUsoPage() {
 
       <Secao titulo="1. Quem oferece o serviço">
         <p>
-          O <strong>Gestão para Psicólogas</strong> é oferecido por{" "}
+          O <strong>Gestão para Psicólogos</strong> é oferecido por{" "}
           <strong>Bernardo Dornelles</strong>, pessoa física, Torres/RS. Ao
           criar uma conta, você concorda com estes termos e com a nossa{" "}
           <Link href="/privacidade" className="underline">
@@ -32,17 +32,17 @@ export default function TermosDeUsoPage() {
       <Secao titulo="2. O que é o serviço">
         <p>
           Plataforma de gestão de consultório (agenda, prontuário/evolução,
-          financeiro e assinatura) voltada a psicólogas autônomas, com
-          atendimento individual (não clínicas com múltiplas profissionais). O
+          financeiro e assinatura) voltada a psicólogos autônomos, com
+          atendimento individual (não clínicas com múltiplos profissionais). O
           serviço <strong>não presta atendimento psicológico</strong> nem
-          substitui o julgamento clínico da profissional — é só uma ferramenta
+          substitui o julgamento clínico do profissional — é só uma ferramenta
           de organização e registro.
         </p>
       </Secao>
 
       <Secao titulo="3. Cadastro e responsabilidade pela conta">
         <ul className="list-disc space-y-1 pl-5">
-          <li>Uma conta por psicóloga; o uso é individual, não compartilhado.</li>
+          <li>Uma conta por psicólogo; o uso é individual, não compartilhado.</li>
           <li>
             Você é responsável por manter a confidencialidade do seu login e
             por tudo que acontecer na sua conta.
@@ -92,7 +92,7 @@ export default function TermosDeUsoPage() {
       <Secao titulo="5. Seus dados e os dados dos seus pacientes">
         <p>
           Os dados que você cadastra sobre seus pacientes pertencem a você
-          (psicóloga) — nós só armazenamos e processamos em seu nome, como
+          (psicólogo) — nós só armazenamos e processamos em seu nome, como
           detalhado na Política de Privacidade. Você pode exportar ou excluir
           esses dados a qualquer momento, respeitado o prazo legal mínimo de 5
           anos de guarda de prontuário (Resolução CFP nº 01/2009).

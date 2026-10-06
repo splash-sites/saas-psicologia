@@ -96,7 +96,7 @@ export async function configurarAssinatura(
 
   try {
     const cliente = await criarClienteAsaas({
-      nome: psicologa?.nome ?? user.email ?? "Psicóloga",
+      nome: psicologa?.nome ?? user.email ?? "Psicólogo",
       email: psicologa?.email ?? user.email ?? "",
       cpfCnpj: validado.digitos,
     });

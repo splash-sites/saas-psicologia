@@ -27,7 +27,7 @@ export function MobileNav({ email }: { email: string }) {
     <div className="md:hidden">
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4">
         <span className="text-sm font-semibold text-teal-800">
-          Gestão para Psicólogas
+          Gestão para Psicólogos
         </span>
         <div className="flex items-center gap-2">
           <ModoPrivado compacto />

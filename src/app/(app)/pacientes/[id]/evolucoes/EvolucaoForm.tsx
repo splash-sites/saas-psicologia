@@ -83,7 +83,7 @@ export function EvolucaoForm({
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">Notas técnicas privadas</span>
         <span className="text-xs text-slate-500">
-          Anotações de uso exclusivo da psicóloga, separadas da evolução.
+          Anotações de uso exclusivo do psicólogo, separadas da evolução.
           Opcional.
         </span>
         <textarea

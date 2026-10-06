@@ -26,7 +26,7 @@ export default function PoliticaDePrivacidadePage() {
 
       <Secao titulo="1. Quem somos">
         <p>
-          O <strong>Gestão para Psicólogas</strong> (nome do produto ainda não
+          O <strong>Gestão para Psicólogos</strong> (nome do produto ainda não
           definido oficialmente) é operado por <strong>Bernardo Dornelles</strong>,
           pessoa física, com sede em Torres/RS. Ainda não possuímos CNPJ — esta
           política será atualizada com a razão social assim que a empresa for
@@ -42,25 +42,25 @@ export default function PoliticaDePrivacidadePage() {
 
       <Secao titulo="2. O que o sistema faz">
         <p>
-          Somos uma plataforma de gestão de consultório para psicólogas
-          autônomas: agenda, prontuário/evolução de sessões, financeiro e
-          assinatura. O sistema é de uso exclusivo da psicóloga — pacientes não
+          Somos uma plataforma de gestão de consultório para psicólogos
+          autônomos: agenda, prontuário/evolução de sessões, financeiro e
+          assinatura. O sistema é de uso exclusivo do psicólogo — pacientes não
           têm login nem acesso direto à plataforma.
         </p>
       </Secao>
 
-      <Secao titulo="3. Quem é a controladora dos dados do paciente">
+      <Secao titulo="3. Quem é o controlador dos dados do paciente">
         <p>
           Para os dados de <strong>pacientes</strong> (cadastro, anamnese,
-          evolução clínica, financeiro), a <strong>psicóloga usuária da
-          plataforma é a controladora</strong>, nos termos da LGPD — é ela quem
+          evolução clínica, financeiro), o <strong>psicólogo usuário da
+          plataforma é o controlador</strong>, nos termos da LGPD — é ele quem
           decide coletar e tratar esses dados no exercício da sua profissão.
           Atuamos como <strong>operadores</strong>: armazenamos e processamos
-          esses dados em nome da psicóloga, seguindo as instruções e
-          finalidades definidas por ela, sem uso próprio.
+          esses dados em nome do psicólogo, seguindo as instruções e
+          finalidades definidas por ele, sem uso próprio.
         </p>
         <p>
-          Para os dados <strong>da própria psicóloga</strong> (cadastro, login,
+          Para os dados <strong>do próprio psicólogo</strong> (cadastro, login,
           assinatura), nós somos os controladores.
         </p>
       </Secao>
@@ -68,7 +68,7 @@ export default function PoliticaDePrivacidadePage() {
       <Secao titulo="4. Dados que coletamos">
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <strong>Cadastro da psicóloga:</strong> nome, e-mail e foto de
+            <strong>Cadastro do psicólogo:</strong> nome, e-mail e foto de
             perfil (via login do Google).
           </li>
           <li>
@@ -109,7 +109,7 @@ export default function PoliticaDePrivacidadePage() {
           </li>
           <li>
             <strong>Consentimento</strong> (LGPD art. 11, I): pro tratamento de
-            dado de saúde de pacientes, obtido pela psicóloga junto ao próprio
+            dado de saúde de pacientes, obtido pelo psicólogo junto ao próprio
             paciente, e pro acesso à sua Google Agenda (escopo pedido
             explicitamente no login, revogável a qualquer momento em{" "}
             <Link href="/configuracoes" className="underline">
@@ -132,7 +132,7 @@ export default function PoliticaDePrivacidadePage() {
           </li>
           <li>
             <strong>Asaas</strong> — processamento da cobrança da sua
-            assinatura. Dados de pagamento do paciente para a psicóloga
+            assinatura. Dados de pagamento do paciente para o psicólogo
             continuam só no nosso banco (lançamento manual, sem gateway).
           </li>
           <li>
@@ -152,7 +152,7 @@ export default function PoliticaDePrivacidadePage() {
           </li>
           <li>
             Dados em repouso são protegidos pela criptografia nativa do banco
-            e por controle de acesso (Row Level Security): cada psicóloga só
+            e por controle de acesso (Row Level Security): cada psicólogo só
             acessa os próprios dados, nunca os de outra conta.
           </li>
           <li>

@@ -19,7 +19,7 @@ export function AppShell({
     <div className="flex min-h-screen flex-col md:flex-row">
       <aside className="hidden w-60 shrink-0 flex-col gap-6 border-r border-slate-200 bg-white p-4 md:sticky md:top-0 md:flex md:h-screen">
         <div className="px-3 pt-2 text-base font-semibold text-teal-800">
-          Gestão para Psicólogas
+          Gestão para Psicólogos
         </div>
         <NavLinks />
         <div className="mt-auto flex flex-col gap-2 border-t border-slate-200 pt-4">

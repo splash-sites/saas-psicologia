@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Gestão para Psicólogas",
-    template: "%s · Gestão para Psicólogas",
+    default: "Gestão para Psicólogos",
+    template: "%s · Gestão para Psicólogos",
   },
   description:
     "Agenda, prontuário e financeiro do seu consultório em um só lugar.",
