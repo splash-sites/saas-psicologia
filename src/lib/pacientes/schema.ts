@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PACIENTE_STATUS } from "./types";
+import { capitalizarNome } from "./formatacao";
 
 // Normaliza strings de formulário: "" (campo vazio) vira undefined.
 const optionalText = z
@@ -9,21 +10,22 @@ const optionalText = z
   .optional();
 
 export const pacienteSchema = z.object({
-  nome: z.string().trim().min(1, "Nome é obrigatório").max(200),
+  nome: z.string().trim().min(1, "Nome é obrigatório").max(200).transform(capitalizarNome),
   email: z
     .string()
     .trim()
     .transform((v) => (v === "" ? undefined : v))
     .optional()
     .pipe(z.string().email("E-mail inválido").optional()),
-  telefone: optionalText.pipe(z.string().max(20).optional()),
+  // Tamanho das máscaras: "(99) 99999-9999" (telefone) e "999.999.999-99" (cpf).
+  telefone: optionalText.pipe(z.string().max(15).optional()),
   data_nascimento: z
     .string()
     .trim()
     .transform((v) => (v === "" ? undefined : v))
     .optional()
     .pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida").optional()),
-  cpf: optionalText.pipe(z.string().max(14).optional()),
+  cpf: optionalText.pipe(z.string().max(14, "CPF inválido").optional()),
   endereco: optionalText,
   status: z.enum(PACIENTE_STATUS).default("ativo"),
   observacoes: optionalText,

@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { PACIENTE_STATUS, PACIENTE_STATUS_LABEL } from "@/lib/pacientes/types";
 import type { Paciente } from "@/lib/pacientes/types";
+import { capitalizarNome, formatarTelefoneBR, formatarCpf } from "@/lib/pacientes/formatacao";
 import type { FormState } from "./actions";
 
 type Props = {
@@ -30,6 +31,13 @@ export function PacienteForm({
   );
   const fe = state.fieldErrors ?? {};
 
+  // Controlados só pra aplicar máscara/capitalização ao digitar — o envio
+  // continua pela própria <form action={formAction}> (FormData nativo), sem
+  // mudar o fluxo de Server Action já existente.
+  const [nome, setNome] = useState(paciente?.nome ?? "");
+  const [telefone, setTelefone] = useState(formatarTelefoneBR(paciente?.telefone ?? ""));
+  const [cpf, setCpf] = useState(formatarCpf(paciente?.cpf ?? ""));
+
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {state.error && (
@@ -43,7 +51,9 @@ export function PacienteForm({
         <input
           name="nome"
           required
-          defaultValue={paciente?.nome ?? ""}
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          onBlur={() => setNome((atual) => capitalizarNome(atual))}
           className="input"
         />
         <FieldError errors={fe.nome} />
@@ -65,8 +75,11 @@ export function PacienteForm({
           Telefone
           <input
             name="telefone"
-            defaultValue={paciente?.telefone ?? ""}
+            value={telefone}
+            onChange={(e) => setTelefone(formatarTelefoneBR(e.target.value))}
             placeholder="(51) 99999-9999"
+            inputMode="numeric"
+            maxLength={15}
             className="input"
           />
           <FieldError errors={fe.telefone} />
@@ -87,7 +100,11 @@ export function PacienteForm({
           CPF
           <input
             name="cpf"
-            defaultValue={paciente?.cpf ?? ""}
+            value={cpf}
+            onChange={(e) => setCpf(formatarCpf(e.target.value))}
+            placeholder="000.000.000-00"
+            inputMode="numeric"
+            maxLength={14}
             className="input"
           />
           <FieldError errors={fe.cpf} />
