@@ -42,6 +42,9 @@ export default async function ConfiguracoesPage({
 
   const configurada = integracaoGoogleConfigurada();
   const conectada = Boolean(token) && !tokenSemAgenda;
+  // Login por e-mail/senha (ou outro provedor) não tem identidade Google —
+  // precisa linkIdentity() pra anexar a Agenda sem trocar de sessão.
+  const temIdentidadeGoogle = user.identities?.some((i) => i.provider === "google") ?? false;
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
@@ -64,6 +67,14 @@ export default async function ConfiguracoesPage({
           </p>
         )}
 
+        {google === "erro" && (
+          <p className="alert alert-error">
+            Não foi possível conectar essa conta Google — ela pode já estar
+            sendo usada por outra conta nossa, ou a permissão foi negada.
+            Tente de novo com outra conta Google.
+          </p>
+        )}
+
         {!configurada ? (
           <p className="alert alert-warning">
             A integração não está configurada neste ambiente (faltam variáveis de
@@ -77,10 +88,13 @@ export default async function ConfiguracoesPage({
                 Desconectar
               </button>
             </form>
-            <ConectarGoogleButton label="Reconectar" />
+            <ConectarGoogleButton label="Reconectar" vincular={!temIdentidadeGoogle} />
           </div>
         ) : (
-          <ConectarGoogleButton label="Conectar Google Calendar" />
+          <ConectarGoogleButton
+            label="Conectar Google Calendar"
+            vincular={!temIdentidadeGoogle}
+          />
         )}
 
         {configurada && (

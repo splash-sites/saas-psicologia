@@ -64,5 +64,13 @@ export async function GET(request: Request) {
     }
   }
 
+  // Falhou — negou consentimento, código inválido, ou (ao vincular uma conta
+  // Google que já pertence a outra conta nossa) "Identity is already linked
+  // to another user". Se veio de Configurações (conectar/vincular Google),
+  // volta pra lá com aviso em vez de jogar pro /login: a sessão atual (se o
+  // login não foi por Google) continua válida, não faz sentido deslogar.
+  if (next === "/configuracoes") {
+    return NextResponse.redirect(`${origin}/configuracoes?google=erro`);
+  }
   return NextResponse.redirect(`${origin}/login?error=auth`);
 }
