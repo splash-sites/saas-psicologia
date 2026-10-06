@@ -1,7 +1,7 @@
 import { LogOut } from "lucide-react";
 import { NavLinks } from "./NavLinks";
 import { MobileNav } from "./MobileNav";
-import { ModoPrivado, SCRIPT_MODO_PRIVADO } from "./ModoPrivado";
+import { ModoPrivado } from "./ModoPrivado";
 import { signOut } from "@/app/(app)/dashboard/actions";
 
 // Casca das telas autenticadas: barra lateral fixa no desktop (md+) e barra
@@ -17,7 +17,6 @@ export function AppShell({
 }) {
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <script dangerouslySetInnerHTML={{ __html: SCRIPT_MODO_PRIVADO }} />
       <aside className="hidden w-60 shrink-0 flex-col gap-6 border-r border-slate-200 bg-white p-4 md:sticky md:top-0 md:flex md:h-screen">
         <div className="px-3 pt-2 text-base font-semibold text-teal-800">
           Gestão para Psicólogas
