@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LoginButton } from "./LoginButton";
+import { EmailLoginForm } from "./EmailLoginForm";
 
 export const metadata = { title: "Entrar" };
 
@@ -31,9 +32,17 @@ export default async function LoginPage({
         <LoginButton />
 
         <p className="text-xs text-slate-400">
-          Ao entrar você autoriza o acesso à sua Google Agenda, usado para
+          Ao entrar com Google você autoriza o acesso à sua Agenda, usado para
           sincronizar consultas e gerar links do Meet.
         </p>
+
+        <div className="flex items-center gap-3 text-xs text-slate-400">
+          <span className="h-px flex-1 bg-slate-200" />
+          ou
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <EmailLoginForm />
 
         <p className="text-xs text-slate-400">
           Ao continuar, você concorda com os{" "}
