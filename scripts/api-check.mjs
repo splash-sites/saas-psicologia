@@ -334,7 +334,10 @@ for (const [arq, nome, args] of cruzadas) {
   const id = actionId(mapa, arq, nome);
   if (!id) continue;
   const r = await chamarAction(id, args(), { cookie: cA2 });
-  registrar("ACTION A→B", nome, (x) => x.status < 500, r);
+  // Formulários de edição/criação devem avisar; ações de 1 clique só voltam
+  // pra lista (clique duplo legítimo também não altera nada).
+  const deveAvisar = ["atualizarPaciente", "salvarAnamnese", "atualizarConsulta", "marcarComoPago", "criarConsulta", "criarPagamento"].includes(nome);
+  registrar("ACTION A→B", nome, (x) => x.status < 500 && (!deveAvisar || /inválido|não encontrad/.test(x.retorno ?? "")), r);
 }
 
 // Estado final de B: nada pode ter mudado

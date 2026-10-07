@@ -178,7 +178,8 @@ export async function atualizarConsulta(
   const remarcou =
     !atual || new Date(atual.inicio).getTime() !== inicio.getTime();
 
-  const { error } = await supabase
+  // O RLS não dá erro em update de linha alheia/arquivada: só não afeta nada.
+  const { data: alterados, error } = await supabase
     .from("consultas")
     .update({
       inicio: inicio.toISOString(),
@@ -189,7 +190,8 @@ export async function atualizarConsulta(
       ...(remarcou ? { confirmada_em: null } : {}),
     })
     .eq("id", id)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .select("id");
 
   if (error) {
     if (error.code === "23P01") {
@@ -197,6 +199,7 @@ export async function atualizarConsulta(
     }
     return { error: mensagemErroEscrita(error, "Não foi possível atualizar a consulta.") };
   }
+  if (!alterados?.length) return { error: "Consulta não encontrada." };
 
   await sincronizarConsulta(supabase, user.id, id);
 

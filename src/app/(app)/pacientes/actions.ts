@@ -60,13 +60,16 @@ export async function atualizarPaciente(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  const { error } = await supabase
+  // O RLS não dá erro em update de linha alheia/arquivada: só não afeta nada.
+  const { data: alterados, error } = await supabase
     .from("pacientes")
     .update(toNullable(parsed.data))
     .eq("id", id)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .select("id");
 
   if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar o paciente.") };
+  if (!alterados?.length) return { error: "Paciente não encontrado." };
 
   revalidatePath("/pacientes");
   revalidatePath(`/pacientes/${id}`);

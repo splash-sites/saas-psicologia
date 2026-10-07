@@ -80,7 +80,8 @@ export async function atualizarEvolucao(
   }
   const v = parsed.data;
 
-  const { error } = await supabase
+  // O RLS não dá erro em update de linha alheia/arquivada: só não afeta nada.
+  const { data: alterados, error } = await supabase
     .from("evolucoes")
     .update({
       consulta_id: v.consulta_id ?? null,
@@ -93,9 +94,11 @@ export async function atualizarEvolucao(
     })
     .eq("id", evolucaoId)
     .eq("paciente_id", pacienteId)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .select("id");
 
   if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar a evolução.") };
+  if (!alterados?.length) return { error: "Evolução não encontrada." };
 
   revalidatePath(`/pacientes/${pacienteId}/evolucoes`);
   revalidatePath(`/pacientes/${pacienteId}/evolucoes/${evolucaoId}`);

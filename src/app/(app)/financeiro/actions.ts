@@ -76,7 +76,8 @@ export async function atualizarPagamento(
     return { error: "Paciente inválido." };
   }
 
-  const { error } = await supabase
+  // O RLS não dá erro em update de linha alheia/arquivada: só não afeta nada.
+  const { data: alterados, error } = await supabase
     .from("pagamentos")
     .update({
       paciente_id: v.paciente_id,
@@ -90,9 +91,11 @@ export async function atualizarPagamento(
       observacoes: v.observacoes ?? null,
     })
     .eq("id", id)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .select("id");
 
   if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar o lançamento.") };
+  if (!alterados?.length) return { error: "Lançamento não encontrado." };
 
   revalidatePath("/financeiro");
   revalidatePath(`/financeiro/${id}`);
@@ -112,7 +115,7 @@ export async function marcarComoPago(
   }
   const v = parsed.data;
 
-  const { error } = await supabase
+  const { data: alterados, error } = await supabase
     .from("pagamentos")
     .update({
       status: "pago",
@@ -120,9 +123,11 @@ export async function marcarComoPago(
       forma_pagamento: v.forma_pagamento ?? null,
     })
     .eq("id", id)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .select("id");
 
   if (error) return { error: mensagemErroEscrita(error, "Não foi possível confirmar o pagamento.") };
+  if (!alterados?.length) return { error: "Lançamento não encontrado." };
 
   revalidatePath("/financeiro");
   revalidatePath(`/financeiro/${id}`);
