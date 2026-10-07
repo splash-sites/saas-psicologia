@@ -273,7 +273,7 @@ const casos = [
   // assinatura (mock)
   ["assinatura/actions", "configurarAssinatura", () => [vazio, fd({ cpf_cnpj: "123", plano: "mensal" })], "validação"],
   ["assinatura/actions", "configurarAssinatura", () => [vazio, fd({ cpf_cnpj: "529.982.247-25", plano: "mensal" })], "ok"],
-  ["assinatura/actions", "verificarPagamentoAgora", () => [], "ok"],
+  ["assinatura/actions", "verificarPagamentoAgora", () => [], "mock"],
   ["assinatura/actions", "simularPagamentoConfirmado", () => [], "ok"],
   ["assinatura/actions", "cancelarAssinatura", () => [], "ok"],
   // destrutivos por último
@@ -288,7 +288,7 @@ for (const [arq, nome, args, tipo] of casos) {
   const id = actionId(mapa, arq, nome);
   if (!id) { linhas.push({ grupo: "ACTION (A)", nome: `${nome} [${tipo}]`, status: "-", destino: "", ms: 0, ok: false, nota: "id não encontrado no manifest" }); continue; }
   const r = await chamarAction(id, args(), { cookie: cA });
-  const esperado = (x) => x.status < 500 && (tipo.startsWith("ok") ? !/"error"|fieldErrors|"ok":false/.test(x.retorno ?? "") : /error|fieldErrors/.test(x.retorno ?? ""));
+  const esperado = (x) => x.status < 500 && (tipo === "mock" ? /Modo simulado/.test(x.retorno ?? "") : tipo.startsWith("ok") ? !/"error"|fieldErrors|"ok":false/.test(x.retorno ?? "") : /error|fieldErrors/.test(x.retorno ?? ""));
   registrar("ACTION (A)", `${nome} [${tipo}]`, esperado, r);
 }
 
