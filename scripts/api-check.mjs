@@ -236,6 +236,8 @@ const casos = [
   // pacientes
   [pac, "criarPaciente", () => [vazio, fd({ nome: "joão da silva", telefone: "51999998888", status: "ativo", aceita_lembretes: "on" })], "ok"],
   [pac, "criarPaciente", () => [vazio, fd({ nome: "" })], "validação"],
+  [pac, "criarPaciente", () => [vazio, fd({ nome: "Com Máscara", email: " X@Y.COM ", telefone: "(51) 98888-7777", cpf: "529.982.247-25", status: "ativo" })], "ok (máscara)"],
+  [pac, "criarPaciente", () => [vazio, fd({ nome: "M", cpf: "111.111.111-11", telefone: "123" })], "validação"],
   [pac, "atualizarPaciente", () => [A.paciente, vazio, fd({ nome: "Paciente de Psico A", status: "ativo" })], "ok"],
   [pac, "salvarAnamnese", () => [A.paciente, vazio, fd({ demanda: "ansiedade", objetivos: "x", historico: "y" })], "ok"],
   // agenda
@@ -283,6 +285,13 @@ for (const [arq, nome, args, tipo] of casos) {
   const r = await chamarAction(id, args(), { cookie: cA });
   const esperado = (x) => x.status < 500 && (tipo === "mock" ? /Modo simulado/.test(x.retorno ?? "") : tipo.startsWith("ok") ? !/"error"|fieldErrors|"ok":false/.test(x.retorno ?? "") : /error|fieldErrors/.test(x.retorno ?? ""));
   registrar("ACTION (A)", `${nome} [${tipo}]`, esperado, r);
+}
+
+// 5a. O paciente cadastrado com máscara foi gravado no formato padrão.
+{
+  const { data: p } = await admin.from("pacientes").select("email, telefone, cpf").eq("psicologa_id", A.pid).eq("nome", "Com Máscara").single();
+  const ok = p?.email === "x@y.com" && p?.telefone === "51988887777" && p?.cpf === "52998224725";
+  linhas.push({ grupo: "PADRONIZAÇÃO", nome: "paciente com máscara gravado só com dígitos", status: "", destino: "", ms: "", ok, nota: JSON.stringify(p) });
 }
 
 // 5b. Webhook de ponta a ponta (modo simulado): pagamento confirmado ativa a

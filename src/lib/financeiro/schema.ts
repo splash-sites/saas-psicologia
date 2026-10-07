@@ -20,7 +20,10 @@ export const pagamentoSchema = z
       .uuid()
       .optional()
       .or(z.literal("").transform(() => undefined)),
-    valor: z.coerce.number().positive("Informe um valor maior que zero"),
+    valor: z.coerce
+      .number()
+      .positive("Informe um valor maior que zero")
+      .max(100000, "Valor acima do limite (R$ 100.000)"),
     situacao: z.enum(["recebido", "a_receber"]).default("recebido"),
     data_referencia: dataStr,
     data_pagamento: dataOpcional,

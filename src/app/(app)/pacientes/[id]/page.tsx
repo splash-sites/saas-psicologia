@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { VoltarLink } from "@/components/VoltarLink";
 import type { Anamnese, Paciente } from "@/lib/pacientes/types";
 import { whatsappLink } from "@/lib/pacientes/whatsapp";
+import { formatarCpf, formatarTelefoneBR } from "@/lib/pacientes/formatacao";
 import { StatusBadge } from "../StatusBadge";
 import { excluirPaciente, salvarAnamnese } from "../actions";
 import { AnamneseForm } from "./AnamneseForm";
@@ -84,12 +85,15 @@ export default async function PacienteDetailPage({
 
       <section className="grid grid-cols-1 gap-x-6 gap-y-3 card text-sm sm:grid-cols-2">
         <Dado rotulo="E-mail" valor={paciente.email} />
-        <Dado rotulo="Telefone" valor={paciente.telefone} />
+        <Dado
+          rotulo="Telefone"
+          valor={paciente.telefone ? formatarTelefoneBR(paciente.telefone) : null}
+        />
         <Dado
           rotulo="Data de nascimento"
           valor={formatarData(paciente.data_nascimento)}
         />
-        <Dado rotulo="CPF" valor={paciente.cpf} />
+        <Dado rotulo="CPF" valor={paciente.cpf ? formatarCpf(paciente.cpf) : null} />
         <Dado rotulo="Endereço" valor={paciente.endereco} />
       </section>
 

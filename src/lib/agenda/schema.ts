@@ -16,6 +16,7 @@ export const consultaSchema = z
     observacoes: z
       .string()
       .trim()
+      .max(2000, "Máximo de 2000 caracteres")
       .transform((v) => (v === "" ? undefined : v))
       .optional(),
   })
@@ -36,6 +37,7 @@ export const consultaEdicaoSchema = z.object({
   observacoes: z
     .string()
     .trim()
+    .max(2000, "Máximo de 2000 caracteres")
     .transform((v) => (v === "" ? undefined : v))
     .optional(),
 });
@@ -50,6 +52,7 @@ export const bloqueioSchema = z
     motivo: z
       .string()
       .trim()
+      .max(200, "Máximo de 200 caracteres")
       .transform((v) => (v === "" ? undefined : v))
       .optional(),
   })

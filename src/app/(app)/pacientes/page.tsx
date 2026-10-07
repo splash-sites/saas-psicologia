@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Paciente } from "@/lib/pacientes/types";
+import { formatarTelefoneBR } from "@/lib/pacientes/formatacao";
 import { StatusBadge } from "./StatusBadge";
 
 export const metadata = { title: "Pacientes" };
@@ -50,7 +51,7 @@ export default async function PacientesPage() {
                   <span className="font-medium">{p.nome}</span>
                   <StatusBadge status={p.status} />
                 </span>
-                <span className="text-sm text-slate-500">{p.telefone ?? "—"}</span>
+                <span className="text-sm text-slate-500">{p.telefone ? formatarTelefoneBR(p.telefone) : "—"}</span>
               </Link>
             </li>
           ))}
