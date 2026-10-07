@@ -9,5 +9,7 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     globals: true,
     pool: "threads",
+    // tests/e2e roda no Playwright (npm run e2e), não no Vitest.
+    exclude: ["**/node_modules/**", "tests/e2e/**"],
   },
 });
