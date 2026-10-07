@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import type { Anamnese } from "@/lib/pacientes/types";
 import type { FormState } from "../actions";
 
@@ -16,7 +17,7 @@ export function AnamneseForm({ action, anamnese }: Props) {
   );
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
       {state.error && (
         <p className="alert alert-error">
           {state.error}

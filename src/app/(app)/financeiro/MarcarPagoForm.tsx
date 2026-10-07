@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import type { FormState } from "./actions";
 
 export function MarcarPagoForm({
@@ -30,7 +31,7 @@ export function MarcarPagoForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-2">
+    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-wrap items-end gap-2">
       {state.error && (
         <p className="w-full text-sm text-red-700">{state.error}</p>
       )}

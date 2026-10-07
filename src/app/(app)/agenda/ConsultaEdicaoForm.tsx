@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import Link from "next/link";
 import {
   MODALIDADES,
@@ -36,7 +37,7 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
   const fe = state.fieldErrors ?? {};
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
       {state.error && (
         <p className="alert alert-error">
           {state.error}
