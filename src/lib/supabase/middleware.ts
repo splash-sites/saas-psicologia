@@ -35,9 +35,11 @@ export async function updateSession(
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims valida o token localmente (JWKS) e renova a sessão quando
+  // expira — sem ir ao servidor de Auth a cada requisição (ver
+  // src/lib/auth/usuario.ts para o porquê e o trade-off).
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims;
 
   const isPublicPath = rotaPublica(request.nextUrl.pathname);
 

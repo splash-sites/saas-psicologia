@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { consultasDisponiveis } from "@/lib/financeiro/consultasDisponiveis";
 import { criarPagamento } from "../actions";
 import { PagamentoForm } from "../PagamentoForm";
@@ -14,9 +15,7 @@ export default async function NovoPagamentoPage({
 }) {
   const { paciente, consulta, data } = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const [{ data: pacientes }, consultas] = await Promise.all([

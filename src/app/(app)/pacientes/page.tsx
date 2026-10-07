@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Paciente } from "@/lib/pacientes/types";
 import { formatarTelefoneBR } from "@/lib/pacientes/formatacao";
 import { StatusBadge } from "./StatusBadge";
@@ -9,9 +10,7 @@ export const metadata = { title: "Pacientes" };
 
 export default async function PacientesPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { data: pacientes } = await supabase

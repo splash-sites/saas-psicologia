@@ -12,6 +12,7 @@ import {
   Video,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import {
   MODALIDADE_LABEL,
   type ConsultaStatus,
@@ -81,9 +82,7 @@ const MAX_PROXIMOS = 8;
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const agora = new Date();

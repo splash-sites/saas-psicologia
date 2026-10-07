@@ -1,15 +1,12 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { criarBloqueio } from "../../actions";
 import { BloqueioForm } from "../../BloqueioForm";
 
 export const metadata = { title: "Novo bloqueio" };
 
 export default async function NovoBloqueioPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   return (

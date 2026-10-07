@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { buscarStatusAssinatura } from "@/lib/assinatura/guard";
 import {
   ASSINATURA_STATUS_LABEL,
@@ -30,9 +31,7 @@ const STATUS_TOM: Record<string, string> = {
 
 export default async function AssinaturaPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { assinatura, enforcementAtivo, somenteLeitura } = await buscarStatusAssinatura(

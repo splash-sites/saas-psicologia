@@ -6,11 +6,11 @@ import {
   MSG_SEM_PERMISSAO,
 } from "@/lib/assinatura/guard";
 
-// Só o que mensagemErroEscrita usa: getUser e a rpc da trava.
+// Só o que mensagemErroEscrita usa: getClaims e a rpc da trava.
 function fakeSupabase(permite: boolean | null) {
   let rpcs = 0;
   const client = {
-    auth: { getUser: async () => ({ data: { user: { id: "u1" } } }) },
+    auth: { getClaims: async () => ({ data: { claims: { sub: "u1" } } }) },
     rpc: async () => {
       rpcs++;
       return { data: permite };

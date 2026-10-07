@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { mensagemErroEscrita } from "@/lib/assinatura/guard";
 import { pacientePertenceAPsicologa } from "@/lib/pacientes/dono";
 import {
@@ -27,9 +28,7 @@ export type FormState = {
 
 async function requirePsicologa() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
   return { supabase, user };
 }

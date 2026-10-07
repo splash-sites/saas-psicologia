@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { VoltarLink } from "@/components/VoltarLink";
 import { formatarBRL, statusExibicao, type Pagamento } from "@/lib/financeiro/types";
 import { StatusBadge } from "../StatusBadge";
@@ -21,9 +22,7 @@ export default async function PagamentoDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { data } = await supabase

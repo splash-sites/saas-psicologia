@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Evolucao } from "@/lib/prontuario/types";
 import { atualizarEvolucao } from "../../actions";
 import { EvolucaoForm } from "../../EvolucaoForm";
@@ -13,9 +14,7 @@ export default async function EditarEvolucaoPage({
 }) {
   const { id, evolucaoId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { data } = await supabase

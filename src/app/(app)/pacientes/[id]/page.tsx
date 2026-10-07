@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { VoltarLink } from "@/components/VoltarLink";
 import type { Anamnese, Paciente } from "@/lib/pacientes/types";
 import { whatsappLink } from "@/lib/pacientes/whatsapp";
@@ -22,9 +23,7 @@ export default async function PacienteDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { data: pacienteRow } = await supabase

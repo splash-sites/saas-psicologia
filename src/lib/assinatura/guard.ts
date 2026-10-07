@@ -42,11 +42,10 @@ export async function mensagemErroEscrita(
 ): Promise<string> {
   if (error?.code !== "42501") return mensagemPadrao;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: permite } = user
-    ? await supabase.rpc("assinatura_permite_escrita", { p_psicologa_id: user.id })
+  const { data } = await supabase.auth.getClaims();
+  const id = data?.claims?.sub;
+  const { data: permite } = id
+    ? await supabase.rpc("assinatura_permite_escrita", { p_psicologa_id: id })
     : { data: null };
   return permite === false ? MSG_SOMENTE_LEITURA : MSG_SEM_PERMISSAO;
 }

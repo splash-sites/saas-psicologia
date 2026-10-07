@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Anamnese, Paciente } from "@/lib/pacientes/types";
 import { PACIENTE_STATUS_LABEL } from "@/lib/pacientes/types";
 import { CAMPOS_EVOLUCAO, type Evolucao } from "@/lib/prontuario/types";
@@ -34,9 +35,7 @@ export default async function ProntuarioImpressaoPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const [{ data: pacienteRow }, { data: psicologa }, { data: anamneseRow }, { data: evolucoesRows }] =

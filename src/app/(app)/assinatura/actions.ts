@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { createAdminClient, adminDisponivel } from "@/lib/supabase/admin";
 import { validarCpfCnpj } from "@/lib/assinatura/cpfCnpj";
 import {
@@ -45,9 +46,7 @@ async function buscarUrlComRetentativa(
 
 async function requirePsicologa() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
   return { supabase, user };
 }

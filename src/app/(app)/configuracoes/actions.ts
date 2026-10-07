@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { preferenciasLembreteSchema } from "@/lib/lembretes/schema";
 
 export type FormState = {
@@ -13,9 +14,7 @@ export type FormState = {
 
 export async function desconectarGoogle(): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   // Policy de delete permite remover só a própria linha.
@@ -40,9 +39,7 @@ export async function salvarPreferenciasLembrete(
   formData: FormData,
 ): Promise<FormState> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const parsed = preferenciasLembreteSchema.safeParse(

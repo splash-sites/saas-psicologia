@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { strToU8, zipSync } from "fflate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { gerarCsv, type Coluna } from "@/lib/exportacao/csv";
 import { dataBRCompleta, dataHoraBR } from "@/lib/exportacao/datas";
 
@@ -58,9 +59,7 @@ Guarde este arquivo em local seguro: ele contém dados de saúde (LGPD).
 
 export async function GET() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) return NextResponse.json({ error: "não autenticado" }, { status: 401 });
 
   let tabelas: Record<string, Linha[]>;

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { mensagemErroEscrita } from "@/lib/assinatura/guard";
 import { evolucaoSchema, arquivarSchema } from "@/lib/prontuario/schema";
 
@@ -13,9 +14,7 @@ export type FormState = {
 
 async function requirePsicologaEPaciente(pacienteId: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   // RLS já restringe pacientes à psicóloga dona — se não achou, não é dela.
