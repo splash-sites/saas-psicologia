@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SCRIPT_MODO_PRIVADO } from "@/components/ModoPrivado";
 import "./globals.css";
@@ -22,7 +23,9 @@ export const metadata: Metadata = {
     "Agenda, prontuário e financeiro do seu consultório em um só lugar.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Nonce da CSP gerado pelo proxy: sem ele o script inline abaixo é bloqueado.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html
       lang="pt-BR"
@@ -36,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             o banner de assinatura de novo), o React reconciliava esse script
             no cliente a cada navegação e disparava aviso (script inserido via
             innerHTML nunca executa fora do parse inicial do HTML). */}
-        <script dangerouslySetInnerHTML={{ __html: SCRIPT_MODO_PRIVADO }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: SCRIPT_MODO_PRIVADO }} />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
