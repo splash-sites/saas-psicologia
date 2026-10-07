@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { mensagemErroEscrita } from "@/lib/assinatura/guard";
+import { pacientePertenceAPsicologa } from "@/lib/pacientes/dono";
 import {
   pagamentoSchema,
   marcarPagoSchema,
@@ -21,19 +22,6 @@ async function requirePsicologa() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   return { supabase, user };
-}
-
-async function pacientePertenceAPsicologa(
-  supabase: Awaited<ReturnType<typeof requirePsicologa>>["supabase"],
-  pacienteId: string,
-): Promise<boolean> {
-  const { data } = await supabase
-    .from("pacientes")
-    .select("id")
-    .eq("id", pacienteId)
-    .is("deleted_at", null)
-    .maybeSingle();
-  return Boolean(data);
 }
 
 export async function criarPagamento(

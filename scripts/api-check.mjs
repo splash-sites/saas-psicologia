@@ -201,7 +201,10 @@ for (const p of rotasPrivadas(B).filter((p) => /[0-9a-f]{8}-/.test(p))) {
   r.resumo = resumoPagina(r);
   const vazou = r.texto.includes("Paciente de Psico B");
   if (vazou) r.resumo = "VAZOU dado de B";
-  registrar("GET A→ids de B", curto(p), (x) => !vazou && (x.status === 404 || x.resumo.startsWith("404") || (x.status >= 300 && x.status < 400)), r);
+  // ?consulta=<id> é só o painel lateral da agenda: com id alheio, a página
+  // abre normal sem o painel. Basta não vazar.
+  const soPainel = p.includes("?consulta=");
+  registrar("GET A→ids de B", curto(p), (x) => !vazou && (soPainel || x.status === 404 || (x.status >= 300 && x.status < 400)), r);
 }
 
 // 4. Rotas de API

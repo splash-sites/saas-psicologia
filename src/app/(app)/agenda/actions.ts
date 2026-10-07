@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { mensagemErroEscrita } from "@/lib/assinatura/guard";
+import { pacientePertenceAPsicologa } from "@/lib/pacientes/dono";
 import {
   consultaSchema,
   consultaEdicaoSchema,
@@ -88,6 +89,10 @@ export async function criarConsulta(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
   const v = parsed.data;
+
+  if (!(await pacientePertenceAPsicologa(supabase, v.paciente_id))) {
+    return { fieldErrors: { paciente_id: ["Paciente inválido"] } };
+  }
 
   const primeiroInicio = brWallTimeToDate(v.data, v.hora);
   if (Number.isNaN(primeiroInicio.getTime())) {

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { mensagemErroEscrita } from "@/lib/assinatura/guard";
+import { pacientePertenceAPsicologa } from "@/lib/pacientes/dono";
 import {
   pacienteSchema,
   anamneseSchema,
@@ -99,6 +100,10 @@ export async function salvarAnamnese(
   const parsed = anamneseSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  if (!(await pacientePertenceAPsicologa(supabase, pacienteId))) {
+    return { error: "Paciente inválido." };
   }
 
   // upsert pela unicidade de paciente_id (1 ficha por paciente).
