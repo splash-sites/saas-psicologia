@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { PDFDocument } from "pdf-lib";
 
 // Fluxos críticos de ponta a ponta, como a psicóloga usa: login, paciente,
 // anamnese, agenda, evolução, financeiro, prontuário, exportação — e o
@@ -157,14 +159,17 @@ test("lançar pagamento a receber e marcar como pago", async () => {
   await expect(page.locator("main")).toContainText("Pago");
 });
 
-test("prontuário para impressão tem anamnese, evolução e notas privadas", async () => {
-  const id = pacienteUrl.split("/").pop();
-  await page.goto(`/imprimir/pacientes/${id}`);
-  const main = page.locator("main");
-  await expect(main).toContainText("Prontuário psicológico");
-  await expect(main).toContainText("Ansiedade no trabalho");
-  await expect(main).toContainText("Relatou insônia");
-  await expect(main).toContainText("Observar evitação");
+test("prontuário em PDF baixa direto da página do paciente", async () => {
+  await page.goto(pacienteUrl);
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Prontuário (PDF)" }).click();
+  const arquivo = await download;
+  expect(arquivo.suggestedFilename()).toMatch(/^prontuario-maria-da-silva-\d{4}-\d{2}-\d{2}\.pdf$/);
+  const bytes = readFileSync((await arquivo.path())!);
+  expect(bytes.subarray(0, 5).toString()).toBe("%PDF-");
+  const doc = await PDFDocument.load(bytes);
+  expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
+  expect(doc.getTitle()).toBe("Prontuário psicológico");
 });
 
 test("exportar todos os dados baixa um ZIP", async () => {
@@ -179,7 +184,7 @@ test("outra conta não abre o paciente nem o prontuário", async ({ browser }) =
   const outra = await browser.newPage();
   await entrar(outra, EMAIL_B);
   const id = pacienteUrl.split("/").pop();
-  for (const url of [pacienteUrl, `/imprimir/pacientes/${id}`]) {
+  for (const url of [pacienteUrl, `/api/prontuario/${id}`]) {
     const resposta = await outra.goto(url);
     expect(resposta?.status()).toBe(404);
     await expect(outra.locator("body")).not.toContainText("Maria da Silva");

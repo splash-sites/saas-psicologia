@@ -166,7 +166,7 @@ const rotasPrivadas = (x) => [
   `/pacientes/${x.paciente}/evolucoes`, `/pacientes/${x.paciente}/evolucoes/nova`,
   `/pacientes/${x.paciente}/evolucoes/${x.evolucao}`, `/pacientes/${x.paciente}/evolucoes/${x.evolucao}/editar`,
   "/financeiro", "/financeiro/novo", "/financeiro/historico", `/financeiro/${x.pagamento}`, `/financeiro/${x.pagamento}/editar`,
-  "/lembretes", "/assinatura", "/configuracoes", `/imprimir/pacientes/${x.paciente}`,
+  "/lembretes", "/assinatura", "/configuracoes", `/api/prontuario/${x.paciente}`,
 ];
 const curto = (p) => p.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/g, ":id");
 
@@ -249,9 +249,12 @@ const webhook = (headers, body) => req("/api/asaas/webhook", { method: "POST", h
   const tudo = nomes.map(csv).join("\n");
   linhas.push({ grupo: "EXPORTAÇÃO", nome: "contém dados de A (paciente, evolução, nota privada)", status: "", destino: "", ms: "", nota: "",
     ok: csv("pacientes.csv").includes("Paciente de Psico A") && csv("evolucoes.csv").includes("nota privada de A") && csv("pagamentos.csv").includes("150") });
-  const imp = await req(`/imprimir/pacientes/${A.paciente}`, { cookie: cA });
-  linhas.push({ grupo: "EXPORTAÇÃO", nome: "prontuário impresso tem paciente, evolução e nota privada", status: imp.status, destino: "", ms: imp.ms, nota: "",
-    ok: imp.status === 200 && imp.texto.includes("Paciente de Psico A") && imp.texto.includes("nota privada de A") && imp.texto.includes("Prontuário psicológico") });
+  const t0 = Date.now();
+  const resPdf = await fetch(`${BASE}/api/prontuario/${A.paciente}`, { headers: { cookie: cA } });
+  const pdf = new Uint8Array(await resPdf.arrayBuffer());
+  linhas.push({ grupo: "EXPORTAÇÃO", nome: "prontuário em PDF (download direto)", status: resPdf.status, destino: "", ms: Date.now() - t0,
+    nota: `${resPdf.headers.get("content-disposition")} (${pdf.length} bytes)`,
+    ok: resPdf.status === 200 && resPdf.headers.get("content-type") === "application/pdf" && String.fromCharCode(...pdf.slice(0, 5)) === "%PDF-" && resPdf.headers.get("cache-control") === "no-store" });
   linhas.push({ grupo: "EXPORTAÇÃO", nome: "não contém nada de B", status: "", destino: "", ms: "", nota: "",
     ok: !tudo.includes("Psico B") && !tudo.includes(B.paciente) });
   linhas.push({ grupo: "EXPORTAÇÃO", nome: "abre no Excel pt-BR (BOM + ;)", status: "", destino: "", ms: "", nota: "",

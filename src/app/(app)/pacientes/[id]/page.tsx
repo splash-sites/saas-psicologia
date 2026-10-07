@@ -73,9 +73,8 @@ export default async function PacienteDetailPage({
               </a>
             )}
             <a
-              href={`/imprimir/pacientes/${id}`}
-              target="_blank"
-              rel="noopener"
+              href={`/api/prontuario/${id}`}
+              download
               className="btn btn-outline"
             >
               Prontuário (PDF)
