@@ -133,7 +133,7 @@ export async function criarConsulta(
     if (error.code === "23P01") {
       return { error: "Conflito de horário com outra consulta. Recarregue e tente de novo." };
     }
-    return { error: mensagemErroEscrita(error, "Não foi possível agendar a consulta.") };
+    return { error: await mensagemErroEscrita(supabase, error, "Não foi possível agendar a consulta.") };
   }
 
   // Empurra para o Google Calendar (best-effort — não bloqueia o agendamento).
@@ -197,7 +197,7 @@ export async function atualizarConsulta(
     if (error.code === "23P01") {
       return { error: "Conflito de horário com outra consulta." };
     }
-    return { error: mensagemErroEscrita(error, "Não foi possível atualizar a consulta.") };
+    return { error: await mensagemErroEscrita(supabase, error, "Não foi possível atualizar a consulta.") };
   }
   if (!alterados?.length) return { error: "Consulta não encontrada." };
 
@@ -345,7 +345,7 @@ export async function criarBloqueio(
     if (error.code === "23P01") {
       return { error: "Esse intervalo já está bloqueado." };
     }
-    return { error: mensagemErroEscrita(error, "Não foi possível criar o bloqueio.") };
+    return { error: await mensagemErroEscrita(supabase, error, "Não foi possível criar o bloqueio.") };
   }
 
   revalidatePath("/agenda");

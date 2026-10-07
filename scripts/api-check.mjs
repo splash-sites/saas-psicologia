@@ -340,6 +340,30 @@ for (const [arq, nome, args] of cruzadas) {
   registrar("ACTION A→B", nome, (x) => x.status < 500 && (!deveAvisar || /inválido|não encontrad/.test(x.retorno ?? "")), r);
 }
 
+// 7. Mensagem de erro de policy: só culpa a assinatura quando a trava é a causa.
+{
+  const { data: pacNovo } = await admin.from("pacientes").insert({ psicologa_id: A.pid, nome: "Paciente msg" }).select("id").single();
+  const { data: evoNova } = await admin.from("evolucoes").insert({
+    psicologa_id: A.pid, paciente_id: pacNovo.id, data_sessao: dia(0),
+    demanda: "d", procedimentos: "p", resultados: "r", encaminhamentos: "e",
+  }).select("id").single();
+  const idEvo = actionId(mapa, evo, "atualizarEvolucao");
+  const r = await chamarAction(idEvo, [pacNovo.id, evoNova.id, vazio, fd({
+    data_sessao: dia(0), consulta_id: B.consulta, demanda: "d", procedimentos: "p", resultados: "r", encaminhamentos: "e",
+  })], { cookie: cA2 });
+  registrar("MSG ERRO", "evolução de A com consulta de B", (x) => /não tem permissão/.test(x.retorno ?? ""), r);
+
+  // Trava ligada + trial vencido: escrita bloqueada com a mensagem da assinatura.
+  await admin.from("app_config").update({ assinatura_enforcement_ativo: true }).eq("id", 1);
+  await admin.from("assinaturas").update({ status: "trial", trial_fim: dia(-1) }).eq("psicologa_id", A.pid);
+  try {
+    const r2 = await chamarAction(actionId(mapa, pac, "criarPaciente"), [vazio, fd({ nome: "Bloqueado", status: "ativo" })], { cookie: cA2 });
+    registrar("MSG ERRO", "trava de assinatura ligada, trial vencido", (x) => /somente leitura/.test(x.retorno ?? ""), r2);
+  } finally {
+    await admin.from("app_config").update({ assinatura_enforcement_ativo: false }).eq("id", 1);
+  }
+}
+
 // Estado final de B: nada pode ter mudado
 const { data: pB } = await admin.from("pacientes").select("nome, deleted_at").eq("id", B.paciente).single();
 const { data: anB } = await admin.from("anamneses").select("id").eq("paciente_id", B.paciente);

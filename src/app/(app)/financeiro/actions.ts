@@ -53,7 +53,7 @@ export async function criarPagamento(
     observacoes: v.observacoes ?? null,
   });
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível lançar o pagamento.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível lançar o pagamento.") };
 
   revalidatePath("/financeiro");
   redirect("/financeiro");
@@ -94,7 +94,7 @@ export async function atualizarPagamento(
     .is("deleted_at", null)
     .select("id");
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar o lançamento.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível atualizar o lançamento.") };
   if (!alterados?.length) return { error: "Lançamento não encontrado." };
 
   revalidatePath("/financeiro");
@@ -126,7 +126,7 @@ export async function marcarComoPago(
     .is("deleted_at", null)
     .select("id");
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível confirmar o pagamento.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível confirmar o pagamento.") };
   if (!alterados?.length) return { error: "Lançamento não encontrado." };
 
   revalidatePath("/financeiro");

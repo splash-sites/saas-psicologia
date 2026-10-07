@@ -42,7 +42,7 @@ export async function criarPaciente(
     .select("id")
     .single();
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível salvar o paciente.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível salvar o paciente.") };
 
   revalidatePath("/pacientes");
   redirect(`/pacientes/${data.id}`);
@@ -68,7 +68,7 @@ export async function atualizarPaciente(
     .is("deleted_at", null)
     .select("id");
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar o paciente.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível atualizar o paciente.") };
   if (!alterados?.length) return { error: "Paciente não encontrado." };
 
   revalidatePath("/pacientes");
@@ -119,7 +119,7 @@ export async function salvarAnamnese(
     { onConflict: "paciente_id" },
   );
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível salvar a anamnese.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível salvar a anamnese.") };
 
   revalidatePath(`/pacientes/${pacienteId}`);
   return {};

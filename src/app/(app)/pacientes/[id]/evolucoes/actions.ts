@@ -59,7 +59,7 @@ export async function criarEvolucao(
     .select("id")
     .single();
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível salvar a evolução.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível salvar a evolução.") };
 
   revalidatePath(`/pacientes/${pacienteId}`);
   revalidatePath(`/pacientes/${pacienteId}/evolucoes`);
@@ -97,7 +97,7 @@ export async function atualizarEvolucao(
     .is("deleted_at", null)
     .select("id");
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar a evolução.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível atualizar a evolução.") };
   if (!alterados?.length) return { error: "Evolução não encontrada." };
 
   revalidatePath(`/pacientes/${pacienteId}/evolucoes`);
@@ -129,7 +129,7 @@ export async function arquivarEvolucao(
     .eq("paciente_id", pacienteId)
     .is("deleted_at", null);
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível arquivar a evolução.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível arquivar a evolução.") };
 
   revalidatePath(`/pacientes/${pacienteId}/evolucoes`);
   redirect(`/pacientes/${pacienteId}/evolucoes`);
