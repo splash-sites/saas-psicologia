@@ -12,44 +12,41 @@ type ConsultaRow = {
   inicio: string;
   paciente_id: string;
   pacientes: { nome: string } | { nome: string }[] | null;
+  pagamentos: { id: string; deleted_at: string | null }[] | null;
 };
 
 /**
  * Consultas elegíveis pra vincular a um lançamento financeiro: não
- * canceladas, não excluídas, e que ainda não têm outro pagamento (não
- * excluído) apontando pra elas — cada consulta só pode estar ligada a um
- * lançamento por vez.
+ * canceladas, não excluídas, de paciente não arquivado, e que ainda não têm
+ * outro pagamento (não excluído) apontando pra elas — cada consulta só pode
+ * estar ligada a um lançamento por vez.
  *
  * `manterConsultaId`: ao editar um lançamento que já tem uma consulta
  * vinculada, essa consulta "já tem pagamento" (o próprio que está sendo
  * editado) e sumiria da lista por engano — esse parâmetro a mantém incluída.
+ *
+ * Os pagamentos vêm embutidos em cada consulta (e não numa lista separada de
+ * todos os pagamentos da conta): o PostgREST corta respostas em 1000 linhas, e
+ * com mais que isso consultas já pagas voltariam a aparecer como disponíveis.
  */
 export async function consultasDisponiveis(
   supabase: SupabaseClient,
   manterConsultaId?: string | null,
 ): Promise<ConsultaDisponivel[]> {
-  const [{ data: consultasRaw }, { data: vinculadasRaw }] = await Promise.all([
-    supabase
-      .from("consultas")
-      .select("id, inicio, paciente_id, pacientes(nome)")
-      .is("deleted_at", null)
-      .neq("status", "cancelada")
-      .order("inicio", { ascending: false }),
-    supabase
-      .from("pagamentos")
-      .select("consulta_id")
-      .is("deleted_at", null)
-      .not("consulta_id", "is", null),
-  ]);
+  const { data } = await supabase
+    .from("consultas")
+    .select("id, inicio, paciente_id, pacientes!inner(nome), pagamentos(id, deleted_at)")
+    .is("deleted_at", null)
+    .is("pacientes.deleted_at", null)
+    .neq("status", "cancelada")
+    .order("inicio", { ascending: false });
 
-  const vinculadas = new Set(
-    (vinculadasRaw ?? [])
-      .map((p) => p.consulta_id as string)
-      .filter((cid) => cid !== manterConsultaId),
-  );
-
-  return ((consultasRaw ?? []) as unknown as ConsultaRow[])
-    .filter((c) => !vinculadas.has(c.id))
+  return ((data ?? []) as unknown as ConsultaRow[])
+    .filter(
+      (c) =>
+        c.id === manterConsultaId ||
+        !(c.pagamentos ?? []).some((p) => p.deleted_at === null),
+    )
     .map((c) => {
       const pac = Array.isArray(c.pacientes) ? (c.pacientes[0] ?? null) : c.pacientes;
       return {

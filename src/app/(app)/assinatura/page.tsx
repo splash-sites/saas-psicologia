@@ -7,6 +7,7 @@ import {
   diasRestantesTrial,
   formatarCpfCnpj,
   PLANOS,
+  trialEncerrado,
 } from "@/lib/assinatura/types";
 import { asaasConfigurada, asaasModo } from "@/lib/asaas/client";
 import { ConfigurarAssinaturaForm } from "./ConfigurarAssinaturaForm";
@@ -50,6 +51,7 @@ export default async function AssinaturaPage() {
   }
 
   const dias = diasRestantesTrial(assinatura.trial_fim);
+  const encerrado = trialEncerrado(assinatura);
   const configurada = asaasConfigurada();
 
   return (
@@ -57,9 +59,11 @@ export default async function AssinaturaPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Assinatura</h1>
         <span
-          className={`rounded-full px-3 py-1 text-sm font-medium ${STATUS_TOM[assinatura.status]}`}
+          className={`rounded-full px-3 py-1 text-sm font-medium ${
+            encerrado ? "bg-amber-100 text-amber-800" : STATUS_TOM[assinatura.status]
+          }`}
         >
-          {ASSINATURA_STATUS_LABEL[assinatura.status]}
+          {encerrado ? "Teste encerrado" : ASSINATURA_STATUS_LABEL[assinatura.status]}
         </span>
       </div>
 

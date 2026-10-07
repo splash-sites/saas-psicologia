@@ -100,4 +100,18 @@ describe.skipIf(!hasLocalSupabase)("consultasDisponiveis", () => {
     const listaA = await consultasDisponiveis(ca);
     expect(listaA.some((c) => c.pacienteNome === "De Outra Conta")).toBe(false);
   });
+  it("esconde consultas de paciente arquivado", async () => {
+    const s = Date.now();
+    const a = await signUpPsicologa(`cd-c-${s}@teste.local`);
+    const ca = userClient(a.accessToken);
+    const ativo = await pacienteDe(ca, a.id, "Ativo");
+    const arquivado = await pacienteDe(ca, a.id, "Arquivado");
+    const doAtivo = await consultaDe(ca, a.id, ativo, "2026-05-01T14:00:00Z");
+    const doArquivado = await consultaDe(ca, a.id, arquivado, "2026-05-02T14:00:00Z");
+    await ca.from("pacientes").update({ deleted_at: new Date().toISOString() }).eq("id", arquivado);
+
+    const ids = (await consultasDisponiveis(ca)).map((c) => c.id);
+    expect(ids).toContain(doAtivo);
+    expect(ids).not.toContain(doArquivado);
+  });
 });
