@@ -73,6 +73,14 @@ export default async function PacienteDetailPage({
                 WhatsApp
               </a>
             )}
+            <a
+              href={`/imprimir/pacientes/${id}`}
+              target="_blank"
+              rel="noopener"
+              className="btn btn-outline"
+            >
+              Prontuário (PDF)
+            </a>
             <Link
               href={`/pacientes/${id}/editar`}
               className="btn btn-outline"

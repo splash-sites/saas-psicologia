@@ -166,7 +166,7 @@ const rotasPrivadas = (x) => [
   `/pacientes/${x.paciente}/evolucoes`, `/pacientes/${x.paciente}/evolucoes/nova`,
   `/pacientes/${x.paciente}/evolucoes/${x.evolucao}`, `/pacientes/${x.paciente}/evolucoes/${x.evolucao}/editar`,
   "/financeiro", "/financeiro/novo", "/financeiro/historico", `/financeiro/${x.pagamento}`, `/financeiro/${x.pagamento}/editar`,
-  "/lembretes", "/assinatura", "/configuracoes",
+  "/lembretes", "/assinatura", "/configuracoes", `/imprimir/pacientes/${x.paciente}`,
 ];
 const curto = (p) => p.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/g, ":id");
 
@@ -225,6 +225,38 @@ const webhook = (headers, body) => req("/api/asaas/webhook", { method: "POST", h
   registrar("API", "GET /auth/callback code inválido", (x) => x.destino.startsWith("/login"), r);
   r = await req("/auth/callback?code=invalido&next=/configuracoes");
   registrar("API", "GET /auth/callback next=/configuracoes", (x) => x.destino.startsWith("/configuracoes"), r);
+}
+
+// 4b. Exportação da conta (ZIP de CSVs)
+{
+  const { unzipSync, strFromU8 } = await import("fflate");
+  await admin.from("evolucoes").update({ notas_privadas: "nota privada de A" }).eq("id", A.evolucao);
+  let r = await req("/api/exportar");
+  registrar("EXPORTAÇÃO", "GET /api/exportar sem login", (x) => x.destino.startsWith("/login"), r);
+
+  const t = Date.now();
+  const res = await fetch(BASE + "/api/exportar", { headers: { cookie: cA } });
+  const zip = new Uint8Array(await res.arrayBuffer());
+  r = { status: res.status, ms: Date.now() - t, destino: "", texto: "" };
+  let arquivos = {};
+  try { arquivos = unzipSync(zip); } catch { /* não é zip */ }
+  const csv = (n) => (arquivos[n] ? strFromU8(arquivos[n]) : "");
+  const nomes = Object.keys(arquivos).sort();
+  r.resumo = `${nomes.join(", ")} (${zip.length} bytes)`;
+  registrar("EXPORTAÇÃO", "GET /api/exportar logado (ZIP com 6 CSVs + LEIA-ME)", (x) =>
+    x.status === 200 && nomes.length === 7 && res.headers.get("cache-control") === "no-store", r);
+
+  const tudo = nomes.map(csv).join("\n");
+  linhas.push({ grupo: "EXPORTAÇÃO", nome: "contém dados de A (paciente, evolução, nota privada)", status: "", destino: "", ms: "", nota: "",
+    ok: csv("pacientes.csv").includes("Paciente de Psico A") && csv("evolucoes.csv").includes("nota privada de A") && csv("pagamentos.csv").includes("150") });
+  const imp = await req(`/imprimir/pacientes/${A.paciente}`, { cookie: cA });
+  linhas.push({ grupo: "EXPORTAÇÃO", nome: "prontuário impresso tem paciente, evolução e nota privada", status: imp.status, destino: "", ms: imp.ms, nota: "",
+    ok: imp.status === 200 && imp.texto.includes("Paciente de Psico A") && imp.texto.includes("nota privada de A") && imp.texto.includes("Prontuário psicológico") });
+  linhas.push({ grupo: "EXPORTAÇÃO", nome: "não contém nada de B", status: "", destino: "", ms: "", nota: "",
+    ok: !tudo.includes("Psico B") && !tudo.includes(B.paciente) });
+  linhas.push({ grupo: "EXPORTAÇÃO", nome: "abre no Excel pt-BR (BOM + ;)", status: "", destino: "", ms: "", nota: "",
+    // Confere os bytes: o TextDecoder do strFromU8 descarta o BOM ao decodificar.
+    ok: arquivos["pacientes.csv"]?.slice(0, 3).join(",") === "239,187,191" && csv("pacientes.csv").replace(/^﻿/, "").startsWith("ID do paciente;Nome;") });
 }
 
 // 5. Server actions (A)
