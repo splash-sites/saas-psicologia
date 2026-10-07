@@ -6,7 +6,7 @@
 // Uso: npx supabase start; (next dev -p 3100 com env local); node scripts/api-check.mjs
 
 import { execSync } from "node:child_process";
-import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 import { createClient } from "@supabase/supabase-js";
@@ -112,17 +112,10 @@ function resumoPagina(r) {
 }
 
 // ---------- server actions ----------
+// Só o manifest consolidado do `next dev`: os de `next build` (.next/server) e
+// os por página têm ids de outra compilação e dão 404 no dev server.
 function acharManifest() {
-  const achados = [];
-  const andar = (d) => {
-    for (const n of readdirSync(d)) {
-      const p = join(d, n);
-      if (statSync(p).isDirectory()) andar(p);
-      else if (n === "server-reference-manifest.json") achados.push(p);
-    }
-  };
-  andar(".next");
-  return achados;
+  return [join(".next", "dev", "server", "server-reference-manifest.json")];
 }
 
 function idsDasActions() {
