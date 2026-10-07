@@ -50,3 +50,7 @@ next-env.d.ts
 .visual/
 .visual-run.log
 .visual-prev/
+
+# Saída do teste de requisições (scripts/api-check.mjs)
+.api-check.json
+.action-ids.json
