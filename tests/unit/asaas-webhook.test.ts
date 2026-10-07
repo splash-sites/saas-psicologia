@@ -5,7 +5,37 @@ import {
   classificarEvento,
   statusIndicaPago,
   proximoMesDe,
+  verificarCobranca,
 } from "@/lib/asaas/webhook";
+
+describe("verificarCobranca", () => {
+  const cobranca = { status: "RECEIVED", subscription: "sub_1" };
+
+  it("usa o status da API, não o do corpo", () => {
+    expect(verificarCobranca("sandbox", "PENDING", cobranca, "sub_1")).toEqual({
+      tipo: "ok",
+      status: "RECEIVED",
+    });
+    expect(
+      verificarCobranca("production", "RECEIVED", { status: "PENDING", subscription: "sub_1" }, "sub_1"),
+    ).toEqual({ tipo: "ok", status: "PENDING" });
+  });
+
+  it("API fora do ar nunca cai no status do corpo", () => {
+    expect(verificarCobranca("sandbox", "RECEIVED", null, "sub_1")).toEqual({ tipo: "indisponivel" });
+  });
+
+  it("cobrança de outra assinatura é divergente", () => {
+    expect(verificarCobranca("sandbox", "RECEIVED", cobranca, "sub_outra")).toEqual({ tipo: "divergente" });
+    expect(
+      verificarCobranca("sandbox", "RECEIVED", { status: "RECEIVED", subscription: null }, "sub_1"),
+    ).toEqual({ tipo: "divergente" });
+  });
+
+  it("modo simulado confia no corpo (não há API pra consultar)", () => {
+    expect(verificarCobranca("mock", "RECEIVED", null, "sub_1")).toEqual({ tipo: "ok", status: "RECEIVED" });
+  });
+});
 
 describe("tokenValido", () => {
   it("aceita quando os tokens batem", () => {

@@ -292,6 +292,27 @@ for (const [arq, nome, args, tipo] of casos) {
   registrar("ACTION (A)", `${nome} [${tipo}]`, esperado, r);
 }
 
+// 5b. Webhook de ponta a ponta (modo simulado): pagamento confirmado ativa a
+// assinatura configurada acima; reentrega do mesmo evento não reprocessa.
+{
+  const { data: ass } = await admin.from("assinaturas").select("asaas_subscription_id").eq("psicologa_id", A.pid).single();
+  await admin.from("assinaturas").update({ status: "atrasada" }).eq("psicologa_id", A.pid);
+  const corpo = JSON.stringify({
+    event: "PAYMENT_CONFIRMED",
+    payment: { id: `pay_${Date.now()}`, subscription: ass.asaas_subscription_id, status: "CONFIRMED", dueDate: dia(0) },
+  });
+  const r = await webhook({ "asaas-access-token": WEBHOOK_TOKEN }, corpo);
+  const { data: depois } = await admin.from("assinaturas").select("status").eq("psicologa_id", A.pid).single();
+  r.resumo = `assinatura: ${depois.status}`;
+  registrar("API", "POST webhook confirma pagamento", (x) => x.status === 200 && depois.status === "ativa", r);
+
+  await admin.from("assinaturas").update({ status: "atrasada" }).eq("psicologa_id", A.pid);
+  const r2 = await webhook({ "asaas-access-token": WEBHOOK_TOKEN }, corpo);
+  const { data: reentrega } = await admin.from("assinaturas").select("status").eq("psicologa_id", A.pid).single();
+  r2.resumo = `assinatura: ${reentrega.status}`;
+  registrar("API", "POST webhook reentrega (idempotente)", (x) => x.status === 200 && reentrega.status === "atrasada", r2);
+}
+
 // 6. Actions de A mirando ids de B (deveriam não afetar B)
 const cA2 = await cookieHeader("teste-a@teste.local");
 const cruzadas = [

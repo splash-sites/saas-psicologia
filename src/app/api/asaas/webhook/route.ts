@@ -7,6 +7,7 @@ import {
   classificarEvento,
   statusIndicaPago,
   proximoMesDe,
+  verificarCobranca,
 } from "@/lib/asaas/webhook";
 import { PLANOS, type AssinaturaPlano } from "@/lib/assinatura/types";
 
@@ -68,9 +69,10 @@ export async function POST(request: Request) {
 
   // Idempotência: grava o evento antes de agir. Reentrega do mesmo evento
   // colide na unique constraint e sai sem reprocessar.
+  const chave = chaveIdempotencia(evento, pagamento.id, pagamento.status);
   const { error: erroInsercao } = await admin.from("assinatura_eventos").insert({
     psicologa_id: assinatura?.psicologa_id ?? null,
-    chave_idempotencia: chaveIdempotencia(evento, pagamento.id, pagamento.status),
+    chave_idempotencia: chave,
     tipo_evento: evento,
     payload: corpo,
   });
@@ -87,13 +89,26 @@ export async function POST(request: Request) {
   const classe = classificarEvento(evento);
   if (classe === "ignorar") return NextResponse.json({ ok: true });
 
-  // Nunca libera acesso só porque o corpo do webhook diz "pago" — confirma
-  // direto na API do Asaas antes (mitiga um token vazado forjando confirmação).
-  let statusReal = pagamento.status;
-  if (asaasModo() !== "mock") {
-    const cobranca = await buscarCobranca(pagamento.id);
-    if (cobranca) statusReal = cobranca.status;
+  // Nunca muda a assinatura só pelo que o corpo do webhook diz — confirma
+  // direto na API do Asaas antes (mitiga um token vazado forjando eventos).
+  const modo = asaasModo();
+  const verificacao = verificarCobranca(
+    modo,
+    pagamento.status,
+    modo === "mock" ? null : await buscarCobranca(pagamento.id),
+    pagamento.subscription ?? "",
+  );
+  if (verificacao.tipo === "indisponivel") {
+    // Libera a chave pra reentrega do Asaas ser processada de novo, e
+    // responde erro pra ele de fato reenviar.
+    await admin.from("assinatura_eventos").delete().eq("chave_idempotencia", chave);
+    return NextResponse.json({ error: "não foi possível confirmar no Asaas" }, { status: 503 });
   }
+  if (verificacao.tipo === "divergente") {
+    // Fica só no log; reenviar não mudaria nada.
+    return NextResponse.json({ ok: true });
+  }
+  const statusReal = verificacao.status;
 
   if (classe === "confirma_pagamento" && statusIndicaPago(statusReal)) {
     const meses = PLANOS[(assinatura.plano ?? "mensal") as AssinaturaPlano].meses;
@@ -105,7 +120,7 @@ export async function POST(request: Request) {
         invoice_url_atual: null,
       })
       .eq("psicologa_id", assinatura.psicologa_id);
-  } else if (classe === "atraso") {
+  } else if (classe === "atraso" && (modo === "mock" || statusReal === "OVERDUE")) {
     await admin
       .from("assinaturas")
       .update({ status: "atrasada", invoice_url_atual: pagamento.invoiceUrl ?? null })
