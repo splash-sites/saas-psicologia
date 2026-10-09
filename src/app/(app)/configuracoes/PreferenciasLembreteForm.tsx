@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import {
   TEMPLATE_PADRAO,
   VARIAVEIS_TEMPLATE,
@@ -34,7 +35,7 @@ export function PreferenciasLembreteForm({ action, defaults }: Props) {
   });
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
       {state.error && (
         <p className="alert alert-error">
           {state.error}

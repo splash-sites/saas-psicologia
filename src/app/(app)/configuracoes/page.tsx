@@ -106,6 +106,19 @@ export default async function ConfiguracoesPage({
       </section>
 
       <section className="flex flex-col gap-3 card">
+        <h2 className="font-medium">Exportar dados</h2>
+        <p className="text-sm text-slate-600">
+          Baixa tudo da sua conta — pacientes, anamneses, agenda, evoluções (com
+          notas privadas) e financeiro — em planilhas que abrem no Excel ou no
+          Google Planilhas. Funciona mesmo com a assinatura pendente. Guarde em
+          local seguro: são dados de saúde.
+        </p>
+        <a href="/api/exportar" download className="btn btn-outline self-start">
+          Exportar todos os dados (.zip)
+        </a>
+      </section>
+
+      <section className="flex flex-col gap-3 card">
         <h2 className="font-medium">Lembretes de consulta</h2>
         <p className="text-sm text-slate-600">
           Na página{" "}

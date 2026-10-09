@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { mensagemErroEscrita } from "@/lib/assinatura/guard";
 import { evolucaoSchema, arquivarSchema } from "@/lib/prontuario/schema";
 
@@ -13,9 +14,7 @@ export type FormState = {
 
 async function requirePsicologaEPaciente(pacienteId: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   // RLS já restringe pacientes à psicóloga dona — se não achou, não é dela.
@@ -59,7 +58,7 @@ export async function criarEvolucao(
     .select("id")
     .single();
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível salvar a evolução.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível salvar a evolução.") };
 
   revalidatePath(`/pacientes/${pacienteId}`);
   revalidatePath(`/pacientes/${pacienteId}/evolucoes`);
@@ -80,7 +79,8 @@ export async function atualizarEvolucao(
   }
   const v = parsed.data;
 
-  const { error } = await supabase
+  // O RLS não dá erro em update de linha alheia/arquivada: só não afeta nada.
+  const { data: alterados, error } = await supabase
     .from("evolucoes")
     .update({
       consulta_id: v.consulta_id ?? null,
@@ -93,9 +93,11 @@ export async function atualizarEvolucao(
     })
     .eq("id", evolucaoId)
     .eq("paciente_id", pacienteId)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .select("id");
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar a evolução.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível atualizar a evolução.") };
+  if (!alterados?.length) return { error: "Evolução não encontrada." };
 
   revalidatePath(`/pacientes/${pacienteId}/evolucoes`);
   revalidatePath(`/pacientes/${pacienteId}/evolucoes/${evolucaoId}`);
@@ -126,7 +128,7 @@ export async function arquivarEvolucao(
     .eq("paciente_id", pacienteId)
     .is("deleted_at", null);
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível arquivar a evolução.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível arquivar a evolução.") };
 
   revalidatePath(`/pacientes/${pacienteId}/evolucoes`);
   redirect(`/pacientes/${pacienteId}/evolucoes`);

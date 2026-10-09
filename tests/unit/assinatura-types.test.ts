@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   permiteEscrita,
   diasRestantesTrial,
+  trialEncerrado,
   formatarCpfCnpj,
 } from "@/lib/assinatura/types";
 
@@ -49,5 +50,13 @@ describe("formatarCpfCnpj", () => {
 
   it("tamanho inesperado devolve como veio", () => {
     expect(formatarCpfCnpj("123")).toBe("123");
+  });
+});
+
+describe("trialEncerrado", () => {
+  it("só é encerrado quando o status é trial e a data já passou", () => {
+    expect(trialEncerrado({ status: "trial", trial_fim: "2026-03-19" }, "2026-03-20")).toBe(true);
+    expect(trialEncerrado({ status: "trial", trial_fim: "2026-03-20" }, "2026-03-20")).toBe(false);
+    expect(trialEncerrado({ status: "ativa", trial_fim: "2026-03-01" }, "2026-03-20")).toBe(false);
   });
 });

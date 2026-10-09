@@ -1,10 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { rotaPublica } from "./rotas-publicas";
 
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/privacidade", "/termos"];
-
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+// requestHeaders: headers extras que seguem para a renderização (nonce/CSP do
+// proxy). Os cookies renovados da sessão são copiados para eles também.
+export async function updateSession(
+  request: NextRequest,
+  requestHeaders: Headers = new Headers(request.headers),
+) {
+  const seguir = () => {
+    requestHeaders.set("cookie", request.headers.get("cookie") ?? "");
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  };
+  let supabaseResponse = seguir();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,7 +26,7 @@ export async function updateSession(request: NextRequest) {
           for (const { name, value } of cookiesToSet) {
             request.cookies.set(name, value);
           }
-          supabaseResponse = NextResponse.next({ request });
+          supabaseResponse = seguir();
           for (const { name, value, options } of cookiesToSet) {
             supabaseResponse.cookies.set(name, value, options);
           }
@@ -27,13 +35,13 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims valida o token localmente (JWKS) e renova a sessão quando
+  // expira — sem ir ao servidor de Auth a cada requisição (ver
+  // src/lib/auth/usuario.ts para o porquê e o trade-off).
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims;
 
-  const isPublicPath = PUBLIC_PATHS.some((path) =>
-    request.nextUrl.pathname.startsWith(path),
-  );
+  const isPublicPath = rotaPublica(request.nextUrl.pathname);
 
   if (!user && !isPublicPath) {
     const redirectUrl = request.nextUrl.clone();

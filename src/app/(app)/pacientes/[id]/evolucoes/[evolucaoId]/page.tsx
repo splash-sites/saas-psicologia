@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { VoltarLink } from "@/components/VoltarLink";
 import { CAMPOS_EVOLUCAO, type Evolucao } from "@/lib/prontuario/types";
 import { arquivarEvolucao } from "../actions";
@@ -28,9 +29,7 @@ export default async function EvolucaoDetailPage({
 }) {
   const { id, evolucaoId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { data } = await supabase

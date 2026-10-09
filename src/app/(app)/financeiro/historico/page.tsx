@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { VoltarLink } from "@/components/VoltarLink";
 import { formatarBRL } from "@/lib/financeiro/types";
 import { mesAtual, primeiroDia, rotuloMes, ultimosMeses } from "@/lib/financeiro/mes";
@@ -11,9 +12,7 @@ const N_MESES = 12;
 
 export default async function HistoricoFinanceiroPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const meses = ultimosMeses(mesAtual(), N_MESES);

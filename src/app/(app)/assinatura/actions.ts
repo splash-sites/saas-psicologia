@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { createAdminClient, adminDisponivel } from "@/lib/supabase/admin";
 import { validarCpfCnpj } from "@/lib/assinatura/cpfCnpj";
 import {
@@ -33,6 +34,8 @@ async function buscarUrlComRetentativa(
   tentativas = 4,
   esperaMs = 800,
 ): Promise<string | null> {
+  // Simulado não tem cobrança real: esperar ~2,4s pelas retentativas é só atraso.
+  if (asaasModo() === "mock") return null;
   for (let i = 0; i < tentativas; i++) {
     const cobranca = await primeiraCobrancaDaAssinatura(subscriptionId);
     if (cobranca?.invoiceUrl) return cobranca.invoiceUrl;
@@ -43,9 +46,7 @@ async function buscarUrlComRetentativa(
 
 async function requirePsicologa() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
   return { supabase, user };
 }
@@ -182,7 +183,18 @@ export async function verificarPagamentoAgora(): Promise<{
     return { ok: false, mensagem: "Nenhuma cobrança configurada ainda." };
   }
 
-  const cobranca = await primeiraCobrancaDaAssinatura(atual.asaas_subscription_id);
+  if (asaasModo() === "mock") {
+    return {
+      ok: false,
+      mensagem: "Modo simulado: não há cobrança real. Use \"Simular pagamento confirmado\".",
+    };
+  }
+
+  // Falha de rede/API lança — vira a mesma mensagem de "tente de novo" em vez
+  // de derrubar a tela.
+  const cobranca = await primeiraCobrancaDaAssinatura(atual.asaas_subscription_id).catch(
+    () => null,
+  );
   if (!cobranca) {
     return {
       ok: false,

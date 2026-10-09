@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { MODALIDADE_LABEL, type Modalidade } from "@/lib/agenda/types";
 import {
   addDias,
@@ -45,9 +46,7 @@ export default async function LembretesPage({
 }) {
   const { data: dataParam } = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { data: pref } = await supabase

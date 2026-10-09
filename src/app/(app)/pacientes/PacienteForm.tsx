@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import Link from "next/link";
 import { PACIENTE_STATUS, PACIENTE_STATUS_LABEL } from "@/lib/pacientes/types";
 import type { Paciente } from "@/lib/pacientes/types";
@@ -32,14 +33,14 @@ export function PacienteForm({
   const fe = state.fieldErrors ?? {};
 
   // Controlados só pra aplicar máscara/capitalização ao digitar — o envio
-  // continua pela própria <form action={formAction}> (FormData nativo), sem
+  // continua pela própria action do formulário (FormData nativo), sem
   // mudar o fluxo de Server Action já existente.
   const [nome, setNome] = useState(paciente?.nome ?? "");
   const [telefone, setTelefone] = useState(formatarTelefoneBR(paciente?.telefone ?? ""));
   const [cpf, setCpf] = useState(formatarCpf(paciente?.cpf ?? ""));
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
       {state.error && (
         <p className="alert alert-error">
           {state.error}

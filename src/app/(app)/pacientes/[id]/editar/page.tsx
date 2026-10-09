@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Paciente } from "@/lib/pacientes/types";
 import { atualizarPaciente } from "../../actions";
 import { PacienteForm } from "../../PacienteForm";
@@ -13,9 +14,7 @@ export default async function EditarPacientePage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { data: paciente } = await supabase

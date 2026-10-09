@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { buscarStatusAssinatura } from "@/lib/assinatura/guard";
 import { AppShell } from "@/components/AppShell";
 import { AssinaturaBanner } from "@/components/AssinaturaBanner";
@@ -10,9 +11,7 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const status = await buscarStatusAssinatura(supabase, user.id);

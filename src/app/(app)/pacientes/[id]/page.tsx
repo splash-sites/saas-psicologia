@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { VoltarLink } from "@/components/VoltarLink";
 import type { Anamnese, Paciente } from "@/lib/pacientes/types";
 import { whatsappLink } from "@/lib/pacientes/whatsapp";
+import { formatarCpf, formatarTelefoneBR } from "@/lib/pacientes/formatacao";
 import { StatusBadge } from "../StatusBadge";
 import { excluirPaciente, salvarAnamnese } from "../actions";
 import { AnamneseForm } from "./AnamneseForm";
@@ -21,9 +23,7 @@ export default async function PacienteDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { data: pacienteRow } = await supabase
@@ -72,6 +72,13 @@ export default async function PacienteDetailPage({
                 WhatsApp
               </a>
             )}
+            <a
+              href={`/api/prontuario/${id}`}
+              download
+              className="btn btn-outline"
+            >
+              Prontuário (PDF)
+            </a>
             <Link
               href={`/pacientes/${id}/editar`}
               className="btn btn-outline"
@@ -84,12 +91,15 @@ export default async function PacienteDetailPage({
 
       <section className="grid grid-cols-1 gap-x-6 gap-y-3 card text-sm sm:grid-cols-2">
         <Dado rotulo="E-mail" valor={paciente.email} />
-        <Dado rotulo="Telefone" valor={paciente.telefone} />
+        <Dado
+          rotulo="Telefone"
+          valor={paciente.telefone ? formatarTelefoneBR(paciente.telefone) : null}
+        />
         <Dado
           rotulo="Data de nascimento"
           valor={formatarData(paciente.data_nascimento)}
         />
-        <Dado rotulo="CPF" valor={paciente.cpf} />
+        <Dado rotulo="CPF" valor={paciente.cpf ? formatarCpf(paciente.cpf) : null} />
         <Dado rotulo="Endereço" valor={paciente.endereco} />
       </section>
 

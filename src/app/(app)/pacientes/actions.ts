@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { mensagemErroEscrita } from "@/lib/assinatura/guard";
+import { pacientePertenceAPsicologa } from "@/lib/pacientes/dono";
 import {
   pacienteSchema,
   anamneseSchema,
@@ -17,9 +19,7 @@ export type FormState = {
 
 async function requirePsicologa() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
   return { supabase, user };
 }
@@ -41,7 +41,7 @@ export async function criarPaciente(
     .select("id")
     .single();
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível salvar o paciente.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível salvar o paciente.") };
 
   revalidatePath("/pacientes");
   redirect(`/pacientes/${data.id}`);
@@ -59,13 +59,16 @@ export async function atualizarPaciente(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  const { error } = await supabase
+  // O RLS não dá erro em update de linha alheia/arquivada: só não afeta nada.
+  const { data: alterados, error } = await supabase
     .from("pacientes")
     .update(toNullable(parsed.data))
     .eq("id", id)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .select("id");
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar o paciente.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível atualizar o paciente.") };
+  if (!alterados?.length) return { error: "Paciente não encontrado." };
 
   revalidatePath("/pacientes");
   revalidatePath(`/pacientes/${id}`);
@@ -101,6 +104,10 @@ export async function salvarAnamnese(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
+  if (!(await pacientePertenceAPsicologa(supabase, pacienteId))) {
+    return { error: "Paciente inválido." };
+  }
+
   // upsert pela unicidade de paciente_id (1 ficha por paciente).
   const { error } = await supabase.from("anamneses").upsert(
     {
@@ -111,7 +118,7 @@ export async function salvarAnamnese(
     { onConflict: "paciente_id" },
   );
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível salvar a anamnese.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível salvar a anamnese.") };
 
   revalidatePath(`/pacientes/${pacienteId}`);
   return {};

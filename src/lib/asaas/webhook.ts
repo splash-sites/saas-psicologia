@@ -52,3 +52,27 @@ export function proximoMesDe(dataISO: string, meses = 1): string {
   d.setUTCMonth(d.getUTCMonth() + meses);
   return d.toISOString().slice(0, 10);
 }
+
+export type VerificacaoCobranca =
+  | { tipo: "ok"; status: string | undefined }
+  // A API não respondeu: não dá pra confirmar nada, o Asaas deve reenviar.
+  | { tipo: "indisponivel" }
+  // A cobrança existe mas é de outra assinatura: corpo forjado ou trocado.
+  | { tipo: "divergente" };
+
+/**
+ * Status em que o webhook pode confiar. Fora do modo simulado, vale só o que a
+ * API do Asaas devolveu para a cobrança — nunca o corpo do webhook, nem quando
+ * a API falha (aí é "indisponivel", não fallback pro corpo).
+ */
+export function verificarCobranca(
+  modo: "mock" | "sandbox" | "production",
+  statusDoCorpo: string | undefined,
+  cobranca: { status: string; subscription: string | null } | null,
+  subscriptionEsperada: string,
+): VerificacaoCobranca {
+  if (modo === "mock") return { tipo: "ok", status: statusDoCorpo };
+  if (!cobranca) return { tipo: "indisponivel" };
+  if (cobranca.subscription !== subscriptionEsperada) return { tipo: "divergente" };
+  return { tipo: "ok", status: cobranca.status };
+}

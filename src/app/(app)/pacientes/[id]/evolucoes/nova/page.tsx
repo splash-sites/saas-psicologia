@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { criarEvolucao } from "../actions";
 import { EvolucaoForm } from "../EvolucaoForm";
 
@@ -16,9 +17,7 @@ export default async function NovaEvolucaoPage({
   const { consulta, data } = await searchParams;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { data: paciente } = await supabase

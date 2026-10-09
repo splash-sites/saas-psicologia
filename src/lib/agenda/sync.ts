@@ -139,13 +139,36 @@ export async function sincronizarConsulta(
   }
 }
 
-/** Sincroniza várias consultas em sequência (usado para séries recorrentes). */
+// Uma série pode ter até 52 consultas, cada uma com ~5 idas e voltas (banco,
+// token OAuth, Calendar API). Em série isso passava fácil do timeout da função
+// serverless; com poucas em paralelo fica rápido sem estourar a cota do Google.
+const SYNC_EM_PARALELO = 5;
+
+/** Roda `fn` em todos os itens, no máximo `limite` ao mesmo tempo. */
+export async function emParalelo<T>(
+  itens: T[],
+  limite: number,
+  fn: (item: T) => Promise<void>,
+): Promise<void> {
+  let proximo = 0;
+  const trabalhador = async () => {
+    while (proximo < itens.length) {
+      const item = itens[proximo++];
+      await fn(item);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limite, itens.length) }, trabalhador),
+  );
+}
+
+/** Sincroniza várias consultas (usado para séries recorrentes). */
 export async function sincronizarConsultas(
   supabase: SupabaseClient,
   psicologaId: string,
   ids: string[],
 ): Promise<void> {
-  for (const id of ids) {
-    await sincronizarConsulta(supabase, psicologaId, id);
-  }
+  await emParalelo(ids, SYNC_EM_PARALELO, (id) =>
+    sincronizarConsulta(supabase, psicologaId, id),
+  );
 }

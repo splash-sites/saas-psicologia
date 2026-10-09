@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 
 /**
  * Registra que a psicóloga abriu o WhatsApp para lembrar este paciente.
@@ -12,9 +13,7 @@ export async function marcarLembreteEnviado(
   consultaId: string,
 ): Promise<{ ok: boolean }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) return { ok: false };
 
   // RLS: só enxerga a consulta se for dela.

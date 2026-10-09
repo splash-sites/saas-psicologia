@@ -1,15 +1,12 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { criarPaciente } from "../actions";
 import { PacienteForm } from "../PacienteForm";
 
 export const metadata = { title: "Novo paciente" };
 
 export default async function NovoPacientePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   return (

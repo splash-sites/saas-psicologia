@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import type { FormState } from "../actions";
 
 export function ArquivarForm({
@@ -27,7 +28,7 @@ export function ArquivarForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-2">
+    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-2">
       <p className="text-sm text-slate-600">
         A evolução deixa de aparecer na timeline ativa, mas continua guardada
         (exigência de guarda mínima de 5 anos). Informe o motivo:

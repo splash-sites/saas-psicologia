@@ -4,7 +4,9 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { mensagemErroEscrita } from "@/lib/assinatura/guard";
+import { pacientePertenceAPsicologa } from "@/lib/pacientes/dono";
 import {
   consultaSchema,
   consultaEdicaoSchema,
@@ -26,9 +28,7 @@ export type FormState = {
 
 async function requirePsicologa() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
   return { supabase, user };
 }
@@ -89,6 +89,10 @@ export async function criarConsulta(
   }
   const v = parsed.data;
 
+  if (!(await pacientePertenceAPsicologa(supabase, v.paciente_id))) {
+    return { fieldErrors: { paciente_id: ["Paciente inválido"] } };
+  }
+
   const primeiroInicio = brWallTimeToDate(v.data, v.hora);
   if (Number.isNaN(primeiroInicio.getTime())) {
     return { fieldErrors: { hora: ["Data/hora inválida"] } };
@@ -128,7 +132,7 @@ export async function criarConsulta(
     if (error.code === "23P01") {
       return { error: "Conflito de horário com outra consulta. Recarregue e tente de novo." };
     }
-    return { error: mensagemErroEscrita(error, "Não foi possível agendar a consulta.") };
+    return { error: await mensagemErroEscrita(supabase, error, "Não foi possível agendar a consulta.") };
   }
 
   // Empurra para o Google Calendar (best-effort — não bloqueia o agendamento).
@@ -173,7 +177,8 @@ export async function atualizarConsulta(
   const remarcou =
     !atual || new Date(atual.inicio).getTime() !== inicio.getTime();
 
-  const { error } = await supabase
+  // O RLS não dá erro em update de linha alheia/arquivada: só não afeta nada.
+  const { data: alterados, error } = await supabase
     .from("consultas")
     .update({
       inicio: inicio.toISOString(),
@@ -184,14 +189,16 @@ export async function atualizarConsulta(
       ...(remarcou ? { confirmada_em: null } : {}),
     })
     .eq("id", id)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .select("id");
 
   if (error) {
     if (error.code === "23P01") {
       return { error: "Conflito de horário com outra consulta." };
     }
-    return { error: mensagemErroEscrita(error, "Não foi possível atualizar a consulta.") };
+    return { error: await mensagemErroEscrita(supabase, error, "Não foi possível atualizar a consulta.") };
   }
+  if (!alterados?.length) return { error: "Consulta não encontrada." };
 
   await sincronizarConsulta(supabase, user.id, id);
 
@@ -337,7 +344,7 @@ export async function criarBloqueio(
     if (error.code === "23P01") {
       return { error: "Esse intervalo já está bloqueado." };
     }
-    return { error: mensagemErroEscrita(error, "Não foi possível criar o bloqueio.") };
+    return { error: await mensagemErroEscrita(supabase, error, "Não foi possível criar o bloqueio.") };
   }
 
   revalidatePath("/agenda");

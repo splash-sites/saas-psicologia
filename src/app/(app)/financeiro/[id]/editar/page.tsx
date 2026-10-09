@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Pagamento } from "@/lib/financeiro/types";
 import { consultasDisponiveis } from "@/lib/financeiro/consultasDisponiveis";
 import { atualizarPagamento } from "../../actions";
@@ -14,9 +15,7 @@ export default async function EditarPagamentoPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const [{ data: pagamentoRow }, { data: pacientes }] = await Promise.all([

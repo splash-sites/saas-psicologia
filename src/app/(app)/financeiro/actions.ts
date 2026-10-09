@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import { mensagemErroEscrita } from "@/lib/assinatura/guard";
+import { pacientePertenceAPsicologa } from "@/lib/pacientes/dono";
 import {
   pagamentoSchema,
   marcarPagoSchema,
@@ -16,24 +18,9 @@ export type FormState = {
 
 async function requirePsicologa() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
   return { supabase, user };
-}
-
-async function pacientePertenceAPsicologa(
-  supabase: Awaited<ReturnType<typeof requirePsicologa>>["supabase"],
-  pacienteId: string,
-): Promise<boolean> {
-  const { data } = await supabase
-    .from("pacientes")
-    .select("id")
-    .eq("id", pacienteId)
-    .is("deleted_at", null)
-    .maybeSingle();
-  return Boolean(data);
 }
 
 export async function criarPagamento(
@@ -65,7 +52,7 @@ export async function criarPagamento(
     observacoes: v.observacoes ?? null,
   });
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível lançar o pagamento.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível lançar o pagamento.") };
 
   revalidatePath("/financeiro");
   redirect("/financeiro");
@@ -88,7 +75,8 @@ export async function atualizarPagamento(
     return { error: "Paciente inválido." };
   }
 
-  const { error } = await supabase
+  // O RLS não dá erro em update de linha alheia/arquivada: só não afeta nada.
+  const { data: alterados, error } = await supabase
     .from("pagamentos")
     .update({
       paciente_id: v.paciente_id,
@@ -102,9 +90,11 @@ export async function atualizarPagamento(
       observacoes: v.observacoes ?? null,
     })
     .eq("id", id)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .select("id");
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível atualizar o lançamento.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível atualizar o lançamento.") };
+  if (!alterados?.length) return { error: "Lançamento não encontrado." };
 
   revalidatePath("/financeiro");
   revalidatePath(`/financeiro/${id}`);
@@ -124,7 +114,7 @@ export async function marcarComoPago(
   }
   const v = parsed.data;
 
-  const { error } = await supabase
+  const { data: alterados, error } = await supabase
     .from("pagamentos")
     .update({
       status: "pago",
@@ -132,9 +122,11 @@ export async function marcarComoPago(
       forma_pagamento: v.forma_pagamento ?? null,
     })
     .eq("id", id)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .select("id");
 
-  if (error) return { error: mensagemErroEscrita(error, "Não foi possível confirmar o pagamento.") };
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível confirmar o pagamento.") };
+  if (!alterados?.length) return { error: "Lançamento não encontrado." };
 
   revalidatePath("/financeiro");
   revalidatePath(`/financeiro/${id}`);

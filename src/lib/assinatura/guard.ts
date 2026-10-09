@@ -25,17 +25,27 @@ export async function buscarStatusAssinatura(
   };
 }
 
+export const MSG_SOMENTE_LEITURA =
+  "Sua assinatura está com o pagamento pendente — o painel está em modo somente leitura até regularizar. Acesse Assinatura no menu para resolver.";
+export const MSG_SEM_PERMISSAO = "Você não tem permissão para alterar este registro.";
+
 /**
- * Toda escrita bloqueada pela trava de assinatura (RLS) chega como violação
- * de policy (SQLSTATE 42501). Convertida numa mensagem que explica o motivo,
- * em vez do "não foi possível salvar" genérico.
+ * Toda escrita barrada por policy (RLS) chega como SQLSTATE 42501 — tanto pela
+ * trava de assinatura quanto por outra regra (ex: registro de outra conta).
+ * Só nesse caminho de erro, confere no banco se a trava é a causa, pra não
+ * mandar a psicóloga pagar uma assinatura que está em dia.
  */
-export function mensagemErroEscrita(
+export async function mensagemErroEscrita(
+  supabase: SupabaseClient,
   error: { code?: string } | null | undefined,
   mensagemPadrao: string,
-): string {
-  if (error?.code === "42501") {
-    return "Sua assinatura está com o pagamento pendente — o painel está em modo somente leitura até regularizar. Acesse Assinatura no menu para resolver.";
-  }
-  return mensagemPadrao;
+): Promise<string> {
+  if (error?.code !== "42501") return mensagemPadrao;
+
+  const { data } = await supabase.auth.getClaims();
+  const id = data?.claims?.sub;
+  const { data: permite } = id
+    ? await supabase.rpc("assinatura_permite_escrita", { p_psicologa_id: id })
+    : { data: null };
+  return permite === false ? MSG_SOMENTE_LEITURA : MSG_SEM_PERMISSAO;
 }

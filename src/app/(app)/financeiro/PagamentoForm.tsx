@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import Link from "next/link";
 import type { Pagamento } from "@/lib/financeiro/types";
 import type { ConsultaDisponivel } from "@/lib/financeiro/consultasDisponiveis";
@@ -64,7 +65,7 @@ export function PagamentoForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
       {state.error && (
         <p className="alert alert-error">
           {state.error}

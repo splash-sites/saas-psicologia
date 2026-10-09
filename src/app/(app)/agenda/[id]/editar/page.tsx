@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Consulta } from "@/lib/agenda/types";
 import { dataChaveBR, horaBR } from "@/lib/agenda/datas";
 import { atualizarConsulta } from "../../actions";
@@ -14,9 +15,7 @@ export default async function EditarConsultaPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { data } = await supabase

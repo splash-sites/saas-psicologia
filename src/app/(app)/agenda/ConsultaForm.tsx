@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import Link from "next/link";
 import {
   MODALIDADES,
@@ -32,7 +33,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
   const fe = state.fieldErrors ?? {};
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
       {state.error && (
         <p className="alert alert-error">
           {state.error}

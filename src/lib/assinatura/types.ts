@@ -69,6 +69,14 @@ export function permiteEscrita(
   return a.status === "ativa" || (a.status === "trial" && a.trial_fim >= hojeISO);
 }
 
+/** Status "trial" com a data já passada: o banco não muda o status sozinho. */
+export function trialEncerrado(
+  a: Pick<Assinatura, "status" | "trial_fim">,
+  hojeISO: string = new Date().toISOString().slice(0, 10),
+): boolean {
+  return a.status === "trial" && a.trial_fim < hojeISO;
+}
+
 export function diasRestantesTrial(
   trialFim: string,
   hojeISO: string = new Date().toISOString().slice(0, 10),
