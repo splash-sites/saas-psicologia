@@ -56,6 +56,17 @@ npm test
 
 Sem essas variáveis, os testes de RLS são pulados automaticamente (o resto da suíte roda normal). `SUPABASE_TEST_SERVICE_ROLE_KEY` só é usada pelo teste da trava de escrita por assinatura (liga/desliga `app_config.assinatura_enforcement_ativo` para testar os dois estados); sem ela, só esse teste específico pula.
 
+## Teste de requisições e E2E
+
+Com o Supabase local de pé (`npx supabase start`):
+
+```bash
+npm run api-check   # todas as páginas, rotas e server actions + isolamento entre contas
+npm run e2e         # Playwright no build de produção (porta 3200) com o Chrome instalado
+```
+
+O `api-check` precisa de um `next dev -p 3100` rodando com as variáveis apontando para o Supabase local (URL e chaves de `npx supabase status`). Ele recria as contas `teste-a@teste.local` e `teste-b@teste.local` a cada execução. O `e2e` sobe o próprio servidor e recusa qualquer Supabase que não seja o local.
+
 ## Teste visual de responsividade
 
 ```bash

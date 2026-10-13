@@ -151,11 +151,33 @@ Módulos 1, 3, 4, 5, 6, 7 e 8 implementados e testados. **Módulo 2 (assinatura/
 - **Webhook do Asaas** (`/api/asaas/webhook`): valida o `asaas-access-token` (comparação resistente a timing attack), nunca confia só no corpo — reconsulta o pagamento na API antes de liberar acesso —, é idempotente (`assinatura_eventos.chave_idempotencia`) e tem um rate limit simples baseado no próprio log (funciona entre instâncias serverless).
 - **Modo simulado do Asaas** (`ASAAS_MODE=mock`, automático sem `ASAAS_API_KEY`): mesmo padrão do Google — o resto do app funciona sem a integração real. Tem um botão "Simular pagamento confirmado" em `/assinatura`, só existe nesse modo (o servidor confere de novo, nunca confia em o botão não aparecer).
 
+### Revisão de segurança e pré-produção (2026-10-07 a 2026-10-13, PR #1 — mergeado na `main` em 2026-10-09)
+
+- **Validação no banco, não só no Zod** (migrations `0013`/`0014`): o client logado escreve direto no PostgREST, então o Zod das server actions não é a única porta. Triggers padronizam (trim, texto vazio → NULL, e-mail minúsculo, telefone e CPF **só dígitos** — máscara só na exibição) e CHECK constraints limitam tamanho/formato/faixa. O Zod espelha as mesmas regras para mostrar erro amigável (CPF com dígito verificador, telefone com DDD).
+- **Referências sempre da mesma conta** (`0012`): policies de escrita checam `paciente_da_psicologa()`/`consulta_da_psicologa()` — a FK não passa pelo RLS.
+- **RLS com `(select auth.uid())`** (`0015`): avaliado uma vez por consulta, não por linha.
+- **Login validado localmente com `getClaims()`** (proxy + `usuarioAtual()` em `src/lib/auth/usuario.ts`, com `cache` por requisição), não `getUser()`. O teste de carga mostrou que `getUser()` esgotava as conexões do GoTrue e deslogava pessoas. **Trade-off aceito pelo usuário:** sessão encerrada em outro lugar vale até o token expirar (até 1 h). Depende da chave JWT do projeto ser assimétrica — **em produção é ECC (P-256)**. `getUser()` só fica em Configurações (precisa das identidades vinculadas).
+- **CSP com nonce por requisição** (proxy) + headers de segurança (`next.config.ts`). `style-src` mantém `'unsafe-inline'` (a agenda usa `style={...}`).
+- **Formulários com `useActionState` enviam via `enviarSemLimpar()`** (`src/lib/form/`), não `<form action>`: o React 19 limpava os campos quando a action voltava com erro (perdia texto de evolução).
+- **Exportação:** prontuário em PDF por download (`/api/prontuario/[id]`, pdf-lib) e conta inteira em ZIP de CSVs (`/api/exportar`). **Notas privadas entram em todos os formatos** (decisão do usuário). Funcionam com a assinatura em somente leitura.
+- **Testes além do Vitest:** `npm run api-check` (todas as páginas, rotas e server actions + isolamento entre contas; precisa do `next dev -p 3100` com o Supabase local), `npm run e2e` (Playwright no build de produção, porta 3200, Chrome instalado), `npm run visual`.
+- **Migrations 0012–0015 aplicadas no Supabase de produção em 2026-10-09** (via SQL Editor; diagnóstico da 0014 = 0 linhas; dados intactos).
+- **Ambiente de testes finais:** tudo em produção (Vercel + Supabase), mas o **Asaas fica no sandbox** até os testes de assinatura terminarem (webhook real apontando pro domínio de produção, sem ngrok). Não abrir para clientes reais nesse período.
+
 ## Checklist antes de produção (não fazer em dev/teste — só antes de ir ao ar)
 
-- [ ] **Rotacionar `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_OAUTH_CLIENT_SECRET`, `ASAAS_API_KEY` e `GOOGLE_TOKEN_ENC_KEY`.** Em 2026-09-29, um comando de debug (`cat` num `.env.local`) imprimiu essas 4 chaves em texto puro nesta conversa. Decisão do usuário: aceitável por enquanto (ambiente de testes), mas rotacionar antes de produção. Trocar `GOOGLE_TOKEN_ENC_KEY` invalida o refresh token do Google já salvo — reconectar em `/configuracoes` depois.
+- [ ] **Rotacionar `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_OAUTH_CLIENT_SECRET`, `ASAAS_API_KEY` e `GOOGLE_TOKEN_ENC_KEY`.** Em 2026-09-29, um comando de debug (`cat` num `.env.local`) imprimiu essas 4 chaves em texto puro nesta conversa. **Em andamento desde 2026-10-09**, feito pelo usuário nos painéis, uma etapa por vez (nunca colar chave no chat):
+  1. [ ] **Supabase → chaves novas** (*em andamento: criando a secret key `vercel_producao`*). Na Vercel (Production + Preview): `NEXT_PUBLIC_SUPABASE_ANON_KEY` = publishable `default` (`sb_publishable_…`), `SUPABASE_SERVICE_ROLE_KEY` = secret `vercel_producao` (`sb_secret_…`). Redeploy (a publishable entra no build) e testar login + PDF. **Já provado localmente que o código funciona com esse formato sem mudança.**
+  2. [ ] Depois do login ok: Supabase → API Keys → aba Legacy → **desativar as chaves legadas** (reversível). Testar de novo. Atualizar `.env.local` de outras máquinas.
+  3. [ ] Por último: Supabase → JWT Keys → **revogar a "Previous key — Legacy HS256"** (irreversível; só depois do passo 2).
+  4. [ ] **Google OAuth:** Google Cloud → Credenciais → cliente OAuth → adicionar secret; trocar em **dois lugares** (Vercel `GOOGLE_OAUTH_CLIENT_SECRET` e Supabase → Auth → Providers → Google); redeploy; testar login com Google; desativar o secret antigo.
+  5. [ ] **Asaas sandbox:** gerar chave nova (invalida a antiga); Vercel: `ASAAS_MODE=sandbox`, `ASAAS_API_KEY` nova, `ASAAS_WEBHOOK_TOKEN` novo; cadastrar o webhook do sandbox em `https://<domínio de produção>/api/asaas/webhook` com o mesmo token.
+  6. [ ] **`GOOGLE_TOKEN_ENC_KEY`:** trocar direto (decisão do usuário) — gerar com `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Quem tinha o Google Agenda conectado reconecta em `/configuracoes`.
+  7. [ ] Redeploy e teste completo de assinatura no sandbox com o webhook de verdade.
 - [ ] Ligar a trava de assinatura (`update app_config set assinatura_enforcement_ativo = true`) só depois de validar o fluxo do Asaas de ponta a ponta.
-- [ ] Trocar `ASAAS_MODE`/chave de sandbox para produção quando a empresa estiver pronta para cobrar de verdade.
+- [ ] Trocar `ASAAS_MODE`/chave de sandbox para produção quando a empresa estiver pronta para cobrar de verdade. **Nessa virada, limpar as assinaturas criadas no sandbox** (`update public.assinaturas set asaas_customer_id = null, asaas_subscription_id = null, invoice_url_atual = null, status = 'trial'` para as contas de teste — os ids do sandbox não existem na produção).
+- [ ] Decisões de produto pendentes: confirmação de e-mail no cadastro; 2FA; política de exclusão de conta (hoje apagar o usuário apaga o prontuário em cascata, conflita com a guarda de 5 anos).
+- [ ] Monitoramento de erros e uptime; backup + teste de restauração; região São Paulo; DPA da Supabase/Vercel e revisão jurídica de Termos/Privacidade.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
