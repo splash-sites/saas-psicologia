@@ -28,10 +28,9 @@ export default function PoliticaDePrivacidadePage() {
 
       <Secao titulo="1. Quem somos">
         <p>
-          O <strong>Gradatim</strong> é operado por <strong>Bernardo Dornelles</strong>,
-          pessoa física, com sede em Torres/RS. Ainda não possuímos CNPJ — esta
-          política será atualizada com a razão social assim que a empresa for
-          formalizada.
+          O Gradatim é operado por Bernardo Dornelles, pessoa física, com sede
+          em Torres/RS. Ainda não temos CNPJ. Quando a empresa for formalizada,
+          esta política passa a trazer a razão social.
         </p>
         <p>
           Contato:{" "}
@@ -43,39 +42,40 @@ export default function PoliticaDePrivacidadePage() {
 
       <Secao titulo="2. O que o sistema faz">
         <p>
-          Somos uma plataforma de gestão de consultório para psicólogos
-          autônomos: agenda, prontuário/evolução de sessões, financeiro e
-          assinatura. O sistema é de uso exclusivo do psicólogo — pacientes não
-          têm login nem acesso direto à plataforma.
+          O Gradatim é um sistema de gestão de consultório para psicólogos
+          autônomos, com agenda, prontuário e evolução de sessões, financeiro e
+          assinatura. Só o psicólogo usa o sistema. Pacientes não têm login nem
+          acesso direto à plataforma.
         </p>
       </Secao>
 
       <Secao titulo="3. Quem é o controlador dos dados do paciente">
         <p>
-          Para os dados de <strong>pacientes</strong> (cadastro, anamnese,
-          evolução clínica, financeiro), o <strong>psicólogo usuário da
-          plataforma é o controlador</strong>, nos termos da LGPD — é ele quem
-          decide coletar e tratar esses dados no exercício da sua profissão.
-          Atuamos como <strong>operadores</strong>: armazenamos e processamos
-          esses dados em nome do psicólogo, seguindo as instruções e
-          finalidades definidas por ele, sem uso próprio.
+          Nos dados de pacientes (cadastro, anamnese, evolução clínica,
+          financeiro), o <strong>controlador</strong> é o psicólogo que usa a
+          plataforma, nos termos da LGPD, porque é ele quem decide coletar e
+          tratar esses dados no exercício da profissão. Nós somos{" "}
+          <strong>operadores</strong>: armazenamos e processamos esses dados em
+          nome do psicólogo, seguindo as instruções e finalidades definidas por
+          ele, e não os usamos para nenhum fim próprio.
         </p>
         <p>
-          Para os dados <strong>do próprio psicólogo</strong> (cadastro, login,
-          assinatura), nós somos os controladores.
+          Nos dados do próprio psicólogo (cadastro, login, assinatura), o
+          controlador somos nós.
         </p>
       </Secao>
 
       <Secao titulo="4. Dados que coletamos">
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <strong>Cadastro do psicólogo:</strong> nome, e-mail e foto de
-            perfil (via login do Google).
+            <strong>Cadastro do psicólogo:</strong> nome e e-mail. Quem entra
+            com o Google também compartilha a foto de perfil da conta Google.
           </li>
           <li>
             <strong>Dados de pacientes:</strong> nome, contato (telefone/WhatsApp),
             status (ativo/inativo/alta), ficha de anamnese e evoluções de
-            sessão — dado de saúde, categoria sensível pela LGPD (art. 5º, II).
+            sessão. São dados de saúde, categoria sensível pela LGPD (art. 5º,
+            II).
           </li>
           <li>
             <strong>Agenda:</strong> consultas, horários, recorrência, bloqueios
@@ -89,14 +89,13 @@ export default function PoliticaDePrivacidadePage() {
             <strong>Google Agenda:</strong> com sua autorização explícita,
             criamos eventos na sua Google Agenda pessoal (e o link do Google
             Meet, quando a consulta é online) e guardamos, de forma cifrada
-            (AES-256-GCM), o token necessário pra isso. Não lemos nem
-            importamos nada da sua agenda — a via é de mão única (nosso
-            sistema → sua Google Agenda).
+            (AES-256-GCM), o token necessário para isso. A via é de mão única:
+            o sistema escreve na sua agenda, mas não lê nem importa nada dela.
           </li>
           <li>
             <strong>Assinatura:</strong> CPF/CNPJ e dados de cobrança
-            necessários pra gerar a cobrança no Asaas. Nunca armazenamos dados
-            de cartão — o pagamento (Pix, boleto ou cartão) acontece
+            necessários para gerar a cobrança no Asaas. Não armazenamos dados
+            de cartão. O pagamento (Pix, boleto ou cartão) acontece
             inteiramente na página hospedada pelo Asaas.
           </li>
         </ul>
@@ -105,14 +104,15 @@ export default function PoliticaDePrivacidadePage() {
       <Secao titulo="5. Por que tratamos esses dados (base legal)">
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <strong>Execução de contrato</strong> (LGPD art. 7º, V): pra
+            <strong>Execução de contrato</strong> (LGPD art. 7º, V): para
             fornecer a plataforma de gestão que você contratou.
           </li>
           <li>
-            <strong>Consentimento</strong> (LGPD art. 11, I): pro tratamento de
-            dado de saúde de pacientes, obtido pelo psicólogo junto ao próprio
-            paciente, e pro acesso à sua Google Agenda (escopo pedido
-            explicitamente no login, revogável a qualquer momento em{" "}
+            <strong>Consentimento</strong> (LGPD art. 11, I): para o tratamento
+            de dados de saúde de pacientes, consentimento que o psicólogo obtém
+            do próprio paciente, e para o acesso à sua Google Agenda (permissão
+            pedida explicitamente no login, que você pode revogar a qualquer
+            momento em{" "}
             <Link href="/configuracoes" className="underline">
               Configurações
             </Link>{" "}
@@ -124,61 +124,60 @@ export default function PoliticaDePrivacidadePage() {
       <Secao titulo="6. Com quem compartilhamos">
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <strong>Supabase</strong> — banco de dados e autenticação (infraestrutura
-            do produto).
+            <strong>Supabase:</strong> banco de dados e autenticação.
           </li>
           <li>
-            <strong>Google</strong> — sincronização de agenda e geração de
-            link do Meet (Google Calendar API), só com sua autorização.
+            <strong>Google:</strong> eventos na sua agenda e links do Meet
+            (Google Calendar API), só com a sua autorização.
           </li>
           <li>
-            <strong>Asaas</strong> — processamento da cobrança da sua
-            assinatura. Dados de pagamento do paciente para o psicólogo
-            continuam só no nosso banco (lançamento manual, sem gateway).
+            <strong>Asaas:</strong> cobrança da sua assinatura. Os pagamentos
+            que seus pacientes fazem a você ficam só no nosso banco (lançamento
+            manual, sem gateway).
           </li>
           <li>
-            <strong>Vercel</strong> — hospedagem da aplicação.
+            <strong>Vercel:</strong> hospedagem da aplicação.
           </li>
         </ul>
-        <p>Não vendemos nem alugamos dados a terceiros, em nenhuma hipótese.</p>
+        <p>Não vendemos nem alugamos dados a terceiros.</p>
       </Secao>
 
       <Secao titulo="7. Guarda e segurança">
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            Registros de evolução/prontuário são mantidos por no mínimo{" "}
-            <strong>5 anos</strong>, conforme exigência da Resolução CFP nº
-            01/2009. &ldquo;Excluir&rdquo; um registro clínico arquiva (soft delete) — nunca
-            apaga fisicamente antes desse prazo.
+            Registros de evolução e prontuário são mantidos por no mínimo{" "}
+            <strong>5 anos</strong>, como exige a Resolução CFP nº 01/2009.
+            Excluir um registro clínico apenas o arquiva; nada é apagado
+            fisicamente antes desse prazo.
           </li>
           <li>
-            Dados em repouso são protegidos pela criptografia nativa do banco
-            e por controle de acesso (Row Level Security): cada psicólogo só
-            acessa os próprios dados, nunca os de outra conta.
+            Os dados armazenados são protegidos pela criptografia nativa do
+            banco e por controle de acesso (Row Level Security), que limita cada
+            psicólogo aos dados da própria conta.
           </li>
           <li>
-            O token de acesso à sua Google Agenda é cifrado na aplicação
-            (AES-256-GCM), separado do resto do banco.
+            O token de acesso à sua Google Agenda tem uma camada extra de
+            cifra, feita na própria aplicação (AES-256-GCM).
           </li>
-          <li>Toda comunicação com o sistema é feita por HTTPS.</li>
+          <li>Toda comunicação com o sistema usa HTTPS.</li>
         </ul>
       </Secao>
 
       <Secao titulo="8. Seus direitos (titular dos dados)">
         <p>
           Você pode pedir acesso, correção, portabilidade ou exclusão dos seus
-          dados, e revogar consentimentos, a qualquer momento — direto na
-          plataforma (quando aplicável) ou pelo contato no topo desta página.
-          Dados sob obrigação legal de guarda (ex: prontuário, 5 anos) não
-          podem ser excluídos antes do prazo, mesmo a pedido.
+          dados e revogar consentimentos a qualquer momento, pela própria
+          plataforma (quando houver a opção) ou pelo contato no topo desta
+          página. Dados com guarda obrigatória por lei, como o prontuário (5
+          anos), não podem ser excluídos antes do prazo, mesmo a pedido.
         </p>
       </Secao>
 
       <Secao titulo="9. Alterações desta política">
         <p>
-          Podemos atualizar esta política conforme o produto evolui (ex:
-          quando a empresa tiver CNPJ). Mudanças relevantes serão avisadas por
-          e-mail ou dentro do próprio sistema.
+          Esta política pode mudar com o produto, por exemplo quando a empresa
+          tiver CNPJ. Avisamos mudanças relevantes por e-mail ou dentro do
+          próprio sistema.
         </p>
       </Secao>
     </main>
