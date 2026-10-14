@@ -392,8 +392,9 @@ export default async function DashboardPage() {
           </ul>
           {pendentes.length > MAX_PENDENTES_LISTADAS && (
             <p className="text-xs text-amber-800">
-              + {pendentes.length - MAX_PENDENTES_LISTADAS} sessões mais antigas
-              ainda sem evolução. Registre estas para ver as demais.
+              Há mais {pendentes.length - MAX_PENDENTES_LISTADAS} sessões
+              antigas sem evolução. Elas entram nesta lista conforme você
+              registra as de cima.
             </p>
           )}
         </section>
@@ -541,7 +542,7 @@ export default async function DashboardPage() {
             <EstadoVazio
               icon={CalendarClock}
               titulo="Nada agendado nos próximos 7 dias"
-              texto="Que tal marcar as próximas sessões?"
+              texto="As consultas marcadas para a próxima semana aparecem aqui."
             >
               <Link href="/agenda/nova" className="btn btn-primary btn-sm">
                 <CalendarPlus className="size-4" aria-hidden />
