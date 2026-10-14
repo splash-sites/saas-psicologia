@@ -32,7 +32,7 @@ export const pacienteSchema = z.object({
     .pipe(z.string().max(254, "E-mail longo demais").email("E-mail inválido").optional()),
   telefone: optionalText
     .transform((v) => (v === undefined ? undefined : telefoneNacional(v)))
-    .pipe(z.string().regex(/^\d{10,11}$/, "Telefone inválido — use DDD + número").optional()),
+    .pipe(z.string().regex(/^\d{10,11}$/, "Telefone inválido. Use DDD + número").optional()),
   data_nascimento: optionalText.pipe(
     z
       .string()

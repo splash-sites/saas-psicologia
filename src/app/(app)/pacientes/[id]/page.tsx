@@ -166,8 +166,8 @@ export default async function PacienteDetailPage({
           </button>
         </form>
         <p className="mt-1 text-xs text-slate-400">
-          O registro é arquivado (soft delete), não apagado — exigência de guarda
-          mínima de 5 anos.
+          O registro é arquivado, sem ser apagado, porque a guarda mínima é de
+          5 anos.
         </p>
       </section>
     </div>

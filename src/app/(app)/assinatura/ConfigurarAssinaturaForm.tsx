@@ -76,8 +76,9 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string })
           className="input"
         />
         <span className="text-xs text-slate-500">
-          Exigido pelo Asaas para gerar a cobrança. Nunca coletamos dados de
-          cartão — você escolhe Pix, boleto ou cartão na página do Asaas.
+          O Asaas exige o CPF ou CNPJ para gerar a cobrança. Não coletamos
+          dados de cartão: você escolhe Pix, boleto ou cartão na página do
+          Asaas.
         </span>
         {state.fieldErrors?.cpf_cnpj && (
           <span className="text-xs text-red-600">{state.fieldErrors.cpf_cnpj[0]}</span>

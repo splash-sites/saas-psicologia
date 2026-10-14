@@ -179,7 +179,7 @@ export async function gerarProntuarioPdf(d: DadosProntuario): Promise<Uint8Array
   const paginas = pdf.getPages();
   paginas.forEach((pg, i) => {
     const texto = textoSeguro(
-      `Documento sigiloso — dados de saúde (LGPD). Guarda mínima de 5 anos (Resolução CFP 01/2009). Emitido em ${emitido}.`,
+      `Documento sigiloso com dados de saúde (LGPD). Guarda mínima de 5 anos (Resolução CFP 01/2009). Emitido em ${emitido}.`,
       normal,
     );
     pg.drawText(texto, { x: MARGEM, y: MARGEM - 18, size: 7, font: normal, color: CINZA, maxWidth: LARGURA - 60 });

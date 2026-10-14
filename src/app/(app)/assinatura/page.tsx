@@ -68,8 +68,8 @@ export default async function AssinaturaPage() {
 
       {!enforcementAtivo && (
         <p className="alert alert-warning">
-          A cobrança ainda não é aplicada neste ambiente — todo mundo tem
-          acesso completo, independentemente do status abaixo.
+          A cobrança ainda não está ativa neste ambiente. Todas as contas têm
+          acesso completo, seja qual for o status abaixo.
         </p>
       )}
       {!configurada && (
@@ -147,8 +147,8 @@ export default async function AssinaturaPage() {
       )}
 
       <p className="text-xs text-slate-400">
-        Nota fiscal ainda não é emitida (depende de CNPJ — ver README). O
-        pagamento é processado pelo Asaas; nenhum dado de cartão passa pelo
+        Ainda não emitimos nota fiscal, porque isso depende do CNPJ. O
+        pagamento é processado pelo Asaas, e nenhum dado de cartão passa pelo
         nosso servidor.{" "}
         <Link href="/configuracoes" className="underline">
           Configurações

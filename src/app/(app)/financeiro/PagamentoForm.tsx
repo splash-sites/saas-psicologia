@@ -59,7 +59,7 @@ export function PagamentoForm({
 
   function aoEscolherConsulta(consultaId: string) {
     const c = consultas.find((c) => c.id === consultaId);
-    if (!c) return; // "Nenhuma — lançamento avulso": mantém o que já tinha.
+    if (!c) return; // "Nenhuma (lançamento avulso)": mantém o que já tinha.
     setPacienteId(c.paciente_id);
     setDataRef(dataChaveBR(c.inicio));
   }
@@ -80,7 +80,7 @@ export function PagamentoForm({
           onChange={(e) => aoEscolherConsulta(e.target.value)}
           className="input"
         >
-          <option value="">Nenhuma — lançamento avulso</option>
+          <option value="">Nenhuma (lançamento avulso)</option>
           {consultas.map((c) => (
             <option key={c.id} value={c.id}>
               {dataBR(c.inicio)} {horaBR(c.inicio)} · {c.pacienteNome}

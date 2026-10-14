@@ -26,7 +26,7 @@ export async function buscarStatusAssinatura(
 }
 
 export const MSG_SOMENTE_LEITURA =
-  "Sua assinatura está com o pagamento pendente — o painel está em modo somente leitura até regularizar. Acesse Assinatura no menu para resolver.";
+  "Sua assinatura está com o pagamento pendente, e o painel está em modo somente leitura até regularizar. Acesse Assinatura no menu para resolver.";
 export const MSG_SEM_PERMISSAO = "Você não tem permissão para alterar este registro.";
 
 /**

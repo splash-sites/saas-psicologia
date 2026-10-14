@@ -140,7 +140,7 @@ export default async function ConsultaDetailPage({
             {SYNC_STATUS_LABEL[c.sync_status]}
             {(c.sync_status === "erro" || c.sync_status === "desativada") &&
             c.sync_erro
-              ? ` — ${c.sync_erro}`
+              ? `: ${c.sync_erro}`
               : ""}
           </span>
           {c.sync_status === "desativada" && (

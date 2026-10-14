@@ -198,7 +198,7 @@ export async function verificarPagamentoAgora(): Promise<{
   if (!cobranca) {
     return {
       ok: false,
-      mensagem: "Não consegui consultar o Asaas agora. Tente de novo em instantes.",
+      mensagem: "Não conseguimos consultar o Asaas agora. Tente de novo em instantes.",
     };
   }
 
@@ -215,11 +215,11 @@ export async function verificarPagamentoAgora(): Promise<{
     }
     return {
       ok: false,
-      mensagem: "Ainda não identifiquei o pagamento. Aguarde alguns minutos após pagar.",
+      mensagem: "Ainda não identificamos o pagamento. Aguarde alguns minutos após pagar.",
     };
   }
   if (!adminDisponivel()) {
-    return { ok: false, mensagem: "Pagamento confirmado, mas não consegui atualizar agora." };
+    return { ok: false, mensagem: "Pagamento confirmado, mas não conseguimos atualizar sua assinatura agora. Tente de novo em instantes." };
   }
 
   const admin = createAdminClient();

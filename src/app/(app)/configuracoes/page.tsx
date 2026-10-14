@@ -55,7 +55,7 @@ export default async function ConfiguracoesPage({
         <p className="text-sm text-slate-600">
           Ao conectar, as consultas agendadas são copiadas para a sua Google
           Agenda e as consultas online ganham link do Meet automaticamente. A
-          sincronização é de mão única — nada da sua Google Agenda é importado
+          sincronização é de mão única: nada da sua Google Agenda é importado
           para cá.
         </p>
 
@@ -69,9 +69,9 @@ export default async function ConfiguracoesPage({
 
         {google === "erro" && (
           <p className="alert alert-error">
-            Não foi possível conectar essa conta Google — ela pode já estar
-            sendo usada por outra conta nossa, ou a permissão foi negada.
-            Tente de novo com outra conta Google.
+            Não foi possível conectar essa conta Google. Ela pode já estar
+            ligada a outra conta do Gradatim, ou a permissão foi negada. Tente
+            de novo com outra conta Google.
           </p>
         )}
 
@@ -108,8 +108,8 @@ export default async function ConfiguracoesPage({
       <section className="flex flex-col gap-3 card">
         <h2 className="font-medium">Exportar dados</h2>
         <p className="text-sm text-slate-600">
-          Baixa tudo da sua conta — pacientes, anamneses, agenda, evoluções (com
-          notas privadas) e financeiro — em planilhas que abrem no Excel ou no
+          Baixa tudo da sua conta (pacientes, anamneses, agenda, evoluções com
+          notas privadas e financeiro) em planilhas que abrem no Excel ou no
           Google Planilhas. Funciona mesmo com a assinatura pendente. Guarde em
           local seguro: são dados de saúde.
         </p>

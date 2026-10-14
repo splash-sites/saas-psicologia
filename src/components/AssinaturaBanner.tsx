@@ -11,7 +11,7 @@ export function AssinaturaBanner({ status }: { status: StatusAssinatura }) {
   if (somenteLeitura) {
     return (
       <div className="border-b border-red-200 bg-red-50 px-4 py-2 text-center text-sm text-red-800 sm:px-6 lg:px-8">
-        Pagamento pendente — o painel está em modo somente leitura.{" "}
+        Pagamento pendente: o painel está em modo somente leitura.{" "}
         <Link href="/assinatura" className="font-medium underline">
           Regularizar assinatura
         </Link>
