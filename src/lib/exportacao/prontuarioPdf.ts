@@ -93,8 +93,8 @@ export function quebrarLinhas(texto: string, fonte: PDFFont, tamanho: number, la
 export async function gerarProntuarioPdf(d: DadosProntuario): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.setTitle("Prontuário psicológico");
-  pdf.setCreator("Gestão para Psicólogos");
-  pdf.setProducer("Gestão para Psicólogos");
+  pdf.setCreator("Gradatim");
+  pdf.setProducer("Gradatim");
   const normal = await pdf.embedFont(StandardFonts.Helvetica);
   const negrito = await pdf.embedFont(StandardFonts.HelveticaBold);
 

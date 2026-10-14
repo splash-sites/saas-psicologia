@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LoginButton } from "./LoginButton";
 import { EmailLoginForm } from "./EmailLoginForm";
+import { Logo } from "@/components/Logo";
 
 export const metadata = { title: "Entrar" };
 
@@ -14,9 +15,9 @@ export default async function LoginPage({
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <div className="card flex w-full max-w-sm flex-col gap-6 p-6 sm:p-8">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold text-teal-800">
-            Gestão para Psicólogos
+        <div className="flex flex-col gap-3">
+          <h1>
+            <Logo className="h-10 w-auto" />
           </h1>
           <p className="text-sm text-slate-500">
             Agenda, prontuário e financeiro do seu consultório em um só lugar.
@@ -32,8 +33,8 @@ export default async function LoginPage({
         <LoginButton />
 
         <p className="text-xs text-slate-400">
-          Ao entrar com Google você autoriza o acesso à sua Agenda, usado para
-          sincronizar consultas e gerar links do Meet.
+          O login com Google pede acesso à sua Agenda para criar os eventos
+          das consultas e os links do Meet.
         </p>
 
         <div className="flex items-center gap-3 text-xs text-slate-400">

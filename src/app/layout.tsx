@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Gestão para Psicólogos",
-    template: "%s · Gestão para Psicólogos",
+    default: "Gradatim",
+    template: "%s · Gradatim",
   },
   description:
     "Agenda, prontuário e financeiro do seu consultório em um só lugar.",

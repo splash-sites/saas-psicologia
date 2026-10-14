@@ -6,7 +6,7 @@ const MAPA: Array<[RegExp, string]> = [
   [/invalid login credentials/i, "E-mail ou senha incorretos."],
   [/user already registered/i, "Já existe uma conta com esse e-mail. Tente entrar."],
   [/password should be at least/i, "A senha precisa ter pelo menos 6 caracteres."],
-  [/email not confirmed/i, "Confirme seu e-mail antes de entrar — veja a caixa de entrada."],
+  [/email not confirmed/i, "Confirme seu e-mail antes de entrar. O link está na sua caixa de entrada."],
   [/rate limit/i, "Muitas tentativas seguidas. Aguarde um pouco e tente de novo."],
   [/unable to validate email address/i, "E-mail inválido."],
 ];

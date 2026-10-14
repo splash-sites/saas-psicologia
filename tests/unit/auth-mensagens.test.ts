@@ -20,7 +20,7 @@ describe("traduzErroAuth", () => {
 
   it("traduz e-mail não confirmado", () => {
     expect(traduzErroAuth("Email not confirmed")).toBe(
-      "Confirme seu e-mail antes de entrar — veja a caixa de entrada.",
+      "Confirme seu e-mail antes de entrar. O link está na sua caixa de entrada.",
     );
   });
 

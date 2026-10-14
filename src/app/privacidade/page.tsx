@@ -28,8 +28,7 @@ export default function PoliticaDePrivacidadePage() {
 
       <Secao titulo="1. Quem somos">
         <p>
-          O <strong>Gestão para Psicólogos</strong> (nome do produto ainda não
-          definido oficialmente) é operado por <strong>Bernardo Dornelles</strong>,
+          O <strong>Gradatim</strong> é operado por <strong>Bernardo Dornelles</strong>,
           pessoa física, com sede em Torres/RS. Ainda não possuímos CNPJ — esta
           política será atualizada com a razão social assim que a empresa for
           formalizada.

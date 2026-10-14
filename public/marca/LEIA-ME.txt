@@ -1,0 +1,29 @@
+Gradatim - pacote de marca
+
+Cores
+  Verde-tinta  #12302B  (fundo escuro, texto da logo em fundo claro)
+  Âmbar        #F0B93B  (círculo do símbolo, botões)
+  Papel        #F4F7F6  (fundo claro, texto da logo em fundo escuro)
+  Teal         #0F766E  (detalhes nas telas claras)
+  Névoa        #DFEBE7  (superfícies claras)
+
+Fonte: Onest (Bold 700 na logo). Gratuita no Google Fonts.
+
+logo/
+  gradatim-logo               texto verde-tinta, fundo transparente (usar em fundo claro)
+  gradatim-logo-fundo-claro   mesma logo com fundo papel
+  gradatim-logo-negativo      texto claro, fundo transparente (usar em fundo escuro)
+  gradatim-logo-fundo-escuro  mesma logo com fundo verde-tinta
+  gradatim-simbolo            só o símbolo (escada no círculo âmbar)
+  SVG para web e impressão; PNG com 2000 px de largura.
+
+perfil/
+  gradatim-perfil        1080x1080, símbolo sobre verde-tinta (Instagram, WhatsApp, Google)
+  gradatim-perfil-ambar  1080x1080, escada verde-tinta sobre âmbar (alternativa)
+
+favicon/
+  favicon.svg, favicon.ico, favicon-32.png, apple-touch-icon.png (180),
+  icon-192.png e icon-512.png (tela inicial do celular)
+
+O símbolo é uma escada de três degraus: gradatim é latim para "passo a passo".
+O nome se escreve sempre em minúsculas na logo.

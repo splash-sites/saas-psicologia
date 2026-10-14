@@ -21,7 +21,7 @@ export default function TermosDeUsoPage() {
 
       <Secao titulo="1. Quem oferece o serviço">
         <p>
-          O <strong>Gestão para Psicólogos</strong> é oferecido por{" "}
+          O <strong>Gradatim</strong> é oferecido por{" "}
           <strong>Bernardo Dornelles</strong>, pessoa física, Torres/RS. Ao
           criar uma conta, você concorda com estes termos e com a nossa{" "}
           <Link href="/privacidade" className="underline">

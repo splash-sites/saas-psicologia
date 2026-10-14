@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { LogOut, Menu, X } from "lucide-react";
 import { NavLinks } from "./NavLinks";
 import { ModoPrivado } from "./ModoPrivado";
+import { Logo } from "./Logo";
 import { signOut } from "@/app/(app)/dashboard/actions";
 
 // Barra superior + menu deslizante, só em telas < md (no desktop existe a
@@ -26,9 +27,7 @@ export function MobileNav({ email }: { email: string }) {
   return (
     <div className="md:hidden">
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4">
-        <span className="text-sm font-semibold text-teal-800">
-          Gestão para Psicólogos
-        </span>
+        <Logo className="h-7 w-auto" />
         <div className="flex items-center gap-2">
           <ModoPrivado compacto />
           <button

@@ -68,7 +68,7 @@ export function EmailLoginForm() {
       setCarregando(false);
       setMensagem({
         tipo: "sucesso",
-        texto: "Conta criada! Veja seu e-mail para confirmar antes de entrar.",
+        texto: "Conta criada. Enviamos um link de confirmação para o seu e-mail; abra-o antes de entrar.",
       });
       return;
     }
