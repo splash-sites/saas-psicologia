@@ -15,7 +15,9 @@ export function LoginButton() {
         redirectTo: `${window.location.origin}/auth/callback`,
         // Escopo do Calendar solicitado já no login para reaproveitar
         // o mesmo consentimento OAuth na integração de Agenda/Meet (item 12/17 do MVP).
-        scopes: "https://www.googleapis.com/auth/calendar",
+        // `calendar.events` e não `calendar`: o app só cria/edita eventos, e a
+        // verificação do Google exige o menor escopo que resolve.
+        scopes: "https://www.googleapis.com/auth/calendar.events",
         queryParams: {
           access_type: "offline",
           prompt: "consent",

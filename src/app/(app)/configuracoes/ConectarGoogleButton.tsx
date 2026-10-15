@@ -29,7 +29,7 @@ export function ConectarGoogleButton({
       provider: "google" as const,
       options: {
         redirectTo: `${window.location.origin}/auth/callback?next=/configuracoes`,
-        scopes: "https://www.googleapis.com/auth/calendar",
+        scopes: "https://www.googleapis.com/auth/calendar.events",
         queryParams: { access_type: "offline", prompt: "consent" },
       },
     };

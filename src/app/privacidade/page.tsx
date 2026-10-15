@@ -99,6 +99,24 @@ export default function PoliticaDePrivacidadePage() {
             inteiramente na página hospedada pelo Asaas.
           </li>
         </ul>
+        <p>
+          O uso e a transferência, para qualquer outro aplicativo, de
+          informações recebidas das APIs do Google seguem a{" "}
+          <a
+            href="https://developers.google.com/terms/api-services-user-data-policy"
+            className="underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Política de Dados do Usuário dos Serviços de API do Google
+          </a>
+          , incluindo os requisitos de Uso Limitado. Na prática: usamos o
+          acesso à sua Google Agenda só para criar e atualizar os eventos das
+          suas consultas e os links do Meet; não usamos esses dados para
+          publicidade; não os vendemos nem repassamos a terceiros; e ninguém da
+          nossa equipe os lê, exceto com o seu consentimento, quando a lei
+          exigir ou para investigar um problema de segurança.
+        </p>
       </Secao>
 
       <Secao titulo="5. Por que tratamos esses dados (base legal)">

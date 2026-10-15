@@ -8,7 +8,8 @@ const TIMEZONE = "America/Sao_Paulo";
 
 export class GoogleNaoConectada extends Error {}
 
-// Permissões aceitas para criar/alterar eventos.
+// Permissões aceitas para criar/alterar eventos. O app pede só `calendar.events`;
+// `calendar` continua aceito para tokens concedidos antes da troca de escopo.
 const ESCOPOS_CALENDAR = [
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/calendar.events",
