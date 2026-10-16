@@ -35,10 +35,12 @@ async function criarUsuario(email, nome) {
   const { data: lista } = await admin.auth.admin.listUsers({ perPage: 10000 });
   const antigo = lista.users.find((u) => u.email === email);
   if (antigo) {
-    // limpa dados antigos (tabelas com FK restrict) antes de apagar o usuário
+    // limpa dados antigos (tabelas com FK restrict) antes de apagar o usuário.
+    // Desde a 0016 a conta só sai depois do prontuário e da própria psicóloga.
     for (const t of ["lembretes", "evolucoes", "pagamentos", "consultas", "bloqueios", "anamneses", "pacientes"]) {
       await admin.from(t).delete().eq("psicologa_id", antigo.id);
     }
+    await admin.from("psicologas").delete().eq("id", antigo.id);
     await admin.auth.admin.deleteUser(antigo.id);
   }
   const { data, error } = await admin.auth.admin.createUser({

@@ -122,10 +122,13 @@ export default function TermosDeUsoPage() {
 
       <Secao titulo="8. Cancelamento e encerramento de conta">
         <p>
-          Você pode encerrar sua conta a qualquer momento. Dados sob
-          obrigação legal de guarda (prontuário, dentro do prazo de 5 anos)
-          permanecem armazenados mesmo após o encerramento, conforme exigido
-          por lei, mas deixam de ser acessíveis via login.
+          Para encerrar sua conta, fale com a gente pelo contato no fim desta
+          página. Antes, você pode exportar todos os seus dados em
+          Configurações. Ao encerrar, cortamos o acesso por login e apagamos o
+          que não tem guarda obrigatória. O prontuário (anamneses e evoluções)
+          continua armazenado pelo prazo legal mínimo de 5 anos (Resolução CFP
+          nº 01/2009), sem acesso por login. Passado esse prazo, você pode
+          pedir a exclusão definitiva.
         </p>
       </Secao>
 

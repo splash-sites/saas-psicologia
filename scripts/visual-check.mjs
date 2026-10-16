@@ -60,7 +60,14 @@ async function criarUsuario(email, nome) {
   // perPage alto: os testes de RLS criam muitos usuários e a lista pagina.
   const { data: lista } = await admin.auth.admin.listUsers({ perPage: 10000 });
   const antigo = lista.users.find((u) => u.email === email);
-  if (antigo) await admin.auth.admin.deleteUser(antigo.id);
+  if (antigo) {
+    // Desde a 0016 o prontuário trava a exclusão da conta: limpa antes.
+    for (const t of ["lembretes", "evolucoes", "pagamentos", "consultas", "bloqueios", "anamneses", "pacientes"]) {
+      await admin.from(t).delete().eq("psicologa_id", antigo.id);
+    }
+    await admin.from("psicologas").delete().eq("id", antigo.id);
+    await admin.auth.admin.deleteUser(antigo.id);
+  }
   const { data: criado, error } = await admin.auth.admin.createUser({
     email, password: PASSWORD, email_confirm: true, user_metadata: { full_name: nome },
   });
