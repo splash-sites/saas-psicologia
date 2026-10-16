@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { buscarStatusAssinatura } from "@/lib/assinatura/guard";
 import {
+  acessoAteCancelada,
   ASSINATURA_STATUS_LABEL,
   diasRestantesTrial,
   formatarCpfCnpj,
@@ -79,6 +80,14 @@ export default async function AssinaturaPage() {
           sandbox de verdade.
         </p>
       )}
+      {assinatura.status === "cancelada" && !somenteLeitura && (
+        <p className="alert alert-warning">
+          Assinatura cancelada. Você mantém o acesso completo até{" "}
+          {dataBR(acessoAteCancelada(assinatura))}. Depois disso, a conta fica
+          em modo somente leitura: você continua entrando para consultar e
+          exportar seus dados, inclusive o prontuário.
+        </p>
+      )}
       {somenteLeitura && (
         <p className="alert alert-error">
           Modo somente leitura: você continua vendo e exportando pacientes,
@@ -142,6 +151,11 @@ export default async function AssinaturaPage() {
             <button type="submit" className="text-sm text-red-600 hover:underline">
               Cancelar assinatura
             </button>
+            <p className="mt-1 text-xs text-slate-500">
+              Você mantém o acesso completo até o fim do período já pago. Depois,
+              a conta fica em modo somente leitura, e você continua podendo
+              consultar e exportar seus dados.
+            </p>
           </form>
         </section>
       )}

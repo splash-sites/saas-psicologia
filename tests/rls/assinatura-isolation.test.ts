@@ -156,4 +156,35 @@ describe.skipIf(!hasLocalSupabase || !hasAdmin)("RLS: trava de escrita por assin
       .insert({ psicologa_id: emTrial.id, nome: "Depois do trial" });
     expect(erroTrialVencido?.code).toBe("42501");
   });
+
+  it("com a trava ligada: cancelada escreve até o fim do período pago e depois só lê", async () => {
+    const s = Date.now();
+    const admin = adminClient();
+    const p = await signUpPsicologa(`gate-d-${s}@teste.local`);
+    const c = userClient(p.accessToken);
+    await admin.from("app_config").update({ assinatura_enforcement_ativo: true }).eq("id", 1);
+
+    // Pagou o período até 2099 e cancelou: continua escrevendo.
+    await admin
+      .from("assinaturas")
+      .update({ status: "cancelada", trial_fim: "2000-01-01", proximo_vencimento: "2099-01-01" })
+      .eq("psicologa_id", p.id);
+    const { error: noPeriodo } = await c
+      .from("pacientes")
+      .insert({ psicologa_id: p.id, nome: "Ainda no período" });
+    expect(noPeriodo).toBeNull();
+
+    // Período acabou: somente leitura.
+    await admin
+      .from("assinaturas")
+      .update({ proximo_vencimento: "2000-01-02" })
+      .eq("psicologa_id", p.id);
+    const { error: depois } = await c
+      .from("pacientes")
+      .insert({ psicologa_id: p.id, nome: "Depois do período" });
+    expect(depois?.code).toBe("42501");
+
+    const { data: leitura } = await c.from("pacientes").select("id");
+    expect(leitura).toHaveLength(1);
+  });
 });

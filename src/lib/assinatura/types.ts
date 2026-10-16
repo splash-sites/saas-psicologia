@@ -61,12 +61,26 @@ export type Assinatura = {
  * só serve pra UI decidir o que mostrar sem depender de tentativa e erro.
  */
 export function permiteEscrita(
-  a: Pick<Assinatura, "status" | "trial_fim">,
+  a: Pick<Assinatura, "status" | "trial_fim"> & Partial<Pick<Assinatura, "proximo_vencimento">>,
   enforcementAtivo: boolean,
   hojeISO: string = new Date().toISOString().slice(0, 10),
 ): boolean {
   if (!enforcementAtivo) return true;
-  return a.status === "ativa" || (a.status === "trial" && a.trial_fim >= hojeISO);
+  if (a.status === "ativa") return true;
+  if (a.status === "trial") return a.trial_fim >= hojeISO;
+  if (a.status === "cancelada") return acessoAteCancelada(a) >= hojeISO;
+  return false;
+}
+
+/**
+ * Cancelada continua escrevendo até o fim do período pago (proximo_vencimento)
+ * ou do teste, o que for mais tarde — como greatest() no banco.
+ */
+export function acessoAteCancelada(
+  a: Pick<Assinatura, "trial_fim"> & Partial<Pick<Assinatura, "proximo_vencimento">>,
+): string {
+  const pv = a.proximo_vencimento;
+  return pv && pv > a.trial_fim ? pv : a.trial_fim;
 }
 
 /** Status "trial" com a data já passada: o banco não muda o status sozinho. */

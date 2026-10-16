@@ -25,9 +25,22 @@ describe("permiteEscrita", () => {
     ).toBe(false);
   });
 
-  it("atrasada e cancelada não escrevem, com a trava ligada", () => {
+  it("atrasada não escreve, com a trava ligada", () => {
     expect(permiteEscrita({ status: "atrasada", trial_fim: "2099-01-01" }, true)).toBe(false);
-    expect(permiteEscrita({ status: "cancelada", trial_fim: "2099-01-01" }, true)).toBe(false);
+  });
+
+  it("cancelada escreve até o fim do período pago ou do teste, o que vier depois", () => {
+    const hoje = "2026-03-20";
+    const cancelada = (proximo_vencimento: string | null, trial_fim = "2026-01-01") => ({
+      status: "cancelada" as const,
+      trial_fim,
+      proximo_vencimento,
+    });
+    expect(permiteEscrita(cancelada("2026-03-20"), true, hoje)).toBe(true);
+    expect(permiteEscrita(cancelada("2026-03-19"), true, hoje)).toBe(false);
+    expect(permiteEscrita(cancelada(null), true, hoje)).toBe(false);
+    // Cancelou durante o teste: vale o fim do teste.
+    expect(permiteEscrita(cancelada(null, "2026-03-25"), true, hoje)).toBe(true);
   });
 });
 
