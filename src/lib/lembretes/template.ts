@@ -10,7 +10,7 @@ export const VARIAVEIS_TEMPLATE = [
   { nome: "{data}", descricao: "data da consulta (dd/mm)" },
   { nome: "{hora}", descricao: "horário de início" },
   { nome: "{modalidade}", descricao: "online ou presencial" },
-  { nome: "{link}", descricao: "link do Meet (só em consultas online)" },
+  { nome: "{link}", descricao: "link da chamada (só em consultas online)" },
 ] as const;
 
 export type VariaveisLembrete = {

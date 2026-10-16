@@ -16,9 +16,11 @@ type Props = {
     mensagem_template: string | null;
     convite_google: boolean;
   };
+  /** Falso com a integração do Google desligada: o convite não existe. */
+  mostrarConviteGoogle: boolean;
 };
 
-export function PreferenciasLembreteForm({ action, defaults }: Props) {
+export function PreferenciasLembreteForm({ action, defaults, mostrarConviteGoogle }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
     {},
@@ -90,22 +92,27 @@ export function PreferenciasLembreteForm({ action, defaults }: Props) {
         <p className="whitespace-pre-wrap">{exemplo}</p>
       </div>
 
-      <label className="flex items-start gap-2 text-sm">
-        <input
-          type="checkbox"
-          name="convite_google"
-          defaultChecked={defaults.convite_google}
-          className="mt-1"
-        />
-        <span>
-          Convidar o paciente pelo Google Agenda
-          <span className="block text-xs text-slate-500">
-            O paciente recebe um convite por e-mail (com o link do Meet nas
-            consultas online) e é avisado se você remarcar ou cancelar. Só vale
-            para pacientes que aceitam lembretes e têm e-mail cadastrado.
+      {mostrarConviteGoogle ? (
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="convite_google"
+            defaultChecked={defaults.convite_google}
+            className="mt-1"
+          />
+          <span>
+            Convidar o paciente pelo Google Agenda
+            <span className="block text-xs text-slate-500">
+              O paciente recebe um convite por e-mail (com o link do Meet nas
+              consultas online) e é avisado se você remarcar ou cancelar. Só vale
+              para pacientes que aceitam lembretes e têm e-mail cadastrado.
+            </span>
           </span>
-        </span>
-      </label>
+        </label>
+      ) : (
+        // Integração desligada: preserva a escolha salva para quando religar.
+        defaults.convite_google && <input type="hidden" name="convite_google" value="on" />
+      )}
 
       <button
         type="submit"

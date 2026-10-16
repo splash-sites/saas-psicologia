@@ -19,6 +19,7 @@ import {
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { GradeSemana } from "./GradeSemana";
 import { DiaLista } from "./DiaLista";
+import { linkDaConsulta } from "@/lib/agenda/linkOnline";
 import { PainelConsulta } from "./PainelConsulta";
 import { EstadoBadge, HACHURA_BLOQUEIO } from "./estilos";
 import {
@@ -103,8 +104,12 @@ export default async function AgendaPage({
   const inicioSemana = new Date(`${segunda}T00:00:00${BR_OFFSET}`).toISOString();
   const fimSemana = new Date(`${addDias(segunda, 7)}T00:00:00${BR_OFFSET}`).toISOString();
 
-  const [{ data: consultasRaw }, { data: bloqueiosRaw }, { data: evolucoesRaw }] =
-    await Promise.all([
+  const [
+    { data: consultasRaw },
+    { data: bloqueiosRaw },
+    { data: evolucoesRaw },
+    { data: psicologa },
+  ] = await Promise.all([
       supabase
         .from("consultas")
         .select(
@@ -126,6 +131,11 @@ export default async function AgendaPage({
         .is("deleted_at", null)
         .gte("data_sessao", semana[0])
         .lte("data_sessao", semana[6]),
+      supabase
+        .from("psicologas")
+        .select("link_atendimento_online")
+        .eq("id", user.id)
+        .maybeSingle(),
     ]);
 
   const rows = (consultasRaw ?? []) as unknown as ConsultaRow[];
@@ -188,7 +198,7 @@ export default async function AgendaPage({
       recorrencia: r.recorrencia,
       serie_id: r.serie_id,
       confirmada_em: r.confirmada_em,
-      meet_link: r.meet_link,
+      meet_link: linkDaConsulta(r, psicologa?.link_atendimento_online),
       paciente,
       estado: estadoVisual(r, agora),
       evolucaoId,

@@ -5,9 +5,15 @@ import {
   escopoTemCalendar,
   integracaoGoogleConfigurada,
 } from "@/lib/google/calendar";
+import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 import { ConectarGoogleButton } from "./ConectarGoogleButton";
+import { LinkAtendimentoForm } from "./LinkAtendimentoForm";
 import { PreferenciasLembreteForm } from "./PreferenciasLembreteForm";
-import { desconectarGoogle, salvarPreferenciasLembrete } from "./actions";
+import {
+  desconectarGoogle,
+  salvarLinkAtendimento,
+  salvarPreferenciasLembrete,
+} from "./actions";
 
 export const metadata = { title: "Configurações" };
 
@@ -40,6 +46,12 @@ export default async function ConfiguracoesPage({
     .eq("psicologa_id", user.id)
     .maybeSingle();
 
+  const { data: psicologa } = await supabase
+    .from("psicologas")
+    .select("link_atendimento_online")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const configurada = integracaoGoogleConfigurada();
   const conectada = Boolean(token) && !tokenSemAgenda;
   // Login por e-mail/senha (ou outro provedor) não tem identidade Google —
@@ -51,59 +63,69 @@ export default async function ConfiguracoesPage({
       <h1 className="text-xl font-semibold">Configurações</h1>
 
       <section className="flex flex-col gap-3 card">
-        <h2 className="font-medium">Google Calendar</h2>
-        <p className="text-sm text-slate-600">
-          Ao conectar, as consultas agendadas são copiadas para a sua Google
-          Agenda e as consultas online ganham link do Meet automaticamente. A
-          sincronização é de mão única: nada da sua Google Agenda é importado
-          para cá.
-        </p>
-
-        {(google === "sem-permissao" || tokenSemAgenda) && (
-          <p className="alert alert-error">
-            O Google não liberou a permissão da <strong>Agenda</strong>. Reconecte
-            e, na tela do Google, deixe marcada a permissão de Agenda antes de
-            continuar.
-          </p>
-        )}
-
-        {google === "erro" && (
-          <p className="alert alert-error">
-            Não foi possível conectar essa conta Google. Ela pode já estar
-            ligada a outra conta do Gradatim, ou a permissão foi negada. Tente
-            de novo com outra conta Google.
-          </p>
-        )}
-
-        {!configurada ? (
-          <p className="alert alert-warning">
-            A integração não está configurada neste ambiente (faltam variáveis de
-            servidor). Sincronização indisponível por enquanto.
-          </p>
-        ) : conectada ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm text-green-700">Conectado</span>
-            <form action={desconectarGoogle}>
-              <button className="btn btn-outline">
-                Desconectar
-              </button>
-            </form>
-            <ConectarGoogleButton label="Reconectar" vincular={!temIdentidadeGoogle} />
-          </div>
-        ) : (
-          <ConectarGoogleButton
-            label="Conectar Google Calendar"
-            vincular={!temIdentidadeGoogle}
-          />
-        )}
-
-        {configurada && (
-          <p className="text-xs text-slate-500">
-            Na tela do Google, mantenha marcada a permissão de Agenda (ver,
-            editar e criar eventos). Sem ela a sincronização não funciona.
-          </p>
-        )}
+        <h2 className="font-medium">Atendimento online</h2>
+        <LinkAtendimentoForm
+          action={salvarLinkAtendimento}
+          valorAtual={psicologa?.link_atendimento_online ?? null}
+        />
       </section>
+
+      {GOOGLE_AGENDA_ATIVA && (
+        <section className="flex flex-col gap-3 card">
+          <h2 className="font-medium">Google Calendar</h2>
+          <p className="text-sm text-slate-600">
+            Ao conectar, as consultas agendadas são copiadas para a sua Google
+            Agenda e as consultas online ganham link do Meet automaticamente. A
+            sincronização é de mão única: nada da sua Google Agenda é importado
+            para cá.
+          </p>
+
+          {(google === "sem-permissao" || tokenSemAgenda) && (
+            <p className="alert alert-error">
+              O Google não liberou a permissão da <strong>Agenda</strong>. Reconecte
+              e, na tela do Google, deixe marcada a permissão de Agenda antes de
+              continuar.
+            </p>
+          )}
+
+          {google === "erro" && (
+            <p className="alert alert-error">
+              Não foi possível conectar essa conta Google. Ela pode já estar
+              ligada a outra conta do Gradatim, ou a permissão foi negada. Tente
+              de novo com outra conta Google.
+            </p>
+          )}
+
+          {!configurada ? (
+            <p className="alert alert-warning">
+              A integração não está configurada neste ambiente (faltam variáveis de
+              servidor). Sincronização indisponível por enquanto.
+            </p>
+          ) : conectada ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-green-700">Conectado</span>
+              <form action={desconectarGoogle}>
+                <button className="btn btn-outline">
+                  Desconectar
+                </button>
+              </form>
+              <ConectarGoogleButton label="Reconectar" vincular={!temIdentidadeGoogle} />
+            </div>
+          ) : (
+            <ConectarGoogleButton
+              label="Conectar Google Calendar"
+              vincular={!temIdentidadeGoogle}
+            />
+          )}
+
+          {configurada && (
+            <p className="text-xs text-slate-500">
+              Na tela do Google, mantenha marcada a permissão de Agenda (ver,
+              editar e criar eventos). Sem ela a sincronização não funciona.
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="flex flex-col gap-3 card">
         <h2 className="font-medium">Exportar dados</h2>
@@ -135,6 +157,7 @@ export default async function ConfiguracoesPage({
             mensagem_template: pref?.mensagem_template ?? null,
             convite_google: pref?.convite_google ?? true,
           }}
+          mostrarConviteGoogle={GOOGLE_AGENDA_ATIVA}
         />
       </section>
     </div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LoginButton } from "./LoginButton";
 import { EmailLoginForm } from "./EmailLoginForm";
 import { Logo } from "@/components/Logo";
+import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 
 export const metadata = { title: "Entrar" };
 
@@ -32,10 +33,12 @@ export default async function LoginPage({
 
         <LoginButton />
 
-        <p className="text-xs text-slate-400">
-          O login com Google pede acesso à sua Agenda para criar os eventos
-          das consultas e os links do Meet.
-        </p>
+        {GOOGLE_AGENDA_ATIVA && (
+          <p className="text-xs text-slate-400">
+            O login com Google pede acesso à sua Agenda para criar os eventos
+            das consultas e os links do Meet.
+          </p>
+        )}
 
         <div className="flex items-center gap-3 text-xs text-slate-400">
           <span className="h-px flex-1 bg-slate-200" />

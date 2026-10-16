@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createAdminClient, adminDisponivel } from "@/lib/supabase/admin";
 import { decrypt, cryptoDisponivel } from "@/lib/crypto";
+import { GOOGLE_AGENDA_ATIVA } from "./flag";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const CAL_BASE = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
@@ -32,9 +33,13 @@ export function ehErroDeEscopo(mensagem: string): boolean {
   );
 }
 
-/** true se as env vars mínimas para falar com o Google estão presentes. */
+/**
+ * true se a integração está ligada (GOOGLE_AGENDA_ATIVA) e as env vars mínimas
+ * para falar com o Google estão presentes.
+ */
 export function integracaoGoogleConfigurada(): boolean {
   return Boolean(
+    GOOGLE_AGENDA_ATIVA &&
     process.env.GOOGLE_OAUTH_CLIENT_ID &&
       process.env.GOOGLE_OAUTH_CLIENT_SECRET &&
       cryptoDisponivel() &&

@@ -88,7 +88,7 @@ export function PainelConsulta({
         className={`btn w-full ${meetEmDestaque(est) ? "btn-primary" : "btn-outline"}`}
       >
         <Video className="size-4" aria-hidden />
-        Entrar no Meet
+        Entrar na chamada
       </a>
     );
     const min = minutosAteInicio(c.inicio, agora);
@@ -175,7 +175,7 @@ export function PainelConsulta({
             </span>
             <span className="flex items-center gap-2">
               <Modal className="size-4 text-slate-500" aria-hidden />
-              {c.modalidade === "online" ? "Online · Google Meet" : "Presencial"}
+              {c.modalidade === "online" ? "Online" : "Presencial"}
             </span>
           </div>
 

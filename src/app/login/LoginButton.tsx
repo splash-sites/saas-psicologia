@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 
 export function LoginButton() {
   const [carregando, setCarregando] = useState(false);
@@ -13,15 +14,18 @@ export function LoginButton() {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        // Escopo do Calendar solicitado já no login para reaproveitar
-        // o mesmo consentimento OAuth na integração de Agenda/Meet (item 12/17 do MVP).
-        // `calendar.events` e não `calendar`: o app só cria/edita eventos, e a
-        // verificação do Google exige o menor escopo que resolve.
-        scopes: "https://www.googleapis.com/auth/calendar.events",
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
-        },
+        // Com a integração ligada, o escopo do Calendar vai já no login para
+        // reaproveitar o mesmo consentimento OAuth na Agenda/Meet (item 12/17
+        // do MVP). `calendar.events` e não `calendar`: o app só cria/edita
+        // eventos, e a verificação do Google exige o menor escopo que resolve.
+        // Desligada (ver lib/google/flag.ts): só o login básico, sem verificação.
+        ...(GOOGLE_AGENDA_ATIVA && {
+          scopes: "https://www.googleapis.com/auth/calendar.events",
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        }),
       },
     });
   }

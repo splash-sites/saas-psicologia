@@ -13,6 +13,8 @@ import {
 import { horaBR, dataLongaBR, dataChaveBR } from "@/lib/agenda/datas";
 import { cancelarConsulta, sincronizarConsultaAgora } from "../actions";
 import { CopyButton } from "../CopyButton";
+import { linkDaConsulta } from "@/lib/agenda/linkOnline";
+import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 
 type Row = Consulta & { pacientes: { id: string; nome: string } | null };
 
@@ -35,6 +37,13 @@ export default async function ConsultaDetailPage({
 
   if (!data) notFound();
   const c = data as unknown as Row;
+
+  const { data: psicologa } = await supabase
+    .from("psicologas")
+    .select("link_atendimento_online")
+    .eq("id", user.id)
+    .maybeSingle();
+  const link = linkDaConsulta(c, psicologa?.link_atendimento_online);
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
@@ -105,28 +114,36 @@ export default async function ConsultaDetailPage({
       {c.modalidade === "online" && c.status !== "cancelada" && (
         <section className="flex flex-col gap-2 card text-sm">
           <h2 className="font-medium">Videochamada</h2>
-          {c.meet_link ? (
+          {link ? (
             <div className="flex flex-wrap items-center gap-2">
               <a
-                href={c.meet_link}
+                href={link}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-700 underline break-all"
               >
-                {c.meet_link}
+                {link}
               </a>
-              <CopyButton value={c.meet_link} />
+              <CopyButton value={link} />
             </div>
-          ) : (
+          ) : GOOGLE_AGENDA_ATIVA ? (
             <p className="text-slate-500">
               Link do Meet ainda não gerado. Ele aparece após a sincronização com
               o Google Calendar.
+            </p>
+          ) : (
+            <p className="text-slate-500">
+              Sem link de atendimento online.{" "}
+              <Link href="/configuracoes" className="underline">
+                Cadastre o seu em Configurações
+              </Link>
+              .
             </p>
           )}
         </section>
       )}
 
-      {c.status !== "cancelada" && (
+      {GOOGLE_AGENDA_ATIVA && c.status !== "cancelada" && (
         <section className="flex flex-wrap items-center gap-3 text-sm">
           <span
             className={

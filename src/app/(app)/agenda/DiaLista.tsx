@@ -177,7 +177,7 @@ export function DiaLista({
                       className="btn btn-primary"
                     >
                       <Video className="size-4" aria-hidden />
-                      Entrar no Meet
+                      Entrar na chamada
                     </a>
                   )}
                   {c.evolucaoPendente && c.paciente && (

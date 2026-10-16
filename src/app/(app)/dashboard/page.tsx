@@ -40,6 +40,7 @@ import { formatarBRL } from "@/lib/financeiro/types";
 import { mesAtual, primeiroDia, ultimoDia } from "@/lib/financeiro/mes";
 import { primeiroNome } from "@/lib/lembretes/template";
 import { whatsappLink } from "@/lib/pacientes/whatsapp";
+import { linkDaConsulta } from "@/lib/agenda/linkOnline";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { EstadoVazio } from "@/components/EstadoVazio";
 
@@ -112,7 +113,7 @@ export default async function DashboardPage() {
     { data: aReceberRaw },
     { count: atrasados },
   ] = await Promise.all([
-    supabase.from("psicologas").select("nome").eq("id", user.id).maybeSingle(),
+    supabase.from("psicologas").select("nome, link_atendimento_online").eq("id", user.id).maybeSingle(),
     supabase
       .from("consultas")
       .select(
@@ -171,7 +172,10 @@ export default async function DashboardPage() {
       .lt("vencimento", hoje),
   ]);
 
-  const consultasDoDia = (consultasHojeRaw ?? []) as unknown as ConsultaHoje[];
+  const consultasDoDia = ((consultasHojeRaw ?? []) as unknown as ConsultaHoje[]).map((c) => ({
+    ...c,
+    meet_link: linkDaConsulta(c, psicologa?.link_atendimento_online),
+  }));
   const consultasHoje = consultasDoDia.filter((c) => c.status !== "cancelada");
   const proximaHoje = consultasHoje.find(
     (c) => c.status === "agendada" && new Date(c.inicio) > agora,
@@ -518,7 +522,7 @@ export default async function DashboardPage() {
                             }`}
                           >
                             <Video className="size-4" aria-hidden />
-                            Entrar no Meet
+                            Entrar na chamada
                           </a>
                         )
                       )}

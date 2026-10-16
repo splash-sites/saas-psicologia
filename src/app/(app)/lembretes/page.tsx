@@ -15,6 +15,8 @@ import {
 } from "@/lib/agenda/datas";
 import { renderizarLembrete } from "@/lib/lembretes/template";
 import { whatsappLinkComTexto } from "@/lib/pacientes/whatsapp";
+import { linkDaConsulta } from "@/lib/agenda/linkOnline";
+import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 import { EnviarWhatsAppButton } from "./EnviarWhatsAppButton";
 
 export const metadata = { title: "Lembretes" };
@@ -68,7 +70,15 @@ export default async function LembretesPage({
     .lt("inicio", fim)
     .order("inicio");
 
-  const consultas = (consultasRaw ?? []) as unknown as Linha[];
+  const { data: psicologa } = await supabase
+    .from("psicologas")
+    .select("link_atendimento_online")
+    .eq("id", user.id)
+    .maybeSingle();
+  const consultas = ((consultasRaw ?? []) as unknown as Linha[]).map((c) => ({
+    ...c,
+    meet_link: linkDaConsulta(c, psicologa?.link_atendimento_online),
+  }));
 
   const { data: enviadosRaw } = consultas.length
     ? await supabase
@@ -168,7 +178,9 @@ export default async function LembretesPage({
                   <span className="text-xs text-slate-500">
                     {MODALIDADE_LABEL[c.modalidade]}
                     {c.modalidade === "online" && !c.meet_link &&
-                      " · link do Meet ainda não gerado"}
+                      (GOOGLE_AGENDA_ATIVA
+                        ? " · link do Meet ainda não gerado"
+                        : " · sem link de atendimento (cadastre em Configurações)")}
                   </span>
                 </div>
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { PACIENTE_STATUS, PACIENTE_STATUS_LABEL } from "@/lib/pacientes/types";
 import type { Paciente } from "@/lib/pacientes/types";
 import { capitalizarNome, formatarTelefoneBR, formatarCpf } from "@/lib/pacientes/formatacao";
+import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 import type { FormState } from "./actions";
 
 type Props = {
@@ -158,7 +159,9 @@ export function PacienteForm({
         <span>
           Aceita receber lembretes de consulta
           <span className="block text-xs text-slate-500">
-            WhatsApp (enviado por você) e convite por e-mail no Google Agenda.
+            {GOOGLE_AGENDA_ATIVA
+              ? "WhatsApp (enviado por você) e convite por e-mail no Google Agenda."
+              : "Pelo WhatsApp, enviado por você."}{" "}
             Desmarque se o paciente não quiser ser contatado.
           </span>
         </span>

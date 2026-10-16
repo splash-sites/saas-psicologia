@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { preferenciasLembreteSchema } from "@/lib/lembretes/schema";
+import { linkAtendimentoSchema } from "@/lib/agenda/linkOnline";
 
 export type FormState = {
   ok?: boolean;
@@ -32,6 +33,35 @@ export async function desconectarGoogle(): Promise<void> {
     .gte("inicio", new Date().toISOString());
 
   revalidatePath("/configuracoes");
+}
+
+export async function salvarLinkAtendimento(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const supabase = await createClient();
+  const user = await usuarioAtual();
+  if (!user) redirect("/login");
+
+  const parsed = linkAtendimentoSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  // Policy psicologas_update_own: só a própria linha.
+  const { data, error } = await supabase
+    .from("psicologas")
+    .update(parsed.data)
+    .eq("id", user.id)
+    .select("id");
+
+  if (error || !data?.length) return { error: "Não foi possível salvar o link." };
+
+  revalidatePath("/configuracoes");
+  revalidatePath("/agenda");
+  revalidatePath("/dashboard");
+  revalidatePath("/lembretes");
+  return { ok: true };
 }
 
 export async function salvarPreferenciasLembrete(
