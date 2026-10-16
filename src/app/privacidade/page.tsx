@@ -34,8 +34,8 @@ export default function PoliticaDePrivacidadePage() {
         </p>
         <p>
           Contato:{" "}
-          <a href="mailto:bernardo.dornelles22@gmail.com" className="underline">
-            bernardo.dornelles22@gmail.com
+          <a href="mailto:contato@splashsistemas.com.br" className="underline">
+            contato@splashsistemas.com.br
           </a>
         </p>
       </Secao>
