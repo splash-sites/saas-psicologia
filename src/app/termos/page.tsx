@@ -122,13 +122,14 @@ export default function TermosDeUsoPage() {
 
       <Secao titulo="8. Cancelamento e encerramento de conta">
         <p>
-          Para encerrar sua conta, fale com a gente pelo contato no fim desta
-          página. Antes, você pode exportar todos os seus dados em
-          Configurações. Ao encerrar, cortamos o acesso por login e apagamos o
-          que não tem guarda obrigatória. O prontuário (anamneses e evoluções)
-          continua armazenado pelo prazo legal mínimo de 5 anos (Resolução CFP
-          nº 01/2009), sem acesso por login. Passado esse prazo, você pode
-          pedir a exclusão definitiva.
+          Você pode cancelar a assinatura a qualquer momento, pela própria
+          plataforma. Depois do cancelamento, a conta fica em modo somente
+          leitura: você continua entrando para consultar e exportar seus
+          dados, inclusive o prontuário, que precisa ser guardado por no mínimo
+          5 anos (Resolução CFP nº 01/2009). Se quiser a exclusão definitiva da
+          conta, fale com a gente pelo contato no fim desta página. Os dados
+          sem guarda obrigatória são apagados, e o prontuário é apagado quando
+          o prazo legal terminar.
         </p>
       </Secao>
 
