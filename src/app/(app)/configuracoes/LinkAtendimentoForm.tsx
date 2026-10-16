@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import type { FormState } from "./actions";
+import { useLinkAtendimento } from "./LinkAtendimentoContext";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -11,6 +12,7 @@ type Props = {
 
 export function LinkAtendimentoForm({ action, valorAtual }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, {});
+  const compartilhado = useLinkAtendimento();
   const fe = state.fieldErrors ?? {};
 
   return (
@@ -25,6 +27,7 @@ export function LinkAtendimentoForm({ action, valorAtual }: Props) {
           type="url"
           inputMode="url"
           defaultValue={valorAtual ?? ""}
+          onChange={(e) => compartilhado?.setLink(e.target.value)}
           placeholder="https://meet.google.com/abc-defg-hij"
           className="input"
         />

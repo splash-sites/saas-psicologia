@@ -8,6 +8,7 @@ import {
   renderizarLembrete,
 } from "@/lib/lembretes/template";
 import type { FormState } from "./actions";
+import { useLinkAtendimento } from "./LinkAtendimentoContext";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -28,12 +29,19 @@ export function PreferenciasLembreteForm({ action, defaults, mostrarConviteGoogl
   const [template, setTemplate] = useState(defaults.mensagem_template ?? "");
   const fe = state.fieldErrors ?? {};
 
+  // A prévia usa o link digitado em "Atendimento online" (mesmo antes de
+  // salvar). Com a integração do Google ligada e sem link fixo, mostra um
+  // exemplo de link do Meet, que seria gerado por consulta.
+  const linkDigitado = useLinkAtendimento()?.link.trim() ?? "";
+  const linkPrevia =
+    linkDigitado || (mostrarConviteGoogle ? "https://meet.google.com/abc-defg-hij" : null);
+
   const exemplo = renderizarLembrete(template, {
     nome: "Maria Souza",
     data: "15/09",
     hora: "14:00",
     modalidade: "online",
-    link: "https://meet.google.com/abc-defg-hij",
+    link: linkPrevia,
   });
 
   return (
@@ -88,8 +96,14 @@ export function PreferenciasLembreteForm({ action, defaults, mostrarConviteGoogl
       </label>
 
       <div className="rounded-md bg-slate-50 p-3 text-sm">
-        <div className="mb-1 text-xs text-slate-500">Prévia</div>
+        <div className="mb-1 text-xs text-slate-500">Prévia (consulta online)</div>
         <p className="whitespace-pre-wrap">{exemplo}</p>
+        {!linkPrevia && (
+          <p className="mt-2 text-xs text-amber-700">
+            Sem link de atendimento online cadastrado: o lembrete de consultas
+            online sai sem link.
+          </p>
+        )}
       </div>
 
       {mostrarConviteGoogle ? (

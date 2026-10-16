@@ -8,6 +8,7 @@ import {
 import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 import { ConectarGoogleButton } from "./ConectarGoogleButton";
 import { LinkAtendimentoForm } from "./LinkAtendimentoForm";
+import { LinkAtendimentoProvider } from "./LinkAtendimentoContext";
 import { PreferenciasLembreteForm } from "./PreferenciasLembreteForm";
 import {
   desconectarGoogle,
@@ -59,6 +60,7 @@ export default async function ConfiguracoesPage({
   const temIdentidadeGoogle = user.identities?.some((i) => i.provider === "google") ?? false;
 
   return (
+    <LinkAtendimentoProvider inicial={psicologa?.link_atendimento_online ?? null}>
     <div className="flex w-full max-w-2xl flex-col gap-6">
       <h1 className="text-xl font-semibold">Configurações</h1>
 
@@ -161,5 +163,6 @@ export default async function ConfiguracoesPage({
         />
       </section>
     </div>
+    </LinkAtendimentoProvider>
   );
 }
