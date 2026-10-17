@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { COOKIE_STATE, pedidoGoogleValido, trocarCodigoGoogle } from "@/lib/google/oauth";
 import { guardarRefreshTokenGoogle } from "@/lib/google/tokens";
+import { escopoTemCalendar } from "@/lib/google/calendar";
 
 // "Entrar com Google" (rota pública). Recebe o código do popup do Google,
 // troca pelos tokens e abre a sessão no Supabase com o id_token. O login pede
@@ -37,8 +38,11 @@ export async function POST(request: Request) {
   });
   if (error || !data.user) return NextResponse.json({ ok: false }, { status: 401 });
 
-  const agenda = await guardarRefreshTokenGoogle(data.user.id, tokens.refreshToken);
-  // Entrou, mas desmarcou a Agenda na tela do Google: avisa em Configurações.
-  const destino = agenda === "sem_permissao" ? "/configuracoes?google=sem-permissao" : "/dashboard";
-  return NextResponse.json({ ok: true, destino });
+  // Login em dois passos: o normal é vir sem a Agenda (o painel oferece
+  // conectar). Só guarda o token se a Agenda veio junto; nunca trata a
+  // ausência dela como erro aqui.
+  if (escopoTemCalendar(tokens.scope)) {
+    await guardarRefreshTokenGoogle(data.user.id, tokens.refreshToken);
+  }
+  return NextResponse.json({ ok: true, destino: "/dashboard" });
 }

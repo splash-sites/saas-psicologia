@@ -30,9 +30,12 @@ export function ConectarGoogleButton({ label, clientId }: { label: string; clien
     const json = (await res.json().catch(() => ({}))) as { ok?: boolean; resultado?: string };
     setEnviando(false);
     if (json.ok) {
+      // Tira um ?google=sem-permissao que tenha ficado na URL (senão o aviso
+      // vermelho continua na tela depois de conectar) e recarrega os dados.
+      router.replace(window.location.pathname);
       router.refresh();
     } else if (json.resultado === "sem_permissao") {
-      router.push("/configuracoes?google=sem-permissao");
+      router.replace("/configuracoes?google=sem-permissao");
     } else {
       setErro("Não foi possível conectar a Google Agenda. Tente novamente.");
     }
