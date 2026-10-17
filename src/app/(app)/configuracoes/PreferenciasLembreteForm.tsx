@@ -19,9 +19,16 @@ type Props = {
   };
   /** Falso com a integração do Google desligada: o convite não existe. */
   mostrarConviteGoogle: boolean;
+  /** Agenda conectada: cada consulta online tem o próprio link do Meet. */
+  meetAutomatico: boolean;
 };
 
-export function PreferenciasLembreteForm({ action, defaults, mostrarConviteGoogle }: Props) {
+export function PreferenciasLembreteForm({
+  action,
+  defaults,
+  mostrarConviteGoogle,
+  meetAutomatico,
+}: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
     {},
@@ -29,12 +36,13 @@ export function PreferenciasLembreteForm({ action, defaults, mostrarConviteGoogl
   const [template, setTemplate] = useState(defaults.mensagem_template ?? "");
   const fe = state.fieldErrors ?? {};
 
-  // A prévia usa o link digitado em "Atendimento online" (mesmo antes de
-  // salvar). Com a integração do Google ligada e sem link fixo, mostra um
-  // exemplo de link do Meet, que seria gerado por consulta.
+  // Com a Agenda conectada, a prévia mostra um exemplo de link do Meet (cada
+  // consulta ganha o seu). Sem ela, usa o link digitado em "Atendimento
+  // online", mesmo antes de salvar.
   const linkDigitado = useLinkAtendimento()?.link.trim() ?? "";
-  const linkPrevia =
-    linkDigitado || (mostrarConviteGoogle ? "https://meet.google.com/abc-defg-hij" : null);
+  const linkPrevia = meetAutomatico
+    ? "https://meet.google.com/abc-defg-hij"
+    : linkDigitado || null;
 
   const exemplo = renderizarLembrete(template, {
     nome: "Maria Souza",
@@ -96,7 +104,9 @@ export function PreferenciasLembreteForm({ action, defaults, mostrarConviteGoogl
       </label>
 
       <div className="rounded-md bg-slate-50 p-3 text-sm">
-        <div className="mb-1 text-xs text-slate-500">Prévia (consulta online)</div>
+        <div className="mb-1 text-xs text-slate-500">
+          Prévia (consulta online{meetAutomatico ? "; o link do Meet muda a cada consulta" : ""})
+        </div>
         <p className="whitespace-pre-wrap">{exemplo}</p>
         {!linkPrevia && (
           <p className="mt-2 text-xs text-amber-700">

@@ -55,19 +55,30 @@ export default async function ConfiguracoesPage({
   const configurada = integracaoGoogleConfigurada();
   const conectada = Boolean(token) && !tokenSemAgenda;
   const clientIdGoogle = process.env.GOOGLE_OAUTH_CLIENT_ID ?? "";
+  // Com a Agenda conectada, cada consulta online ganha o próprio link do Meet:
+  // o link fixo some da tela (continua salvo e volta a valer se desconectar).
+  const meetAutomatico = configurada && conectada;
 
   return (
     <LinkAtendimentoProvider inicial={psicologa?.link_atendimento_online ?? null}>
     <div className="flex w-full max-w-2xl flex-col gap-6">
       <h1 className="text-xl font-semibold">Configurações</h1>
 
-      <section className="flex flex-col gap-3 card">
-        <h2 className="font-medium">Atendimento online</h2>
-        <LinkAtendimentoForm
-          action={salvarLinkAtendimento}
-          valorAtual={psicologa?.link_atendimento_online ?? null}
-        />
-      </section>
+      {!meetAutomatico && (
+        <section className="flex flex-col gap-3 card">
+          <h2 className="font-medium">Atendimento online</h2>
+          {GOOGLE_AGENDA_ATIVA && (
+            <p className="text-sm text-slate-600">
+              Conectando a Google Agenda (abaixo), cada consulta online ganha um
+              link do Meet automático. Enquanto isso, use o link da sua sala.
+            </p>
+          )}
+          <LinkAtendimentoForm
+            action={salvarLinkAtendimento}
+            valorAtual={psicologa?.link_atendimento_online ?? null}
+          />
+        </section>
+      )}
 
       {GOOGLE_AGENDA_ATIVA && (
         <section className="flex flex-col gap-3 card">
@@ -154,6 +165,7 @@ export default async function ConfiguracoesPage({
             convite_google: pref?.convite_google ?? true,
           }}
           mostrarConviteGoogle={GOOGLE_AGENDA_ATIVA}
+          meetAutomatico={meetAutomatico}
         />
       </section>
     </div>
