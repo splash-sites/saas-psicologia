@@ -1,10 +1,15 @@
 import Link from "next/link";
+import { Lock } from "lucide-react";
 import { LoginButton } from "./LoginButton";
 import { EmailLoginForm } from "./EmailLoginForm";
 import { Logo } from "@/components/Logo";
 import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 
 export const metadata = { title: "Entrar" };
+
+// Links do rodapé: contraste AA e foco visível.
+const LINK_RODAPE =
+  "rounded font-medium text-teal-700 underline hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600";
 
 export default async function LoginPage({
   searchParams,
@@ -20,7 +25,7 @@ export default async function LoginPage({
           <h1>
             <Logo className="h-10 w-auto" />
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-600">
             Agenda, prontuário e financeiro do seu consultório em um só lugar.
           </p>
         </div>
@@ -31,34 +36,37 @@ export default async function LoginPage({
           </p>
         )}
 
-        <LoginButton clientId={process.env.GOOGLE_OAUTH_CLIENT_ID ?? ""} />
+        <EmailLoginForm
+          google={
+            <div className="flex flex-col gap-2">
+              <LoginButton clientId={process.env.GOOGLE_OAUTH_CLIENT_ID ?? ""} />
+              {GOOGLE_AGENDA_ATIVA && (
+                <p className="text-center text-xs text-slate-600">
+                  Ao entrar com Google, você autoriza o acesso à sua Agenda
+                  para criar eventos e links do Meet.
+                </p>
+              )}
+            </div>
+          }
+        />
 
-        {GOOGLE_AGENDA_ATIVA && (
-          <p className="text-xs text-slate-400">
-            O login com Google pede acesso à sua Agenda para criar os eventos
-            das consultas e os links do Meet.
+        <div className="flex flex-col gap-2 border-t border-slate-200 pt-4 text-center text-xs text-slate-600">
+          <p className="flex items-center justify-center gap-1.5 font-medium text-slate-700">
+            <Lock className="size-3.5" aria-hidden />
+            Dados protegidos conforme a LGPD
           </p>
-        )}
-
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          <span className="h-px flex-1 bg-slate-200" />
-          ou
-          <span className="h-px flex-1 bg-slate-200" />
+          <p>
+            Ao continuar, você concorda com os{" "}
+            <Link href="/termos" className={LINK_RODAPE}>
+              Termos de Uso
+            </Link>{" "}
+            e a{" "}
+            <Link href="/privacidade" className={LINK_RODAPE}>
+              Política de Privacidade
+            </Link>
+            .
+          </p>
         </div>
-
-        <EmailLoginForm />
-
-        <p className="text-xs text-slate-400">
-          Ao continuar, você concorda com os{" "}
-          <Link href="/termos" className="underline">
-            Termos de Uso
-          </Link>{" "}
-          e a{" "}
-          <Link href="/privacidade" className="underline">
-            Política de Privacidade
-          </Link>
-          .
-        </p>
       </div>
     </main>
   );
