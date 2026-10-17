@@ -6,6 +6,8 @@ const PUBLIC_PATHS = [
   "/privacidade",
   "/termos",
   "/api/asaas/webhook",
+  // Login com Google: chega sem sessão (é ele que cria a sessão).
+  "/api/google/login",
 ];
 
 /** Casa o caminho exato ou um subcaminho dele (nunca "/loginx"). */

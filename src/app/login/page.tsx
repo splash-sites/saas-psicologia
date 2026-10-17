@@ -31,7 +31,7 @@ export default async function LoginPage({
           </p>
         )}
 
-        <LoginButton />
+        <LoginButton clientId={process.env.GOOGLE_OAUTH_CLIENT_ID ?? ""} />
 
         {GOOGLE_AGENDA_ATIVA && (
           <p className="text-xs text-slate-400">

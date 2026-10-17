@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioAtual } from "@/lib/auth/usuario";
 import {
   escopoTemCalendar,
   integracaoGoogleConfigurada,
@@ -25,9 +26,7 @@ export default async function ConfiguracoesPage({
 }) {
   const { google } = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioAtual();
   if (!user) redirect("/login");
 
   const { data: token } = await supabase
@@ -55,9 +54,7 @@ export default async function ConfiguracoesPage({
 
   const configurada = integracaoGoogleConfigurada();
   const conectada = Boolean(token) && !tokenSemAgenda;
-  // Login por e-mail/senha (ou outro provedor) não tem identidade Google —
-  // precisa linkIdentity() pra anexar a Agenda sem trocar de sessão.
-  const temIdentidadeGoogle = user.identities?.some((i) => i.provider === "google") ?? false;
+  const clientIdGoogle = process.env.GOOGLE_OAUTH_CLIENT_ID ?? "";
 
   return (
     <LinkAtendimentoProvider inicial={psicologa?.link_atendimento_online ?? null}>
@@ -111,13 +108,10 @@ export default async function ConfiguracoesPage({
                   Desconectar
                 </button>
               </form>
-              <ConectarGoogleButton label="Reconectar" vincular={!temIdentidadeGoogle} />
+              <ConectarGoogleButton label="Reconectar" clientId={clientIdGoogle} />
             </div>
           ) : (
-            <ConectarGoogleButton
-              label="Conectar Google Calendar"
-              vincular={!temIdentidadeGoogle}
-            />
+            <ConectarGoogleButton label="Conectar Google Calendar" clientId={clientIdGoogle} />
           )}
 
           {configurada && (
