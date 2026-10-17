@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { Google_Sans } from "next/font/google";
 import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 import { ESCOPO_AGENDA } from "@/lib/google/oauth";
 import { useGoogleCodeClient } from "@/lib/google/useGoogleCodeClient";
@@ -11,6 +12,9 @@ import { useGoogleCodeClient } from "@/lib/google/useGoogleCodeClient";
 // `calendar.events` e não `calendar`: o app só cria/edita eventos, e a
 // verificação do Google exige o menor escopo que resolve.
 const ESCOPO = `openid email profile${GOOGLE_AGENDA_ATIVA ? ` ${ESCOPO_AGENDA}` : ""}`;
+
+// Fonte do botão exigida pelas diretrizes (servida pelo próprio app via next/font).
+const googleSans = Google_Sans({ weight: "500", subsets: ["latin"], display: "swap" });
 
 // "G" oficial nas quatro cores, sem alterar proporção nem cor (diretrizes de
 // marca do Google para o botão de login: fundo branco, contorno neutro).
@@ -68,19 +72,22 @@ export function LoginButton({ clientId }: { clientId: string }) {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Diretrizes de marca do Google (developers.google.com/identity/branding-guidelines),
+          exigidas na verificação do app: texto "Continue with Google" localizado,
+          fundo #FFFFFF, contorno 1px #747775, texto #1F1F1F em Google Sans Medium
+          14/20, "G" padrão sempre visível e sem mudar de cor (por isso nada de
+          opacidade no estado desabilitado), 12px antes do G, 10px entre G e texto,
+          12px depois do texto. */}
       <button
         type="button"
         onClick={entrar}
         disabled={!pronto || carregando}
         aria-busy={carregando}
-        className="btn btn-outline w-full text-slate-900"
+        className={`${googleSans.className} flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-[#747775] bg-white px-3 text-sm leading-5 font-medium text-[#1F1F1F] transition-colors hover:bg-[#F8FAFF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 disabled:cursor-wait`}
       >
-        {carregando ? (
-          <Loader2 className="size-[18px] animate-spin" aria-hidden />
-        ) : (
-          <LogoGoogle />
-        )}
-        {carregando ? "Entrando..." : "Entrar com Google"}
+        <LogoGoogle />
+        <span>Continuar com o Google</span>
+        {carregando && <Loader2 className="size-4 animate-spin text-[#1F1F1F]" aria-hidden />}
       </button>
       {erro && (
         <p className="alert alert-error" role="alert">

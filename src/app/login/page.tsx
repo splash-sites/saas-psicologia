@@ -42,7 +42,7 @@ export default async function LoginPage({
               <LoginButton clientId={process.env.GOOGLE_OAUTH_CLIENT_ID ?? ""} />
               {GOOGLE_AGENDA_ATIVA && (
                 <p className="text-center text-xs text-slate-600">
-                  Ao entrar com Google, você autoriza o acesso à sua Agenda
+                  Ao continuar com o Google, você autoriza o acesso à sua Agenda
                   para criar eventos e links do Meet.
                 </p>
               )}
