@@ -5,9 +5,9 @@ import { COOKIE_STATE, pedidoGoogleValido, trocarCodigoGoogle } from "@/lib/goog
 import { guardarRefreshTokenGoogle } from "@/lib/google/tokens";
 
 // "Entrar com Google" (rota pública). Recebe o código do popup do Google,
-// troca pelos tokens, abre a sessão no Supabase com o id_token e, se a
-// permissão da Agenda veio junto, guarda o refresh token — login e Agenda num
-// passo só, como antes da troca de fluxo.
+// troca pelos tokens e abre a sessão no Supabase com o id_token. O login pede
+// só identidade (dois passos — a Agenda vem por /api/google/conectar); se um
+// dia a permissão da Agenda vier junto, o refresh token ainda é guardado.
 export async function POST(request: Request) {
   const corpo = (await request.json().catch(() => ({}))) as { code?: unknown; state?: unknown };
   const cookieStore = await cookies();

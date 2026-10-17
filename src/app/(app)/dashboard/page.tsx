@@ -41,6 +41,8 @@ import { mesAtual, primeiroDia, ultimoDia } from "@/lib/financeiro/mes";
 import { primeiroNome } from "@/lib/lembretes/template";
 import { whatsappLink } from "@/lib/pacientes/whatsapp";
 import { linkDaConsulta } from "@/lib/agenda/linkOnline";
+import { escopoTemCalendar, integracaoGoogleConfigurada } from "@/lib/google/calendar";
+import { ConectarGoogleButton } from "@/app/(app)/configuracoes/ConectarGoogleButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { EstadoVazio } from "@/components/EstadoVazio";
 
@@ -112,6 +114,7 @@ export default async function DashboardPage() {
     { data: recebidosRaw },
     { data: aReceberRaw },
     { count: atrasados },
+    { data: tokenGoogle },
   ] = await Promise.all([
     supabase.from("psicologas").select("nome, link_atendimento_online").eq("id", user.id).maybeSingle(),
     supabase
@@ -170,7 +173,17 @@ export default async function DashboardPage() {
       .is("deleted_at", null)
       .eq("status", "pendente")
       .lt("vencimento", hoje),
+    supabase
+      .from("google_oauth_tokens")
+      .select("escopo")
+      .eq("psicologa_id", user.id)
+      .maybeSingle(),
   ]);
+  // Login em dois passos: a Agenda é conectada depois. Enquanto não estiver,
+  // o painel oferece o botão (escopo nulo = token antigo, conta como conectado).
+  const agendaPendente =
+    integracaoGoogleConfigurada() &&
+    (!tokenGoogle || (tokenGoogle.escopo != null && !escopoTemCalendar(tokenGoogle.escopo)));
 
   const consultasDoDia = ((consultasHojeRaw ?? []) as unknown as ConsultaHoje[]).map((c) => ({
     ...c,
@@ -324,6 +337,25 @@ export default async function DashboardPage() {
           progresso={previsto > 0 ? recebido / previsto : undefined}
         />
       </div>
+
+      {agendaPendente && (
+        <section className="flex flex-col gap-3 rounded-xl border border-teal-200 bg-teal-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <h2 className="font-medium text-teal-900">Conecte sua Google Agenda</h2>
+            <p className="text-sm text-teal-900/80">
+              As consultas aparecem na sua agenda e as online ganham link do
+              Meet automaticamente. O app só cria e edita os eventos das
+              consultas; não lê o resto da sua agenda.
+            </p>
+          </div>
+          <div className="shrink-0">
+            <ConectarGoogleButton
+              label="Conectar Google Agenda"
+              clientId={process.env.GOOGLE_OAUTH_CLIENT_ID ?? ""}
+            />
+          </div>
+        </section>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Link href="/agenda/nova" className="btn btn-primary">

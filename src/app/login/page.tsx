@@ -3,7 +3,6 @@ import { Lock } from "lucide-react";
 import { LoginButton } from "./LoginButton";
 import { EmailLoginForm } from "./EmailLoginForm";
 import { Logo } from "@/components/Logo";
-import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 
 export const metadata = { title: "Entrar" };
 
@@ -37,23 +36,13 @@ export default async function LoginPage({
         )}
 
         <EmailLoginForm
-          google={
-            <div className="flex flex-col gap-2">
-              <LoginButton clientId={process.env.GOOGLE_OAUTH_CLIENT_ID ?? ""} />
-              {GOOGLE_AGENDA_ATIVA && (
-                <p className="text-center text-xs text-slate-600">
-                  Ao continuar com o Google, você autoriza o acesso à sua Agenda
-                  para criar eventos e links do Meet.
-                </p>
-              )}
-            </div>
-          }
+          google={<LoginButton clientId={process.env.GOOGLE_OAUTH_CLIENT_ID ?? ""} />}
         />
 
         <div className="flex flex-col gap-2 border-t border-slate-200 pt-4 text-center text-xs text-slate-600">
           <p className="flex items-center justify-center gap-1.5 font-medium text-slate-700">
             <Lock className="size-3.5" aria-hidden />
-            Dados protegidos conforme a LGPD
+            Seus dados ficam protegidos com criptografia e acesso restrito
           </p>
           <p>
             Ao continuar, você concorda com os{" "}

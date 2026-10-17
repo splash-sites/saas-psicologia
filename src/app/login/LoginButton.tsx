@@ -3,15 +3,13 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Google_Sans } from "next/font/google";
-import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
-import { ESCOPO_AGENDA } from "@/lib/google/oauth";
 import { useGoogleCodeClient } from "@/lib/google/useGoogleCodeClient";
 
-// Com a integração ligada, o escopo da Agenda vai já no login para reaproveitar
-// o mesmo consentimento na Agenda/Meet (item 12/17 do MVP) — um passo só.
-// `calendar.events` e não `calendar`: o app só cria/edita eventos, e a
-// verificação do Google exige o menor escopo que resolve.
-const ESCOPO = `openid email profile${GOOGLE_AGENDA_ATIVA ? ` ${ESCOPO_AGENDA}` : ""}`;
+// Login em dois passos (decisão do usuário, 2026-10-17): aqui só identidade.
+// A Agenda é pedida depois, por autorização incremental ("Conectar Google
+// Agenda" no painel e em Configurações), como recomendam as diretrizes do
+// Google — quem só quer entrar não precisa liberar a agenda.
+const ESCOPO = "openid email profile";
 
 // Fonte do botão exigida pelas diretrizes (servida pelo próprio app via next/font).
 const googleSans = Google_Sans({ weight: "500", subsets: ["latin"], display: "swap" });
