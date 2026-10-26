@@ -9,11 +9,15 @@ const TIMEZONE = "America/Sao_Paulo";
 
 export class GoogleNaoConectada extends Error {}
 
-// Permissões aceitas para criar/alterar eventos. O app pede só `calendar.events`;
-// `calendar` continua aceito para tokens concedidos antes da troca de escopo.
+// Permissões aceitas para criar/alterar eventos. O app pede só
+// `calendar.events.owned` (eventos das agendas de que a pessoa é dona — o app
+// só escreve na agenda principal dela; pedido da verificação do Google por
+// menor privilégio, 2026-10-22). `calendar.events` e `calendar` continuam
+// aceitos para tokens concedidos antes das trocas de escopo.
 const ESCOPOS_CALENDAR = [
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/calendar.events.owned",
 ];
 
 export const MSG_SEM_PERMISSAO_CALENDAR =

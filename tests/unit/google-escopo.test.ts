@@ -24,6 +24,18 @@ describe("escopoTemCalendar", () => {
     ).toBe(true);
   });
 
+  it("aceita calendar.events.owned (o escopo que o app pede hoje)", () => {
+    expect(
+      escopoTemCalendar("openid https://www.googleapis.com/auth/calendar.events.owned"),
+    ).toBe(true);
+  });
+
+  it("não confunde a leitura das próprias agendas com permissão de escrita", () => {
+    expect(
+      escopoTemCalendar("https://www.googleapis.com/auth/calendar.events.owned.readonly"),
+    ).toBe(false);
+  });
+
   it("não confunde calendar.readonly com permissão de escrita", () => {
     expect(
       escopoTemCalendar("https://www.googleapis.com/auth/calendar.readonly"),

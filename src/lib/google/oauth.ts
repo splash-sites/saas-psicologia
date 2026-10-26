@@ -7,7 +7,9 @@
 // O navegador recebe um código de uso único e o envia para /api/google/*; a
 // troca pelo token acontece aqui, com o client secret, que nunca sai do servidor.
 
-export const ESCOPO_AGENDA = "https://www.googleapis.com/auth/calendar.events";
+// Menor escopo que cobre o app: criar/alterar/apagar eventos (com Meet e
+// convidados) nas agendas de que a psicóloga é dona — só a principal é usada.
+export const ESCOPO_AGENDA = "https://www.googleapis.com/auth/calendar.events.owned";
 
 /** Cookie do "state" (double-submit): só o próprio app consegue gravá-lo. */
 export const COOKIE_STATE = "g_oauth_state";
