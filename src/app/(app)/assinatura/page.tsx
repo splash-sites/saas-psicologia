@@ -14,6 +14,7 @@ import {
 import { asaasConfigurada, asaasModo } from "@/lib/asaas/client";
 import { ConfigurarAssinaturaForm } from "./ConfigurarAssinaturaForm";
 import { VerificarPagamentoButton } from "./VerificarPagamentoButton";
+import { AtualizarAoPagar } from "./AtualizarAoPagar";
 import { cancelarAssinatura, simularPagamentoConfirmado } from "./actions";
 
 export const metadata = { title: "Assinatura" };
@@ -141,7 +142,12 @@ export default async function AssinaturaPage() {
                 Ver / pagar cobrança
               </a>
             )}
-            {configurada && assinatura.status !== "ativa" && <VerificarPagamentoButton />}
+            {configurada && assinatura.status !== "ativa" && (
+              <>
+                <VerificarPagamentoButton />
+                <AtualizarAoPagar />
+              </>
+            )}
           </div>
 
           {asaasModo() === "mock" && assinatura.status !== "ativa" && (
