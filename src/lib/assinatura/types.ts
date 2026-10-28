@@ -13,7 +13,9 @@ export const PLANOS: Record<
   AssinaturaPlano,
   { label: string; valor: number; meses: number; cicloAsaas: "MONTHLY" | "QUARTERLY" | "SEMIANNUALLY"; economia?: string }
 > = {
-  mensal: { label: "Mensal", valor: 49.9, meses: 1, cicloAsaas: "MONTHLY" },
+  // TEMPORÁRIO (2026-10-28): R$ 5 (mínimo do Asaas) para o teste de pagamento
+  // real em produção. Voltar para 49.9 logo depois do teste.
+  mensal: { label: "Mensal", valor: 5, meses: 1, cicloAsaas: "MONTHLY" },
   trimestral: {
     label: "Trimestral",
     valor: 134.73, // 3 × 49,90 com 10% de desconto
