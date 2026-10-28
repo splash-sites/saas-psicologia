@@ -34,19 +34,64 @@ const EVENTOS_ATRASO = new Set(["PAYMENT_OVERDUE"]);
 // link e o vencimento para o próprio app avisar — as notificações do Asaas
 // ficam desligadas (taxa de mensageria).
 const EVENTOS_COBRANCA_EM_ABERTO = new Set(["PAYMENT_CREATED", "PAYMENT_UPDATED"]);
+// Estorno (feito por nós no painel) e chargeback (contestação da cliente no
+// cartão): a classe só diz "reavaliar"; quem decide é o status lido na API.
+const EVENTOS_ESTORNO = new Set([
+  "PAYMENT_REFUNDED",
+  "PAYMENT_PARTIALLY_REFUNDED",
+  "PAYMENT_REFUND_IN_PROGRESS",
+  "PAYMENT_CHARGEBACK_REQUESTED",
+  "PAYMENT_CHARGEBACK_DISPUTE",
+  "PAYMENT_AWAITING_CHARGEBACK_REVERSAL",
+]);
 const STATUS_PAGO = new Set(["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"]);
+// Estorno parcial não entra: a cobrança continua RECEIVED (foi um desconto).
+const STATUS_ESTORNADO = new Set([
+  "REFUNDED",
+  "REFUND_REQUESTED",
+  "REFUND_IN_PROGRESS",
+  "CHARGEBACK_REQUESTED",
+  "CHARGEBACK_DISPUTE",
+]);
 
-export type ClasseEvento = "confirma_pagamento" | "atraso" | "cobranca_em_aberto" | "ignorar";
+export type ClasseEvento =
+  | "confirma_pagamento"
+  | "atraso"
+  | "cobranca_em_aberto"
+  | "estorno"
+  | "ignorar";
 
 export function classificarEvento(evento: string): ClasseEvento {
   if (EVENTOS_CONFIRMAM_PAGAMENTO.has(evento)) return "confirma_pagamento";
   if (EVENTOS_ATRASO.has(evento)) return "atraso";
   if (EVENTOS_COBRANCA_EM_ABERTO.has(evento)) return "cobranca_em_aberto";
+  if (EVENTOS_ESTORNO.has(evento)) return "estorno";
   return "ignorar";
 }
 
 export function statusIndicaPago(status: string | null | undefined): boolean {
   return Boolean(status && STATUS_PAGO.has(status));
+}
+
+export function statusIndicaEstorno(status: string | null | undefined): boolean {
+  return Boolean(status && STATUS_ESTORNADO.has(status));
+}
+
+/** Chargeback contestado e ganho (aguardando o repasse): vale como pago. */
+export function statusChargebackRevertido(status: string | null | undefined): boolean {
+  return status === "AWAITING_CHARGEBACK_REVERSAL";
+}
+
+/**
+ * A cobrança paga cobre o período de hoje? (vencimento + duração do plano
+ * ainda não passou). Estorno de um período antigo, já usado, não bloqueia.
+ */
+export function cobrancaDoPeriodoAtual(
+  vencimentoISO: string,
+  meses: number,
+  hojeISO: string = new Date().toISOString().slice(0, 10),
+): boolean {
+  return proximoMesDe(vencimentoISO, meses) >= hojeISO;
 }
 
 /** Próxima data de vencimento (mesmo dia, `meses` adiante — 1/3/6 conforme o

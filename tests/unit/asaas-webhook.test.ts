@@ -4,6 +4,9 @@ import {
   chaveIdempotencia,
   classificarEvento,
   statusIndicaPago,
+  statusIndicaEstorno,
+  statusChargebackRevertido,
+  cobrancaDoPeriodoAtual,
   proximoMesDe,
   verificarCobranca,
 } from "@/lib/asaas/webhook";
@@ -108,5 +111,43 @@ describe("proximoMesDe", () => {
 
   it("atravessa o ano", () => {
     expect(proximoMesDe("2026-12-15")).toBe("2027-01-15");
+  });
+});
+
+describe("estorno e chargeback", () => {
+  it("classifica os eventos de estorno e chargeback", () => {
+    for (const e of [
+      "PAYMENT_REFUNDED",
+      "PAYMENT_PARTIALLY_REFUNDED",
+      "PAYMENT_REFUND_IN_PROGRESS",
+      "PAYMENT_CHARGEBACK_REQUESTED",
+      "PAYMENT_CHARGEBACK_DISPUTE",
+      "PAYMENT_AWAITING_CHARGEBACK_REVERSAL",
+    ]) {
+      expect(classificarEvento(e)).toBe("estorno");
+    }
+  });
+
+  it("bloqueia por estorno ou chargeback; estorno parcial (RECEIVED) não", () => {
+    for (const s of ["REFUNDED", "REFUND_REQUESTED", "REFUND_IN_PROGRESS", "CHARGEBACK_REQUESTED", "CHARGEBACK_DISPUTE"]) {
+      expect(statusIndicaEstorno(s)).toBe(true);
+    }
+    expect(statusIndicaEstorno("RECEIVED")).toBe(false);
+    expect(statusIndicaEstorno("AWAITING_CHARGEBACK_REVERSAL")).toBe(false);
+    expect(statusIndicaEstorno(undefined)).toBe(false);
+  });
+
+  it("disputa ganha vale como pago", () => {
+    expect(statusChargebackRevertido("AWAITING_CHARGEBACK_REVERSAL")).toBe(true);
+    expect(statusChargebackRevertido("CHARGEBACK_DISPUTE")).toBe(false);
+  });
+
+  it("só o período atual conta", () => {
+    // mensal vencido em 28/10 cobre até 28/11
+    expect(cobrancaDoPeriodoAtual("2026-10-28", 1, "2026-11-10")).toBe(true);
+    expect(cobrancaDoPeriodoAtual("2026-10-28", 1, "2026-11-28")).toBe(true);
+    expect(cobrancaDoPeriodoAtual("2026-10-28", 1, "2026-11-29")).toBe(false);
+    // trimestral cobre 3 meses
+    expect(cobrancaDoPeriodoAtual("2026-08-01", 3, "2026-10-28")).toBe(true);
   });
 });

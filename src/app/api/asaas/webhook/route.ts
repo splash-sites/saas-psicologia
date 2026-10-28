@@ -6,6 +6,9 @@ import {
   chaveIdempotencia,
   classificarEvento,
   statusIndicaPago,
+  statusIndicaEstorno,
+  statusChargebackRevertido,
+  cobrancaDoPeriodoAtual,
   proximoMesDe,
   verificarCobranca,
 } from "@/lib/asaas/webhook";
@@ -139,6 +142,32 @@ export async function POST(request: Request) {
         .from("assinaturas")
         .update({ invoice_url_atual: link, proximo_vencimento: vencimento })
         .eq("psicologa_id", assinatura.psicologa_id);
+    }
+  } else if (classe === "estorno") {
+    const meses = PLANOS[(assinatura.plano ?? "mensal") as AssinaturaPlano].meses;
+    const vencimento = modo === "mock" ? pagamento.dueDate : cobranca?.dueDate;
+    if (vencimento && cobrancaDoPeriodoAtual(vencimento, meses)) {
+      if (statusIndicaEstorno(statusReal)) {
+        // Somente leitura na hora (decisão do usuário, 2026-10-28). Ativa vira
+        // atrasada; cancelada perde o resto do período pago.
+        await admin
+          .from("assinaturas")
+          .update({ status: "atrasada" })
+          .eq("psicologa_id", assinatura.psicologa_id)
+          .eq("status", "ativa");
+        await admin
+          .from("assinaturas")
+          .update({ proximo_vencimento: null })
+          .eq("psicologa_id", assinatura.psicologa_id)
+          .eq("status", "cancelada");
+      } else if (statusChargebackRevertido(statusReal)) {
+        // Disputa ganha: só desfaz o bloqueio que o próprio estorno causou.
+        await admin
+          .from("assinaturas")
+          .update({ status: "ativa", proximo_vencimento: proximoMesDe(vencimento, meses) })
+          .eq("psicologa_id", assinatura.psicologa_id)
+          .eq("status", "atrasada");
+      }
     }
   } else if (classe === "atraso" && (modo === "mock" || statusReal === "OVERDUE")) {
     await admin

@@ -150,6 +150,17 @@ export default async function AssinaturaPage() {
             )}
           </div>
 
+          {assinatura.status === "atrasada" && !assinatura.invoice_url_atual && (
+            <p className="text-sm text-slate-700">
+              Não há fatura em aberto para pagar por aqui. Se o pagamento foi
+              estornado ou contestado, escreva para{" "}
+              <a href="mailto:contato@splashsistemas.com.br" className="underline">
+                contato@splashsistemas.com.br
+              </a>{" "}
+              para regularizar.
+            </p>
+          )}
+
           {asaasModo() === "mock" && assinatura.status !== "ativa" && (
             <form action={simularPagamentoConfirmado}>
               <button type="submit" className="btn btn-outline btn-sm">
