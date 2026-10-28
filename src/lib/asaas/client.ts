@@ -23,6 +23,16 @@ const BASE_URL: Record<Exclude<AsaasModo, "mock">, string> = {
   production: "https://api.asaas.com/v3",
 };
 
+/** Erro HTTP da API do Asaas, com o status para quem precisa distinguir 404. */
+export class AsaasErro extends Error {
+  constructor(
+    mensagem: string,
+    readonly status: number,
+  ) {
+    super(mensagem);
+  }
+}
+
 async function chamar<T>(caminho: string, init?: RequestInit): Promise<T> {
   const modo = asaasModo();
   if (modo === "mock") {
@@ -41,7 +51,7 @@ async function chamar<T>(caminho: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const corpo = await res.text();
-    throw new Error(`Asaas ${caminho} recusou: ${res.status} ${corpo.slice(0, 300)}`);
+    throw new AsaasErro(`Asaas ${caminho} recusou: ${res.status} ${corpo.slice(0, 300)}`, res.status);
   }
   return res.json() as Promise<T>;
 }
@@ -118,6 +128,23 @@ export async function primeiraCobrancaDaAssinatura(
     `/payments?subscription=${encodeURIComponent(subscriptionId)}&limit=1`,
   );
   return r.data[0] ?? null;
+}
+
+/**
+ * A assinatura foi mesmo removida no Asaas? true/false pela API (404 conta
+ * como removida); null se a API não respondeu — aí não dá para confirmar.
+ */
+export async function assinaturaRemovidaNoAsaas(subscriptionId: string): Promise<boolean | null> {
+  if (asaasModo() === "mock") return null;
+  try {
+    const r = await chamar<{ deleted?: boolean }>(
+      `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    );
+    return r.deleted === true;
+  } catch (e) {
+    if (e instanceof AsaasErro && e.status === 404) return true;
+    return null;
+  }
 }
 
 /** Confere o status de uma cobrança direto na API — nunca confiar só no

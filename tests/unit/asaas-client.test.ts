@@ -7,6 +7,7 @@ import {
   cancelarAssinaturaAsaas,
   primeiraCobrancaDaAssinatura,
   buscarCobranca,
+  assinaturaRemovidaNoAsaas,
 } from "@/lib/asaas/client";
 
 const originais = { modo: process.env.ASAAS_MODE, chave: process.env.ASAAS_API_KEY };
@@ -93,5 +94,37 @@ describe("criarClienteAsaas com o Asaas de verdade", () => {
       cpfCnpj: "11144477735",
       notificationDisabled: true,
     });
+  });
+});
+
+describe("assinaturaRemovidaNoAsaas", () => {
+  beforeEach(() => {
+    process.env.ASAAS_MODE = "production";
+    process.env.ASAAS_API_KEY = "chave-teste";
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const responder = (corpo: unknown, status = 200) =>
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(corpo), { status })));
+
+  it("lê o campo deleted da API", async () => {
+    responder({ id: "sub_1", deleted: true });
+    expect(await assinaturaRemovidaNoAsaas("sub_1")).toBe(true);
+    responder({ id: "sub_1", deleted: false });
+    expect(await assinaturaRemovidaNoAsaas("sub_1")).toBe(false);
+  });
+
+  it("404 conta como removida; outra falha não confirma nada", async () => {
+    responder({ errors: [] }, 404);
+    expect(await assinaturaRemovidaNoAsaas("sub_1")).toBe(true);
+    responder({ errors: [] }, 500);
+    expect(await assinaturaRemovidaNoAsaas("sub_1")).toBeNull();
+  });
+
+  it("em modo simulado não chama a API", async () => {
+    process.env.ASAAS_MODE = "mock";
+    expect(await assinaturaRemovidaNoAsaas("sub_1")).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, adminDisponivel } from "@/lib/supabase/admin";
-import { buscarCobranca, asaasModo } from "@/lib/asaas/client";
+import { buscarCobranca, asaasModo, assinaturaRemovidaNoAsaas } from "@/lib/asaas/client";
 import {
   tokenValido,
   chaveIdempotencia,
@@ -18,6 +18,7 @@ const LIMITE_EVENTOS_POR_MINUTO = 120;
 
 type CorpoWebhook = {
   event?: string;
+  subscription?: { id?: string; deleted?: boolean };
   payment?: {
     id?: string;
     subscription?: string;
@@ -59,6 +60,9 @@ export async function POST(request: Request) {
   }
 
   const evento = corpo.event;
+  if (evento === "SUBSCRIPTION_DELETED") {
+    return assinaturaRemovida(admin, corpo);
+  }
   const pagamento = corpo.payment;
   if (!evento || !pagamento?.id) {
     return NextResponse.json({ ok: true });
@@ -176,5 +180,53 @@ export async function POST(request: Request) {
       .eq("psicologa_id", assinatura.psicologa_id);
   }
 
+  return NextResponse.json({ ok: true });
+}
+
+/**
+ * Assinatura removida no painel do Asaas (por fora do app): mesmo efeito do
+ * botão "Cancelar assinatura" — cancelada, com acesso até o fim do período
+ * pago. Quando o cancelamento é pelo app, o Asaas também avisa; repetir é inócuo.
+ */
+async function assinaturaRemovida(
+  admin: ReturnType<typeof createAdminClient>,
+  corpo: CorpoWebhook,
+) {
+  const id = corpo.subscription?.id;
+  if (!id) return NextResponse.json({ ok: true });
+
+  const { data: assinatura } = await admin
+    .from("assinaturas")
+    .select("psicologa_id")
+    .eq("asaas_subscription_id", id)
+    .maybeSingle();
+
+  const chave = chaveIdempotencia("SUBSCRIPTION_DELETED", id, undefined);
+  const { error: erroInsercao } = await admin.from("assinatura_eventos").insert({
+    psicologa_id: assinatura?.psicologa_id ?? null,
+    chave_idempotencia: chave,
+    tipo_evento: "SUBSCRIPTION_DELETED",
+    payload: corpo,
+  });
+  if (erroInsercao) {
+    if (erroInsercao.code === "23505") return NextResponse.json({ ok: true });
+    return NextResponse.json({ error: "falha ao registrar" }, { status: 500 });
+  }
+  if (!assinatura) return NextResponse.json({ ok: true });
+
+  // Confirma na API antes de cancelar (mock: confia no corpo).
+  const removida =
+    asaasModo() === "mock" ? corpo.subscription?.deleted !== false : await assinaturaRemovidaNoAsaas(id);
+  if (removida === null) {
+    await admin.from("assinatura_eventos").delete().eq("chave_idempotencia", chave);
+    return NextResponse.json({ error: "não foi possível confirmar no Asaas" }, { status: 503 });
+  }
+  if (removida) {
+    await admin
+      .from("assinaturas")
+      .update({ status: "cancelada", invoice_url_atual: null })
+      .eq("psicologa_id", assinatura.psicologa_id)
+      .neq("status", "cancelada");
+  }
   return NextResponse.json({ ok: true });
 }
