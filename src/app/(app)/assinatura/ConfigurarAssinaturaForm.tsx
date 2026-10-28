@@ -4,7 +4,9 @@ import { useState, useTransition, type FormEvent } from "react";
 import { configurarAssinatura, type FormState } from "./actions";
 import { ASSINATURA_PLANO, PLANOS, type AssinaturaPlano } from "@/lib/assinatura/types";
 
-export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string }) {
+// vencimento = fim do teste grátis ainda por vir; null = o teste já acabou e a
+// primeira cobrança vence hoje (mesma regra de assinarPlano).
+export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | null }) {
   const [state, setState] = useState<FormState>({});
   const [pending, startTransition] = useTransition();
   const [plano, setPlano] = useState<AssinaturaPlano>("mensal");
@@ -91,8 +93,10 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string })
       <p className="text-xs text-slate-500">
         Abrimos uma nova aba com o pagamento do Asaas (Pix, boleto ou cartão).
         Se o navegador bloquear a aba, o link aparece aqui embaixo depois de
-        confirmar. A primeira cobrança acontece em {vencimento}, quando o
-        teste grátis termina.
+        confirmar.{" "}
+        {vencimento
+          ? `A primeira cobrança acontece em ${vencimento}, quando o teste grátis termina.`
+          : "A primeira cobrança vence hoje."}
       </p>
     </form>
   );

@@ -119,7 +119,13 @@ export default async function AssinaturaPage() {
       {!assinatura.asaas_subscription_id || assinatura.status === "cancelada" ? (
         <section className="card flex flex-col gap-3">
           <h2 className="font-medium">Configurar forma de pagamento</h2>
-          <ConfigurarAssinaturaForm vencimento={dataBR(assinatura.trial_fim)} />
+          <ConfigurarAssinaturaForm
+            vencimento={
+              assinatura.trial_fim > new Date().toISOString().slice(0, 10)
+                ? dataBR(assinatura.trial_fim)
+                : null
+            }
+          />
         </section>
       ) : (
         <section className="card flex flex-col gap-3">
