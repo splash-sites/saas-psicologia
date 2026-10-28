@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   asaasModo,
   asaasConfigurada,
@@ -71,5 +71,27 @@ describe("modo simulado — nenhuma chamada de rede", () => {
   it("primeiraCobrancaDaAssinatura e buscarCobranca devolvem null", async () => {
     expect(await primeiraCobrancaDaAssinatura("mock_sub_x")).toBeNull();
     expect(await buscarCobranca("mock_pay_x")).toBeNull();
+  });
+});
+
+describe("criarClienteAsaas com o Asaas de verdade", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("cria o cliente sem as notificações do Asaas (taxa de mensageria)", async () => {
+    process.env.ASAAS_MODE = "production";
+    process.env.ASAAS_API_KEY = "chave-teste";
+    const fetchFalso = vi.fn(async () => new Response(JSON.stringify({ id: "cus_1" })));
+    vi.stubGlobal("fetch", fetchFalso);
+
+    await criarClienteAsaas({ nome: "Teste", email: "t@t.com", cpfCnpj: "111.444.777-35" });
+
+    const [url, init] = fetchFalso.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.asaas.com/v3/customers");
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      cpfCnpj: "11144477735",
+      notificationDisabled: true,
+    });
   });
 });

@@ -60,6 +60,10 @@ export async function criarClienteAsaas(dados: {
       name: dados.nome,
       email: dados.email,
       cpfCnpj: dados.cpfCnpj.replace(/\D/g, ""),
+      // Sem notificações do Asaas (e-mail/SMS/WhatsApp ao cliente): cada
+      // cobrança notificada custa a "taxa de mensageria". Decisão do usuário,
+      // 2026-10-28.
+      notificationDisabled: true,
     }),
   });
 }
