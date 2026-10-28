@@ -75,8 +75,13 @@ describe("classificarEvento", () => {
     expect(classificarEvento("PAYMENT_OVERDUE")).toBe("atraso");
   });
 
+  it("reconhece cobrança gerada ou alterada, ainda em aberto", () => {
+    expect(classificarEvento("PAYMENT_CREATED")).toBe("cobranca_em_aberto");
+    expect(classificarEvento("PAYMENT_UPDATED")).toBe("cobranca_em_aberto");
+  });
+
   it("ignora eventos desconhecidos", () => {
-    expect(classificarEvento("PAYMENT_CREATED")).toBe("ignorar");
+    expect(classificarEvento("PAYMENT_DELETED")).toBe("ignorar");
     expect(classificarEvento("QUALQUER_COISA")).toBe("ignorar");
   });
 });

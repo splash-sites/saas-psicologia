@@ -106,6 +106,7 @@ export type CobrancaAsaas = {
   value: number;
   subscription: string | null;
   invoiceUrl: string | null;
+  dueDate: string; // YYYY-MM-DD
 };
 
 /** Primeira cobrança gerada para a assinatura — dá o link de pagamento. */

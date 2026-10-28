@@ -30,13 +30,18 @@ const EVENTOS_CONFIRMAM_PAGAMENTO = new Set([
   "PAYMENT_RECEIVED_IN_CASH",
 ]);
 const EVENTOS_ATRASO = new Set(["PAYMENT_OVERDUE"]);
+// Cobrança gerada (ou com vencimento/valor alterado) ainda em aberto: guarda o
+// link e o vencimento para o próprio app avisar — as notificações do Asaas
+// ficam desligadas (taxa de mensageria).
+const EVENTOS_COBRANCA_EM_ABERTO = new Set(["PAYMENT_CREATED", "PAYMENT_UPDATED"]);
 const STATUS_PAGO = new Set(["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"]);
 
-export type ClasseEvento = "confirma_pagamento" | "atraso" | "ignorar";
+export type ClasseEvento = "confirma_pagamento" | "atraso" | "cobranca_em_aberto" | "ignorar";
 
 export function classificarEvento(evento: string): ClasseEvento {
   if (EVENTOS_CONFIRMAM_PAGAMENTO.has(evento)) return "confirma_pagamento";
   if (EVENTOS_ATRASO.has(evento)) return "atraso";
+  if (EVENTOS_COBRANCA_EM_ABERTO.has(evento)) return "cobranca_em_aberto";
   return "ignorar";
 }
 

@@ -100,6 +100,23 @@ export function diasRestantesTrial(
   return Math.ceil(diff / 86_400_000);
 }
 
+/** Quantos dias antes do vencimento o painel avisa da cobrança em aberto. */
+export const DIAS_AVISO_COBRANCA = 5;
+
+/**
+ * Dias até a cobrança em aberto vencer, quando já está na janela de aviso;
+ * null fora dela. O Asaas não notifica a cliente (notificações desligadas por
+ * causa da taxa de mensageria), então o aviso é do próprio app.
+ */
+export function diasParaAvisoCobranca(
+  a: Pick<Assinatura, "status" | "invoice_url_atual" | "proximo_vencimento">,
+  hojeISO: string = new Date().toISOString().slice(0, 10),
+): number | null {
+  if (a.status !== "ativa" || !a.invoice_url_atual || !a.proximo_vencimento) return null;
+  const dias = diasRestantesTrial(a.proximo_vencimento, hojeISO);
+  return dias >= 0 && dias <= DIAS_AVISO_COBRANCA ? dias : null;
+}
+
 export function formatarCpfCnpj(digitos: string): string {
   if (digitos.length === 11) {
     return digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");

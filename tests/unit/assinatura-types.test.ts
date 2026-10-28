@@ -4,6 +4,7 @@ import {
   diasRestantesTrial,
   trialEncerrado,
   formatarCpfCnpj,
+  diasParaAvisoCobranca,
 } from "@/lib/assinatura/types";
 
 describe("permiteEscrita", () => {
@@ -71,5 +72,30 @@ describe("trialEncerrado", () => {
     expect(trialEncerrado({ status: "trial", trial_fim: "2026-03-19" }, "2026-03-20")).toBe(true);
     expect(trialEncerrado({ status: "trial", trial_fim: "2026-03-20" }, "2026-03-20")).toBe(false);
     expect(trialEncerrado({ status: "ativa", trial_fim: "2026-03-01" }, "2026-03-20")).toBe(false);
+  });
+});
+
+describe("diasParaAvisoCobranca", () => {
+  const base = {
+    status: "ativa" as const,
+    invoice_url_atual: "https://www.asaas.com/i/abc",
+    proximo_vencimento: "2026-11-28",
+  };
+
+  it("avisa nos 5 dias antes do vencimento, inclusive no dia", () => {
+    expect(diasParaAvisoCobranca(base, "2026-11-23")).toBe(5);
+    expect(diasParaAvisoCobranca(base, "2026-11-27")).toBe(1);
+    expect(diasParaAvisoCobranca(base, "2026-11-28")).toBe(0);
+  });
+
+  it("não avisa antes da janela nem depois de vencer", () => {
+    expect(diasParaAvisoCobranca(base, "2026-11-22")).toBeNull();
+    expect(diasParaAvisoCobranca(base, "2026-11-29")).toBeNull();
+  });
+
+  it("não avisa sem cobrança em aberto ou fora de assinatura ativa", () => {
+    expect(diasParaAvisoCobranca({ ...base, invoice_url_atual: null }, "2026-11-27")).toBeNull();
+    expect(diasParaAvisoCobranca({ ...base, status: "trial" }, "2026-11-27")).toBeNull();
+    expect(diasParaAvisoCobranca({ ...base, status: "atrasada" }, "2026-11-27")).toBeNull();
   });
 });

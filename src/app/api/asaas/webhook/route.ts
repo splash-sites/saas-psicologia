@@ -92,10 +92,11 @@ export async function POST(request: Request) {
   // Nunca muda a assinatura só pelo que o corpo do webhook diz — confirma
   // direto na API do Asaas antes (mitiga um token vazado forjando eventos).
   const modo = asaasModo();
+  const cobranca = modo === "mock" ? null : await buscarCobranca(pagamento.id);
   const verificacao = verificarCobranca(
     modo,
     pagamento.status,
-    modo === "mock" ? null : await buscarCobranca(pagamento.id),
+    cobranca,
     pagamento.subscription ?? "",
   );
   if (verificacao.tipo === "indisponivel") {
@@ -117,9 +118,28 @@ export async function POST(request: Request) {
       .update({
         status: "ativa",
         proximo_vencimento: pagamento.dueDate ? proximoMesDe(pagamento.dueDate, meses) : null,
-        invoice_url_atual: null,
       })
       .eq("psicologa_id", assinatura.psicologa_id);
+    // Só apaga o link se for o desta cobrança: a do próximo ciclo pode já ter
+    // sido gerada (PAYMENT_CREATED) antes deste aviso chegar.
+    const linkPago = cobranca?.invoiceUrl ?? pagamento.invoiceUrl;
+    if (linkPago) {
+      await admin
+        .from("assinaturas")
+        .update({ invoice_url_atual: null })
+        .eq("psicologa_id", assinatura.psicologa_id)
+        .eq("invoice_url_atual", linkPago);
+    }
+  } else if (classe === "cobranca_em_aberto" && (modo === "mock" || statusReal === "PENDING")) {
+    // Link e vencimento vêm da API (mock: do corpo), nunca só do corpo.
+    const link = modo === "mock" ? pagamento.invoiceUrl : cobranca?.invoiceUrl;
+    const vencimento = modo === "mock" ? pagamento.dueDate : cobranca?.dueDate;
+    if (link && vencimento) {
+      await admin
+        .from("assinaturas")
+        .update({ invoice_url_atual: link, proximo_vencimento: vencimento })
+        .eq("psicologa_id", assinatura.psicologa_id);
+    }
   } else if (classe === "atraso" && (modo === "mock" || statusReal === "OVERDUE")) {
     await admin
       .from("assinaturas")
