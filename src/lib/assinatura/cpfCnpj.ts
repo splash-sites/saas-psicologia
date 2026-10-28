@@ -40,3 +40,18 @@ export function validarCpfCnpj(valor: string): ResultadoCpfCnpj {
   }
   return { valido: false, tipo: null, digitos };
 }
+
+/** Máscara progressiva: 999.999.999-99 até 11 dígitos e, a partir do 12º,
+ * 99.999.999/9999-99. Ignora tudo que não for dígito e corta em 14. */
+export function mascararCpfCnpj(valorBruto: string): string {
+  const d = valorBruto.replace(/\D/g, "").slice(0, 14);
+  if (d.length <= 11) {
+    const grupos = [d.slice(0, 3), d.slice(3, 6), d.slice(6, 9)].filter(Boolean);
+    let out = grupos.join(".");
+    if (d.length > 9) out += `-${d.slice(9)}`;
+    return out;
+  }
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}${
+    d.length > 12 ? `-${d.slice(12)}` : ""
+  }`;
+}

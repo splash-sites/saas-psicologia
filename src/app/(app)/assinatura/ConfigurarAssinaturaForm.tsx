@@ -3,6 +3,9 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { configurarAssinatura, type FormState } from "./actions";
 import { ASSINATURA_PLANO, PLANOS, type AssinaturaPlano } from "@/lib/assinatura/types";
+import { mascararCpfCnpj, validarCpfCnpj } from "@/lib/assinatura/cpfCnpj";
+
+const MSG_CPF_CNPJ_INVALIDO = "CPF ou CNPJ inválido. Confira os números.";
 
 // vencimento = fim do teste grátis ainda por vir; null = o teste já acabou e a
 // primeira cobrança vence hoje (mesma regra de assinarPlano).
@@ -10,9 +13,21 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
   const [state, setState] = useState<FormState>({});
   const [pending, startTransition] = useTransition();
   const [plano, setPlano] = useState<AssinaturaPlano>("mensal");
+  const [cpfCnpj, setCpfCnpj] = useState("");
+  // Erro só depois de sair do campo ou tentar enviar — não enquanto digita.
+  const [erroCpfCnpj, setErroCpfCnpj] = useState<string | null>(null);
+
+  function conferirCpfCnpj(): boolean {
+    const ok = validarCpfCnpj(cpfCnpj).valido;
+    setErroCpfCnpj(ok ? null : MSG_CPF_CNPJ_INVALIDO);
+    return ok;
+  }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Antes de abrir a aba: com documento inválido não há cobrança para mostrar.
+    // O servidor valida de novo (configurarAssinatura).
+    if (!conferirCpfCnpj()) return;
     const formData = new FormData(e.currentTarget);
 
     // Só dá pra abrir popup como reação direta ao clique — se esperasse a
@@ -73,17 +88,29 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
         <input
           name="cpf_cnpj"
           required
-          placeholder="Só números"
+          value={cpfCnpj}
+          onChange={(e) => {
+            setCpfCnpj(mascararCpfCnpj(e.target.value));
+            if (erroCpfCnpj) setErroCpfCnpj(null);
+          }}
+          onBlur={() => cpfCnpj && conferirCpfCnpj()}
+          placeholder="000.000.000-00"
           inputMode="numeric"
+          autoComplete="off"
+          maxLength={18}
+          aria-invalid={Boolean(erroCpfCnpj || state.fieldErrors?.cpf_cnpj)}
+          aria-describedby="cpf-cnpj-ajuda"
           className="input"
         />
-        <span className="text-xs text-slate-500">
+        <span id="cpf-cnpj-ajuda" className="text-xs text-slate-500">
           O Asaas exige o CPF ou CNPJ para gerar a cobrança. Não coletamos
           dados de cartão: você escolhe Pix, boleto ou cartão na página do
           Asaas.
         </span>
-        {state.fieldErrors?.cpf_cnpj && (
-          <span className="text-xs text-red-600">{state.fieldErrors.cpf_cnpj[0]}</span>
+        {(erroCpfCnpj ?? state.fieldErrors?.cpf_cnpj?.[0]) && (
+          <span className="text-xs text-red-600" role="alert">
+            {erroCpfCnpj ?? state.fieldErrors?.cpf_cnpj?.[0]}
+          </span>
         )}
       </label>
 
