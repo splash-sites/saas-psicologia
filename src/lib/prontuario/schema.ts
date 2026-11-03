@@ -3,8 +3,9 @@ import { z } from "zod";
 const obrigatorio = (rotulo: string) =>
   z.string().trim().min(1, `${rotulo} é obrigatório`).max(20000);
 
-// A estrutura mínima da CFP 01/2009 é exigência legal — os 4 campos não
-// podem ficar vazios.
+// Os 4 campos não podem ficar vazios por decisão de produto: dão estrutura à
+// evolução do trabalho e aos procedimentos (Resolução CFP 01/2009, art. 2º,
+// III). A resolução não pede "resultados" como item à parte.
 export const evolucaoSchema = z.object({
   data_sessao: z
     .string()

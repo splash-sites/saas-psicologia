@@ -34,8 +34,9 @@ export default async function NovaEvolucaoPage({
         Nova evolução — {paciente.nome}
       </h1>
       <p className="text-sm text-slate-500">
-        Registro documental da sessão (Resolução CFP 01/2009). Os quatro campos
-        são obrigatórios.
+        Os quatro campos são obrigatórios. Junto com a ficha e a anamnese do
+        paciente, a evolução compõe o registro documental (Resolução CFP nº
+        01/2009).
       </p>
       <EvolucaoForm
         action={criarEvolucao.bind(null, id)}

@@ -392,8 +392,8 @@ export default async function DashboardPage() {
               </span>
             </h2>
             <p className="text-sm text-amber-800">
-              O registro documental de cada atendimento é obrigatório (CFP
-              01/2009).
+              A Resolução CFP nº 01/2009 pede o registro documental sempre
+              atualizado.
             </p>
           </div>
           <ul className="divide-y divide-amber-200 rounded-lg border border-amber-200 bg-white">

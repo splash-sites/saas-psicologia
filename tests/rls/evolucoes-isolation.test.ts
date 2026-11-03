@@ -102,7 +102,7 @@ describe.skipIf(!hasLocalSupabase)("RLS: evolucoes", () => {
     expect(aindaLa).toHaveLength(1);
   });
 
-  it("a estrutura mínima da CFP é exigida pelo banco (campo vazio recusado)", async () => {
+  it("os quatro campos da evolução são exigidos pelo banco (campo vazio recusado)", async () => {
     const s = Date.now();
     const a = await signUpPsicologa(`ev-a5-${s}@teste.local`);
     const ca = userClient(a.accessToken);
