@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { LogOut, Menu, X } from "lucide-react";
 import { NavLinks } from "./NavLinks";
 import { ModoPrivado } from "./ModoPrivado";
@@ -27,7 +28,9 @@ export function MobileNav({ email }: { email: string }) {
   return (
     <div className="md:hidden">
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4">
-        <Logo className="h-7 w-auto" />
+        <Link href="/dashboard" aria-label="Gradatim — ir para o painel" className="rounded">
+          <Logo className="h-7 w-auto" />
+        </Link>
         <div className="flex items-center gap-2">
           <ModoPrivado compacto />
           <button
