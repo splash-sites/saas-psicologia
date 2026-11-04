@@ -26,6 +26,25 @@ type ConsultaRow = {
   pacientes: PacienteEmbed | PacienteEmbed[] | null;
 };
 
+/**
+ * Quem o Google avisa. Consulta que já terminou (registrada ou mexida depois)
+ * vira só registro na agenda da psicóloga: sem convidado e sem e-mail —
+ * convite de uma sessão de semanas atrás confunde o paciente.
+ */
+export function conviteDoPaciente(
+  c: { fim: string },
+  pac: { email: string | null; aceita_lembretes: boolean } | null,
+  conviteLigado: boolean,
+  agora: Date = new Date(),
+): { convidadoEmail: string | null; notificar: boolean } {
+  const jaPassou = new Date(c.fim).getTime() <= agora.getTime();
+  if (jaPassou) return { convidadoEmail: null, notificar: false };
+  return {
+    convidadoEmail: conviteLigado && pac?.aceita_lembretes && pac.email ? pac.email : null,
+    notificar: true,
+  };
+}
+
 function paciente(p: ConsultaRow["pacientes"]): PacienteEmbed | null {
   if (!p) return null;
   return Array.isArray(p) ? (p[0] ?? null) : p;
@@ -80,8 +99,7 @@ export async function sincronizarConsulta(
     .eq("psicologa_id", psicologaId)
     .maybeSingle();
   const conviteLigado = pref?.convite_google ?? true;
-  const convidadoEmail =
-    conviteLigado && pac?.aceita_lembretes && pac.email ? pac.email : null;
+  const { convidadoEmail, notificar } = conviteDoPaciente(c, pac, conviteLigado);
 
   // O evento é visível ao convidado: sem observações da consulta nem nada
   // clínico. Só nome do paciente, horário e Meet.
@@ -91,11 +109,12 @@ export async function sincronizarConsulta(
     fim: c.fim,
     online: c.modalidade === "online",
     convidadoEmail,
+    notificar,
   };
 
   try {
     if (c.status === "cancelada") {
-      if (c.google_event_id) await removerEvento(psicologaId, c.google_event_id);
+      if (c.google_event_id) await removerEvento(psicologaId, c.google_event_id, notificar);
       await marcar(supabase, c.id, {
         google_event_id: null,
         meet_link: null,

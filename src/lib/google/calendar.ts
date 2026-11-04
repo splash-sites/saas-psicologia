@@ -122,7 +122,14 @@ export type EventoInput = {
   // / cancelamento). Nulo = sem convidados. Nunca colocar dado clínico em
   // titulo/descricao: o convidado enxerga o evento.
   convidadoEmail?: string | null;
+  // false = o Google não manda e-mail a ninguém (sendUpdates=none). Usado para
+  // consulta que já passou, registrada depois. Padrão: avisa (sendUpdates=all).
+  notificar?: boolean;
 };
+
+function sendUpdates(ev: { notificar?: boolean }): "all" | "none" {
+  return ev.notificar === false ? "none" : "all";
+}
 
 export function corpoEvento(ev: EventoInput, comConference: boolean) {
   const body: Record<string, unknown> = {
@@ -156,7 +163,7 @@ export async function criarEvento(
   ev: EventoInput,
 ): Promise<ResultadoSync> {
   const token = await getAccessToken(psicologaId);
-  const res = await fetch(`${CAL_BASE}?conferenceDataVersion=1&sendUpdates=all`, {
+  const res = await fetch(`${CAL_BASE}?conferenceDataVersion=1&sendUpdates=${sendUpdates(ev)}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -178,7 +185,7 @@ export async function atualizarEvento(
 ): Promise<ResultadoSync> {
   const token = await getAccessToken(psicologaId);
   const res = await fetch(
-    `${CAL_BASE}/${encodeURIComponent(googleEventId)}?conferenceDataVersion=1&sendUpdates=all`,
+    `${CAL_BASE}/${encodeURIComponent(googleEventId)}?conferenceDataVersion=1&sendUpdates=${sendUpdates(ev)}`,
     {
       method: "PATCH",
       headers: {
@@ -202,11 +209,12 @@ export async function atualizarEvento(
 export async function removerEvento(
   psicologaId: string,
   googleEventId: string,
+  notificar = true,
 ): Promise<void> {
   const token = await getAccessToken(psicologaId);
   // sendUpdates=all: o convidado recebe o aviso de cancelamento.
   const res = await fetch(
-    `${CAL_BASE}/${encodeURIComponent(googleEventId)}?sendUpdates=all`,
+    `${CAL_BASE}/${encodeURIComponent(googleEventId)}?sendUpdates=${sendUpdates({ notificar })}`,
     {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },

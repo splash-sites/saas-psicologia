@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { corpoEvento } from "@/lib/google/calendar";
+import { conviteDoPaciente } from "@/lib/agenda/sync";
 
 const base = {
   titulo: "Consulta — Maria",
@@ -31,5 +32,33 @@ describe("corpoEvento — convidado", () => {
   it("não inclui descrição quando ela não é informada (nada clínico no evento)", () => {
     const b = corpoEvento({ ...base, convidadoEmail: "m@e.com" }, true);
     expect(b.description).toBeUndefined();
+  });
+});
+
+describe("conviteDoPaciente — consulta registrada depois", () => {
+  const agora = new Date("2026-11-04T15:00:00.000Z");
+  const pac = { email: "maria@exemplo.com", aceita_lembretes: true };
+
+  it("consulta futura convida e avisa", () => {
+    expect(conviteDoPaciente({ fim: "2026-11-05T15:50:00.000Z" }, pac, true, agora)).toEqual({
+      convidadoEmail: "maria@exemplo.com",
+      notificar: true,
+    });
+  });
+
+  it("consulta que já terminou não convida nem avisa ninguém", () => {
+    expect(conviteDoPaciente({ fim: "2026-10-14T15:50:00.000Z" }, pac, true, agora)).toEqual({
+      convidadoEmail: null,
+      notificar: false,
+    });
+    // terminou exatamente agora: também já passou
+    expect(conviteDoPaciente({ fim: agora.toISOString() }, pac, true, agora).notificar).toBe(false);
+  });
+
+  it("futura sem consentimento, sem e-mail ou com convite desligado: avisa, mas sem convidado", () => {
+    const fim = { fim: "2026-11-05T15:50:00.000Z" };
+    expect(conviteDoPaciente(fim, { ...pac, aceita_lembretes: false }, true, agora).convidadoEmail).toBeNull();
+    expect(conviteDoPaciente(fim, { ...pac, email: null }, true, agora).convidadoEmail).toBeNull();
+    expect(conviteDoPaciente(fim, pac, false, agora).convidadoEmail).toBeNull();
   });
 });
