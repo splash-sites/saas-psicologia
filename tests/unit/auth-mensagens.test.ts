@@ -35,4 +35,11 @@ describe("traduzErroAuth", () => {
     expect(traduzErroAuth(null)).toBe("Não foi possível completar. Tente novamente.");
     expect(traduzErroAuth("")).toBe("Não foi possível completar. Tente novamente.");
   });
+
+  it("traduz os erros da troca de senha", () => {
+    expect(traduzErroAuth("New password should be different from the old password.")).toBe(
+      "A nova senha precisa ser diferente da atual.",
+    );
+    expect(traduzErroAuth("Auth session missing!")).toMatch(/link expirou/);
+  });
 });

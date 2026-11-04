@@ -3,6 +3,9 @@
 const PUBLIC_PATHS = [
   "/login",
   "/auth/callback",
+  // Links dos e-mails (confirmação e recuperação) e o pedido de nova senha.
+  "/auth/confirm",
+  "/esqueci-senha",
   "/privacidade",
   "/termos",
   "/api/asaas/webhook",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -32,8 +33,10 @@ const LINK =
 
 // Login: mensagem genérica, sem dizer se o e-mail existe (nem "e-mail não
 // confirmado"). Só o limite de tentativas tem texto próprio — não revela nada.
+// "E-mail não confirmado" só vem com a senha certa, então dizer isso não revela
+// nada a quem não sabe a senha — e evita a pessoa achar que errou a senha.
 function erroDeLogin(mensagem: string): string {
-  return /rate limit/i.test(mensagem)
+  return /rate limit|email not confirmed/i.test(mensagem)
     ? traduzErroAuth(mensagem)
     : "E-mail ou senha incorretos.";
 }
@@ -50,6 +53,22 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
   const [mensagem, setMensagem] = useState<{ tipo: "erro" | "sucesso"; texto: string } | null>(
     null,
   );
+  // Cadastro feito (ou login barrado) aguardando a confirmação do e-mail:
+  // mostra o botão de reenviar o link.
+  const [aguardandoConfirmacao, setAguardandoConfirmacao] = useState(false);
+  const [reenviando, setReenviando] = useState(false);
+
+  async function reenviarConfirmacao() {
+    if (reenviando) return;
+    setReenviando(true);
+    const { error } = await createClient().auth.resend({ type: "signup", email });
+    setReenviando(false);
+    setMensagem(
+      error
+        ? { tipo: "erro", texto: traduzErroAuth(error.message) }
+        : { tipo: "sucesso", texto: `Enviamos um novo link para ${email}. Confira também o spam.` },
+    );
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -84,9 +103,10 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
         return;
       }
       setCarregando(false);
+      setAguardandoConfirmacao(true);
       setMensagem({
         tipo: "sucesso",
-        texto: "Conta criada. Enviamos um link de confirmação para o seu e-mail; abra-o antes de entrar.",
+        texto: `Conta criada. Enviamos um link para ${email}: clique nele para ativar a conta e depois entre aqui.`,
       });
       return;
     }
@@ -96,6 +116,7 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
     if (error) {
       setCarregando(false);
+      setAguardandoConfirmacao(/email not confirmed/i.test(error.message));
       setMensagem({ tipo: "erro", texto: erroDeLogin(error.message) });
       return;
     }
@@ -106,6 +127,7 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
   function trocarModo() {
     setModo(modo === "criar" ? "entrar" : "criar");
     setMensagem(null);
+    setAguardandoConfirmacao(false);
   }
 
   const criando = modo === "criar";
@@ -186,10 +208,9 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
             criando ? "Mínimo de 6 caracteres" : "Sua senha",
           )}
           {!criando && (
-            // Sem fluxo de recuperação de senha no app ainda (ver resposta da tarefa).
-            <a href="#" className={`self-end text-sm ${LINK}`}>
+            <Link href="/esqueci-senha" className={`self-end text-sm ${LINK}`}>
               Esqueci minha senha
-            </a>
+            </Link>
           )}
         </div>
 
@@ -209,6 +230,16 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
           >
             {mensagem.texto}
           </p>
+        )}
+        {aguardandoConfirmacao && (
+          <button
+            type="button"
+            onClick={reenviarConfirmacao}
+            disabled={reenviando}
+            className={`self-start text-sm ${LINK}`}
+          >
+            {reenviando ? "Reenviando..." : "Não recebeu? Reenviar o link"}
+          </button>
         )}
 
         <button

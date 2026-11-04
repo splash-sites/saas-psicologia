@@ -31,7 +31,18 @@ export default async function LoginPage({
 
         {error && (
           <p className="alert alert-error" role="alert">
-            Não foi possível entrar. Tente novamente.
+            {error === "link" ? (
+              <>
+                O link expirou ou já foi usado. Para trocar a senha, peça um
+                novo em{" "}
+                <Link href="/esqueci-senha" className="underline">
+                  Esqueci minha senha
+                </Link>
+                .
+              </>
+            ) : (
+              "Não foi possível entrar. Tente novamente."
+            )}
           </p>
         )}
 

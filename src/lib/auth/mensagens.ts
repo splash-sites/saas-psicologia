@@ -9,6 +9,8 @@ const MAPA: Array<[RegExp, string]> = [
   [/email not confirmed/i, "Confirme seu e-mail antes de entrar. O link está na sua caixa de entrada."],
   [/rate limit/i, "Muitas tentativas seguidas. Aguarde um pouco e tente de novo."],
   [/unable to validate email address/i, "E-mail inválido."],
+  [/should be different from the old password/i, "A nova senha precisa ser diferente da atual."],
+  [/auth session missing|session.*expired/i, "O link expirou. Peça um novo em \"Esqueci minha senha\"."],
 ];
 
 export function traduzErroAuth(mensagem: string | undefined | null): string {
