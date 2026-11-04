@@ -115,6 +115,7 @@ export default async function DashboardPage() {
     { data: aReceberRaw },
     { count: atrasados },
     { data: tokenGoogle },
+    { count: pendentesTotalRaw },
   ] = await Promise.all([
     supabase.from("psicologas").select("nome, link_atendimento_online").eq("id", user.id).maybeSingle(),
     supabase
@@ -178,6 +179,9 @@ export default async function DashboardPage() {
       .select("escopo")
       .eq("psicologa_id", user.id)
       .maybeSingle(),
+    // Pendências de qualquer data (o card conta todas; a lista do painel só
+    // as dos últimos DIAS_PENDENCIA dias).
+    supabase.rpc("consultas_sem_evolucao", {}, { count: "exact", head: true }),
   ]);
   // Login em dois passos: a Agenda é conectada depois. Enquanto não estiver,
   // o painel oferece o botão (escopo nulo = token antigo, conta como conectado).
@@ -265,6 +269,9 @@ export default async function DashboardPage() {
     new Set(passadas.filter((c) => evolucaoDe(c)).map((c) => c.id)),
   );
   const evolucoesPendentes = pendentes.length;
+  // As duas contas usam a mesma regra; o max só protege de uma diferença de
+  // limite (a lista recente busca no máximo 60 sessões).
+  const pendentesTotal = Math.max(pendentesTotalRaw ?? 0, evolucoesPendentes);
   const MAX_PENDENTES_LISTADAS = 6;
 
   const nome = psicologa?.nome ? primeiroNome(psicologa.nome) : "";
@@ -316,10 +323,16 @@ export default async function DashboardPage() {
         />
         <Indicador
           rotulo="Evoluções pendentes"
-          valor={evolucoesPendentes > 0 ? String(evolucoesPendentes) : null}
-          href="#pendentes"
-          destaque={evolucoesPendentes > 0 ? "amber" : undefined}
-          sub={evolucoesPendentes > 0 ? `Últimos ${DIAS_PENDENCIA} dias` : undefined}
+          valor={pendentesTotal > 0 ? String(pendentesTotal) : null}
+          href="/evolucoes/pendentes"
+          destaque={pendentesTotal > 0 ? "amber" : undefined}
+          sub={
+            pendentesTotal === 0
+              ? undefined
+              : evolucoesPendentes > 0
+                ? `${evolucoesPendentes} nos últimos ${DIAS_PENDENCIA} dias`
+                : `Todas com mais de ${DIAS_PENDENCIA} dias`
+          }
         />
         <Indicador
           rotulo="Lembretes a enviar"
@@ -426,12 +439,10 @@ export default async function DashboardPage() {
               );
             })}
           </ul>
-          {pendentes.length > MAX_PENDENTES_LISTADAS && (
-            <p className="text-xs text-amber-800">
-              Há mais {pendentes.length - MAX_PENDENTES_LISTADAS} sessões
-              antigas sem evolução. Elas entram nesta lista conforme você
-              registra as de cima.
-            </p>
+          {pendentesTotal > Math.min(pendentes.length, MAX_PENDENTES_LISTADAS) && (
+            <Link href="/evolucoes/pendentes" className="text-sm font-medium text-amber-900 underline">
+              Ver todas as {pendentesTotal} pendências
+            </Link>
           )}
         </section>
       )}

@@ -278,6 +278,34 @@ export async function definirStatusConsulta(
   redirect(destinoSeguro(voltar));
 }
 
+/**
+ * Lista de evoluções pendentes: a sessão já passada não aconteceu (falta ou
+ * cancelada) e sai da lista. Só para sessão encerrada e ainda agendada/
+ * realizada. Não mexe no Google Agenda: o evento já passou, e cancelar lá
+ * mandaria ao paciente convidado um aviso de cancelamento de semanas atrás.
+ */
+export async function marcarSessaoNaoRealizada(
+  id: string,
+  status: "falta" | "cancelada",
+  _formData: FormData,
+): Promise<void> {
+  const { supabase } = await requirePsicologa();
+  if (status !== "falta" && status !== "cancelada") redirect("/evolucoes/pendentes");
+
+  await supabase
+    .from("consultas")
+    .update({ status })
+    .eq("id", id)
+    .in("status", ["agendada", "realizada"])
+    .lte("fim", new Date().toISOString())
+    .is("deleted_at", null);
+
+  revalidatePath("/evolucoes/pendentes");
+  revalidatePath("/dashboard");
+  revalidatePath("/agenda");
+  redirect("/evolucoes/pendentes");
+}
+
 /** Confirmação manual: a psicóloga registra que o paciente confirmou. */
 export async function definirConfirmacao(
   id: string,
