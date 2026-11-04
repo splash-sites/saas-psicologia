@@ -47,7 +47,7 @@ export default async function EvolucoesPendentesPage() {
   const user = await usuarioAtual();
   if (!user) redirect("/login");
 
-  const { data, count } = await supabase
+  const { data, count, error } = await supabase
     .rpc("consultas_sem_evolucao", {}, { count: "exact" })
     .limit(MAX_LISTADAS);
   const pendentes = (data ?? []) as Pendente[];
@@ -65,7 +65,11 @@ export default async function EvolucoesPendentesPage() {
         </p>
       </div>
 
-      {pendentes.length === 0 ? (
+      {error ? (
+        <p className="alert alert-error" role="alert">
+          Não foi possível carregar as evoluções pendentes. Recarregue a página.
+        </p>
+      ) : pendentes.length === 0 ? (
         <EstadoVazio
           icon={Check}
           titulo="Tudo em dia"
