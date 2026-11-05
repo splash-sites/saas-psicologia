@@ -1,12 +1,9 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 type Opcao = { id: string; nome: string };
-
-/** A partir de quantos pacientes aparece o campo de filtrar. */
-export const LIMIAR_FILTRO_PACIENTES = 10;
 
 // Sem acento e minúsculo: "joao" acha "João".
 function normalizar(texto: string): string {
@@ -14,12 +11,13 @@ function normalizar(texto: string): string {
 }
 
 /**
- * <select> de paciente com um campo para filtrar por nome quando a lista é
- * longa. Continua sendo um <select name="paciente_id"> de verdade (envio do
- * formulário, teclado e leitor de tela iguais), só com menos opções.
+ * Campo de paciente com busca (combobox): clicar mostra a lista inteira,
+ * digitar filtra na hora; setas + Enter escolhem, Esc fecha. O valor vai no
+ * formulário por um <input type="hidden" name="paciente_id">.
  *
- * O paciente já escolhido nunca some da lista por causa do filtro: o
- * navegador trocaria o valor do <select> sem avisar.
+ * Obrigatório: sem paciente escolhido, o campo visível fica inválido
+ * (setCustomValidity) e o navegador barra o envio com a mensagem — texto
+ * digitado que não virou escolha não conta.
  */
 export function PacienteSelect({
   pacientes,
@@ -38,74 +36,149 @@ export function PacienteSelect({
   required?: boolean;
   rotulo?: string;
 }) {
-  const id = useId();
-  const [filtro, setFiltro] = useState("");
+  const idCampo = useId();
+  const idLista = useId();
+  const campo = useRef<HTMLInputElement>(null);
+  const lista = useRef<HTMLUListElement>(null);
   const [interno, setInterno] = useState(defaultValue);
   const atual = value ?? interno;
+  const nomeAtual = pacientes.find((p) => p.id === atual)?.nome ?? "";
 
-  function escolher(novo: string) {
-    if (value === undefined) setInterno(novo);
-    onChange?.(novo);
+  const [aberto, setAberto] = useState(false);
+  // null = não está digitando: o campo mostra o nome do escolhido.
+  const [texto, setTexto] = useState<string | null>(null);
+  const [ativo, setAtivo] = useState(0);
+
+  const termo = normalizar((texto ?? "").trim());
+  const opcoes = useMemo(
+    () => (termo ? pacientes.filter((p) => normalizar(p.nome).includes(termo)) : pacientes),
+    [pacientes, termo],
+  );
+
+  function escolher(id: string) {
+    if (value === undefined) setInterno(id);
+    onChange?.(id);
+    setTexto(null);
+    setAberto(false);
   }
 
-  const termo = normalizar(filtro.trim());
-  const visiveis = useMemo(
-    () => (termo ? pacientes.filter((p) => p.id === atual || normalizar(p.nome).includes(termo)) : pacientes),
-    [pacientes, termo, atual],
-  );
-  const encontrados = visiveis.filter((p) => p.id !== atual || normalizar(p.nome).includes(termo));
+  function abrir() {
+    setAberto(true);
+    const i = opcoes.findIndex((p) => p.id === atual);
+    setAtivo(i >= 0 ? i : 0);
+  }
+
+  useEffect(() => {
+    campo.current?.setCustomValidity(required && !atual ? "Escolha um paciente da lista." : "");
+  }, [required, atual]);
+
+  useEffect(() => {
+    if (!aberto) return;
+    lista.current?.querySelector<HTMLElement>(`[data-indice="${ativo}"]`)?.scrollIntoView?.({ block: "nearest" });
+  }, [aberto, ativo]);
+
+  const idOpcao = (i: number) => `${idLista}-${i}`;
 
   return (
     <div className="flex flex-col gap-1 text-sm">
-      <label htmlFor={id}>{rotulo}</label>
-      {pacientes.length > LIMIAR_FILTRO_PACIENTES && (
-        <div className="relative">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
-            aria-hidden
-          />
-          <input
-            type="search"
-            value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
-            onKeyDown={(e) => {
-              // Enter aqui não envia o formulário; com um nome só, já escolhe.
-              if (e.key !== "Enter") return;
+      <label htmlFor={idCampo}>{rotulo}</label>
+      <div className="relative">
+        <input
+          ref={campo}
+          id={idCampo}
+          type="text"
+          role="combobox"
+          aria-expanded={aberto}
+          aria-controls={idLista}
+          aria-autocomplete="list"
+          aria-activedescendant={aberto && opcoes.length ? idOpcao(ativo) : undefined}
+          value={texto ?? nomeAtual}
+          placeholder="Digite ou clique para escolher"
+          autoComplete="off"
+          className="input pr-10"
+          data-sensivel
+          onClick={() => (aberto ? null : abrir())}
+          onFocus={(e) => e.currentTarget.select()}
+          onChange={(e) => {
+            setTexto(e.target.value);
+            setAtivo(0);
+            setAberto(true);
+            // Mexeu no texto: a escolha anterior deixa de valer.
+            if (atual) {
+              if (value === undefined) setInterno("");
+              onChange?.("");
+            }
+          }}
+          onBlur={() => {
+            setAberto(false);
+            setTexto(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
               e.preventDefault();
-              if (termo && encontrados.length === 1) escolher(encontrados[0].id);
-            }}
-            placeholder="Digite para filtrar pelo nome"
-            aria-label="Filtrar pacientes pelo nome"
-            aria-controls={id}
-            autoComplete="off"
-            className="input pl-9"
-          />
-        </div>
-      )}
-      <select
-        id={id}
-        name={name}
-        required={required}
-        value={atual}
-        onChange={(e) => escolher(e.target.value)}
-        className="input"
-      >
-        <option value="">
-          {termo && encontrados.length === 0 ? "Nenhum paciente com esse nome" : "Selecione..."}
-        </option>
-        {visiveis.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.nome}
-          </option>
-        ))}
-      </select>
-      {termo && encontrados.length > 0 && (
-        <span className="text-xs text-slate-500" role="status">
-          {encontrados.length === 1
-            ? "1 paciente encontrado (Enter escolhe)"
-            : `${encontrados.length} pacientes encontrados`}
-        </span>
-      )}
+              if (!aberto) return abrir();
+              const passo = e.key === "ArrowDown" ? 1 : -1;
+              setAtivo((i) => Math.min(Math.max(i + passo, 0), Math.max(opcoes.length - 1, 0)));
+            } else if (e.key === "Enter" && aberto) {
+              // Enter na lista escolhe; não envia o formulário.
+              e.preventDefault();
+              if (opcoes[ativo]) escolher(opcoes[ativo].id);
+            } else if (e.key === "Escape" && aberto) {
+              e.preventDefault();
+              setAberto(false);
+              setTexto(null);
+            }
+          }}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={aberto ? "Fechar lista de pacientes" : "Abrir lista de pacientes"}
+          className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-500"
+          onMouseDown={(e) => {
+            // Mantém o foco no campo (o blur fecharia a lista antes do clique).
+            e.preventDefault();
+            campo.current?.focus();
+            if (aberto) setAberto(false);
+            else abrir();
+          }}
+        >
+          <ChevronDown className="size-4" aria-hidden />
+        </button>
+
+        {aberto && (
+          <ul
+            ref={lista}
+            id={idLista}
+            role="listbox"
+            aria-label="Pacientes"
+            className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+          >
+            {opcoes.length === 0 ? (
+              <li className="px-3 py-2 text-slate-500">Nenhum paciente com esse nome</li>
+            ) : (
+              opcoes.map((p, i) => (
+                <li
+                  key={p.id}
+                  id={idOpcao(i)}
+                  data-indice={i}
+                  role="option"
+                  aria-selected={p.id === atual}
+                  className={`cursor-pointer px-3 py-2 ${i === ativo ? "bg-teal-50 text-teal-900" : ""} ${
+                    p.id === atual ? "font-medium" : ""
+                  }`}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onMouseEnter={() => setAtivo(i)}
+                  onClick={() => escolher(p.id)}
+                >
+                  <span data-sensivel>{p.nome}</span>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </div>
+      <input type="hidden" name={name} value={atual} />
     </div>
   );
 }

@@ -69,6 +69,13 @@ async function enviar(p: Page, campo: string) {
   ]);
 }
 
+// Campo de paciente com busca: digita parte do nome e clica na opção.
+async function escolherPaciente(p: Page, nome: string) {
+  await p.getByRole("combobox", { name: "Paciente *" }).fill(nome.split(" ")[0]);
+  await p.getByRole("listbox", { name: "Pacientes" }).getByRole("option", { name: nome, exact: true }).click();
+  await expect(p.getByRole("combobox", { name: "Paciente *" })).toHaveValue(nome);
+}
+
 test("sem login, o painel manda para o login", async () => {
   await page.goto("/pacientes");
   await expect(page).toHaveURL(/\/login$/);
@@ -115,7 +122,7 @@ test("anamnese salva", async () => {
 
 test("agendar consulta", async () => {
   await page.goto("/agenda/nova");
-  await page.locator('[name="paciente_id"]').selectOption({ label: "Maria da Silva" });
+  await escolherPaciente(page, "Maria da Silva");
   await page.locator('[name="data"]').fill(amanha);
   await page.locator('[name="hora"]').fill("10:00");
   await page.locator('[name="modalidade"]').selectOption("presencial");
@@ -145,7 +152,7 @@ test("evolução: erro do servidor não apaga o texto, e depois salva", async ()
 
 test("lançar pagamento a receber e marcar como pago", async () => {
   await page.goto("/financeiro/novo");
-  await page.locator('[name="paciente_id"]').selectOption({ label: "Maria da Silva" });
+  await escolherPaciente(page, "Maria da Silva");
   await page.locator('[name="valor"]').fill("180.50");
   await page.locator('input[name="situacao"][value="a_receber"]').check();
   await page.locator('[name="vencimento"]').fill(amanha);
