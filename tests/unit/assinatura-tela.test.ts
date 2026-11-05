@@ -3,6 +3,7 @@ import {
   diasUsadosDoTeste,
   distanciaEmDias,
   documentoMascarado,
+  duracaoDoTeste,
   estadoDaTela,
   mostraFormulario,
 } from "@/lib/assinatura/tela";
@@ -38,10 +39,18 @@ describe("estadoDaTela", () => {
 });
 
 describe("apoio da tela", () => {
-  it("dias usados do teste, de 0 a 14", () => {
-    expect(diasUsadosDoTeste("2026-11-10", HOJE)).toBe(9);
-    expect(diasUsadosDoTeste("2026-11-01", HOJE)).toBe(14);
-    expect(diasUsadosDoTeste("2026-11-25", HOJE)).toBe(0);
+  it("dias usados do teste, de 0 até a duração", () => {
+    expect(diasUsadosDoTeste("2026-11-10", 14, HOJE)).toBe(9);
+    expect(diasUsadosDoTeste("2026-11-01", 14, HOJE)).toBe(14);
+    expect(diasUsadosDoTeste("2026-11-25", 14, HOJE)).toBe(0);
+    expect(diasUsadosDoTeste("2026-11-07", 7, HOJE)).toBe(5);
+  });
+
+  it("duração do teste vem da própria conta (14 antigas, 7 novas)", () => {
+    expect(duracaoDoTeste({ created_at: "2026-10-27T15:00:00Z", trial_fim: "2026-11-10" })).toBe(14);
+    expect(duracaoDoTeste({ created_at: "2026-11-06T10:00:00Z", trial_fim: "2026-11-13" })).toBe(7);
+    // Dado estranho (ex.: fim antes do cadastro): usa o padrão atual.
+    expect(duracaoDoTeste({ created_at: "2026-11-06T10:00:00Z", trial_fim: "2026-11-01" })).toBe(7);
   });
 
   it("distância em dias", () => {

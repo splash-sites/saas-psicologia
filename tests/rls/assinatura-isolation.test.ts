@@ -19,6 +19,9 @@ describe.skipIf(!hasLocalSupabase)("RLS: assinaturas", () => {
       .single();
     expect(data?.status).toBe("trial");
     expect(data!.trial_fim >= new Date().toISOString().slice(0, 10)).toBe(true);
+    // Migration 0021: conta nova ganha 7 dias de teste (era 14).
+    const dias = (new Date(`${data!.trial_fim}T00:00:00Z`).getTime() - new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`).getTime()) / 86_400_000;
+    expect(dias).toBe(7);
   });
 
   it("A não lê a assinatura de B", async () => {

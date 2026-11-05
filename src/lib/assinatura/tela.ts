@@ -38,10 +38,21 @@ export function mostraFormulario(estado: EstadoTela): boolean {
   return estado === "teste" || estado === "encerrado" || estado === "cancelada" || estado === "leitura";
 }
 
-/** Dias do teste já usados (0 a 14), para a barra de progresso. */
-export function diasUsadosDoTeste(trialFim: string, hojeISO?: string): number {
+/**
+ * Quantos dias de teste a conta ganhou: do cadastro até trial_fim. O teste
+ * já foi de 14 dias e agora é de 7 (0021); quem se cadastrou antes mantém
+ * os 14, então a tela não pode usar um número fixo. Fora do esperado, cai
+ * no padrão atual.
+ */
+export function duracaoDoTeste(a: Pick<Assinatura, "trial_fim" | "created_at">): number {
+  const dias = diasRestantesTrial(a.trial_fim, a.created_at.slice(0, 10));
+  return dias >= 1 && dias <= 60 ? dias : DIAS_TRIAL;
+}
+
+/** Dias do teste já usados (0 até a duração), para a barra de progresso. */
+export function diasUsadosDoTeste(trialFim: string, total: number, hojeISO?: string): number {
   const restantes = diasRestantesTrial(trialFim, hojeISO);
-  return Math.min(DIAS_TRIAL, Math.max(0, DIAS_TRIAL - restantes));
+  return Math.min(total, Math.max(0, total - restantes));
 }
 
 /** "Hoje", "Amanhã", "Daqui a 5 dias", "Ontem", "Há 4 dias". */

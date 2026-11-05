@@ -5,7 +5,6 @@ import { buscarStatusAssinatura } from "@/lib/assinatura/guard";
 import {
   acessoAteCancelada,
   DIAS_AVISO_COBRANCA,
-  DIAS_TRIAL,
   diasRestantesTrial,
   PLANOS,
   type Assinatura,
@@ -13,6 +12,7 @@ import {
 import {
   diasUsadosDoTeste,
   distanciaEmDias,
+  duracaoDoTeste,
   documentoMascarado,
   estadoDaTela,
   mostraFormulario,
@@ -161,7 +161,9 @@ function CartaoTeste({
   encerrado: boolean;
   hoje: string;
 }) {
-  const usados = diasUsadosDoTeste(assinatura.trial_fim, hoje);
+  const total = duracaoDoTeste(assinatura);
+  // O dia de hoje já conta como usado: no primeiro dia a barra mostra 1.
+  const usados = encerrado ? total : Math.max(1, diasUsadosDoTeste(assinatura.trial_fim, total, hoje));
   const restantes = diasRestantesTrial(assinatura.trial_fim, hoje);
   const titulo = encerrado
     ? "Seu teste grátis terminou"
@@ -179,18 +181,19 @@ function CartaoTeste({
         <p className="text-sm text-slate-600">
           {encerrado
             ? `Terminou em ${dataBR(assinatura.trial_fim)}`
-            : `Dia ${Math.max(1, usados)} de ${DIAS_TRIAL} · termina em ${dataBR(assinatura.trial_fim)}`}
+            : `Dia ${usados} de ${total} · termina em ${dataBR(assinatura.trial_fim)}`}
         </p>
       </div>
       <div
         role="progressbar"
         aria-label="Dias de teste usados"
         aria-valuemin={0}
-        aria-valuemax={DIAS_TRIAL}
+        aria-valuemax={total}
         aria-valuenow={usados}
-        className="grid grid-cols-[repeat(14,minmax(0,1fr))] gap-1"
+        className="grid gap-1"
+        style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}
       >
-        {Array.from({ length: DIAS_TRIAL }, (_, i) => (
+        {Array.from({ length: total }, (_, i) => (
           <span
             key={i}
             className={`h-2 rounded ${

@@ -1,5 +1,10 @@
 export const PRECO_MENSAL = 49.9;
-export const DIAS_TRIAL = 14;
+/**
+ * Duração do teste grátis para contas novas. O que vale é o padrão de
+ * trial_fim no banco (migration 0021); este número precisa bater com ele.
+ * Contas antigas podem ter outra duração: a tela usa duracaoDoTeste().
+ */
+export const DIAS_TRIAL = 7;
 
 export const ASSINATURA_PLANO = ["mensal", "trimestral", "semestral"] as const;
 export type AssinaturaPlano = (typeof ASSINATURA_PLANO)[number];

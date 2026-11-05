@@ -61,7 +61,7 @@ export default function TermosDeUsoPage() {
       <Secao titulo="4. Assinatura e cobrança">
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            A plataforma é paga por assinatura, com 14 dias de teste grátis a
+            A plataforma é paga por assinatura, com 7 dias de teste grátis a
             partir do cadastro. Os planos são mensal, trimestral (10% de
             desconto) e semestral (15% de desconto), com os valores mostrados
             na tela de assinatura antes da confirmação.
