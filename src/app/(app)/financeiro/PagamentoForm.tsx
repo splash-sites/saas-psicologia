@@ -5,7 +5,7 @@ import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import Link from "next/link";
 import type { Pagamento } from "@/lib/financeiro/types";
 import type { ConsultaDisponivel } from "@/lib/financeiro/consultasDisponiveis";
-import { dataBR, dataChaveBR, horaBR } from "@/lib/agenda/datas";
+import { dataBR, dataChaveBR, hojeBR, horaBR } from "@/lib/agenda/datas";
 import type { FormState } from "./actions";
 
 type Props = {
@@ -41,7 +41,7 @@ export function PagamentoForm({
     {},
   );
   const fe = state.fieldErrors ?? {};
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeBR();
   const dataRefInicial = pagamento?.data_referencia ?? dataPadrao ?? hoje;
 
   // Novo lançamento começa como "recebido" (caso mais comum: registrar um

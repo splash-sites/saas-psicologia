@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   brWallTimeToDate,
   segundaDaSemana,
@@ -7,7 +7,9 @@ import {
   gerarOcorrencias,
   dataChaveBR,
   horaBR,
+  hojeBR,
 } from "@/lib/agenda/datas";
+import { statusExibicao } from "@/lib/financeiro/types";
 
 describe("brWallTimeToDate", () => {
   it("interpreta data+hora como horário de Brasília (UTC-3)", () => {
@@ -96,5 +98,24 @@ describe("formatação BR", () => {
     const iso = "2026-03-10T02:30:00.000Z"; // 23:30 BRT do dia 09
     expect(dataChaveBR(iso)).toBe("2026-03-09");
     expect(horaBR(iso)).toBe("23:30");
+  });
+});
+
+describe("hojeBR", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("às 23h30 de Brasília ainda é hoje (o UTC já virou o dia)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-06T02:30:00Z")); // 05/11 23:30 BRT
+    expect(hojeBR()).toBe("2026-11-05");
+    // Pagamento que vence hoje não aparece como atrasado à noite.
+    expect(statusExibicao({ status: "pendente", vencimento: "2026-11-05" })).toBe("pendente");
+  });
+
+  it("à meia-noite de Brasília vira o dia", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-06T03:00:00Z")); // 06/11 00:00 BRT
+    expect(hojeBR()).toBe("2026-11-06");
+    expect(statusExibicao({ status: "pendente", vencimento: "2026-11-05" })).toBe("atrasado");
   });
 });

@@ -122,6 +122,15 @@ export function dataChaveBR(iso: string): string {
   return FMT_CHAVE.format(new Date(iso));
 }
 
+/**
+ * Hoje no fuso de Brasília (YYYY-MM-DD). Não usar
+ * `new Date().toISOString().slice(0, 10)`: isso é a data em UTC, que já
+ * vira "amanhã" às 21h de Brasília.
+ */
+export function hojeBR(): string {
+  return dataChaveBR(new Date().toISOString());
+}
+
 export function horaBR(iso: string): string {
   return FMT_HORA.format(new Date(iso));
 }

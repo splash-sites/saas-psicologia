@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import Link from "next/link";
 import { CAMPOS_EVOLUCAO, type Evolucao } from "@/lib/prontuario/types";
+import { hojeBR } from "@/lib/agenda/datas";
 import type { FormState } from "./actions";
 
 type Props = {
@@ -59,7 +60,7 @@ export function EvolucaoForm({
           defaultValue={
             evolucao?.data_sessao ??
             dataSessaoPadrao ??
-            new Date().toISOString().slice(0, 10)
+            hojeBR()
           }
           className="input"
         />

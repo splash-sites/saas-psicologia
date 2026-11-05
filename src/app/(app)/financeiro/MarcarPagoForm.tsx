@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
+import { hojeBR } from "@/lib/agenda/datas";
 import type { FormState } from "./actions";
 
 export function MarcarPagoForm({
@@ -41,7 +42,7 @@ export function MarcarPagoForm({
           name="data_pagamento"
           type="date"
           required
-          defaultValue={new Date().toISOString().slice(0, 10)}
+          defaultValue={hojeBR()}
           className="input w-auto"
         />
       </label>

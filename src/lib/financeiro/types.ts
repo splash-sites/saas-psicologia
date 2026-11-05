@@ -1,3 +1,5 @@
+import { hojeBR } from "@/lib/agenda/datas";
+
 export const PAGAMENTO_STATUS = ["pendente", "pago"] as const;
 export type PagamentoStatus = (typeof PAGAMENTO_STATUS)[number];
 
@@ -29,7 +31,7 @@ export type Pagamento = {
 
 export function statusExibicao(
   p: Pick<Pagamento, "status" | "vencimento">,
-  hojeISO: string = new Date().toISOString().slice(0, 10),
+  hojeISO: string = hojeBR(),
 ): StatusExibicao {
   if (p.status === "pago") return "pago";
   return p.vencimento < hojeISO ? "atrasado" : "pendente";
