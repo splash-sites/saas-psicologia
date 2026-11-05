@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { buscarStatusAssinatura } from "@/lib/assinatura/guard";
 import { AppShell } from "@/components/AppShell";
@@ -10,11 +9,10 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
   const user = await usuarioAtual();
   if (!user) redirect("/login");
 
-  const status = await buscarStatusAssinatura(supabase, user.id);
+  const status = await buscarStatusAssinatura(user.id);
 
   return (
     <AppShell email={user.email ?? ""} banner={<AssinaturaBanner status={status} />}>

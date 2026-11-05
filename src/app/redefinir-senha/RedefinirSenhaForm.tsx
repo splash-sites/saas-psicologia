@@ -32,7 +32,6 @@ export function RedefinirSenhaForm() {
       return;
     }
     router.push("/dashboard");
-    router.refresh();
   }
 
   const OlhoIcone = verSenha ? EyeOff : Eye;

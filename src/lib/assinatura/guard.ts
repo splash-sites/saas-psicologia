@@ -1,4 +1,6 @@
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 import { permiteEscrita, type Assinatura } from "./types";
 
 export type StatusAssinatura = {
@@ -7,11 +9,16 @@ export type StatusAssinatura = {
   somenteLeitura: boolean;
 };
 
-/** Busca a assinatura da psicóloga logada + se a trava está ligada. */
-export async function buscarStatusAssinatura(
-  supabase: SupabaseClient,
+/**
+ * Busca a assinatura da psicóloga logada + se a trava está ligada.
+ *
+ * cache(): layout (faixa de aviso) + página /assinatura da mesma requisição
+ * consultam uma vez só. O rpc é POST, que o Next não deduplica sozinho.
+ */
+export const buscarStatusAssinatura = cache(async (
   psicologaId: string,
-): Promise<StatusAssinatura> {
+): Promise<StatusAssinatura> => {
+  const supabase = await createClient();
   const [{ data: assinatura }, { data: enforcementAtivo }] = await Promise.all([
     supabase.from("assinaturas").select("*").eq("psicologa_id", psicologaId).maybeSingle(),
     supabase.rpc("assinatura_enforcement_ativo"),
@@ -23,7 +30,7 @@ export async function buscarStatusAssinatura(
     enforcementAtivo: enforcement,
     somenteLeitura: assinatura ? !permiteEscrita(assinatura, enforcement) : false,
   };
-}
+});
 
 export const MSG_SOMENTE_LEITURA =
   "Sua assinatura não está em dia, e o painel está em modo somente leitura. Acesse Assinatura no menu para assinar ou regularizar.";

@@ -99,7 +99,6 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
       if (data.session) {
         // Confirmação de e-mail desligada no projeto: já loga direto.
         router.push("/dashboard");
-        router.refresh();
         return;
       }
       setCarregando(false);
@@ -121,7 +120,6 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
       return;
     }
     router.push("/dashboard");
-    router.refresh();
   }
 
   function trocarModo() {
