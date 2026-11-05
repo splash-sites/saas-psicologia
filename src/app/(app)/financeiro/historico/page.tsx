@@ -18,11 +18,9 @@ export default async function HistoricoFinanceiroPage() {
   const meses = ultimosMeses(mesAtual(), N_MESES);
   const desde = primeiroDia(meses[0]);
 
-  const { data } = await supabase
-    .from("pagamentos")
-    .select("valor, status, data_referencia")
-    .is("deleted_at", null)
-    .gte("data_referencia", desde);
+  // Somado no banco (migration 0020): trazer os lançamentos e somar aqui
+  // esbarrava no limite de 1000 linhas do PostgREST.
+  const { data } = await supabase.rpc("historico_financeiro", { p_desde: desde });
 
   const porMes = new Map<
     string,
@@ -30,13 +28,17 @@ export default async function HistoricoFinanceiroPage() {
   >();
   for (const mes of meses) porMes.set(mes, { recebido: 0, aReceber: 0, quantidade: 0 });
 
-  for (const row of data ?? []) {
-    const chave = row.data_referencia.slice(0, 7);
-    const bucket = porMes.get(chave);
+  for (const row of (data ?? []) as {
+    mes: string;
+    recebido: number;
+    a_receber: number;
+    quantidade: number;
+  }[]) {
+    const bucket = porMes.get(row.mes);
     if (!bucket) continue;
-    bucket.quantidade += 1;
-    if (row.status === "pago") bucket.recebido += Number(row.valor);
-    else bucket.aReceber += Number(row.valor);
+    bucket.quantidade = Number(row.quantidade);
+    bucket.recebido = Number(row.recebido);
+    bucket.aReceber = Number(row.a_receber);
   }
 
   const totalRecebido = [...porMes.values()].reduce((s, b) => s + b.recebido, 0);

@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Paciente } from "@/lib/pacientes/types";
-import { formatarTelefoneBR } from "@/lib/pacientes/formatacao";
-import { StatusBadge } from "./StatusBadge";
+import { ListaPacientes } from "./ListaPacientes";
 
 export const metadata = { title: "Pacientes" };
 
@@ -39,22 +38,7 @@ export default async function PacientesPage() {
       {lista.length === 0 ? (
         <p className="text-sm text-slate-500">Nenhum paciente cadastrado ainda.</p>
       ) : (
-        <ul className="divide-y rounded-lg border">
-          {lista.map((p) => (
-            <li key={p.id}>
-              <Link
-                href={`/pacientes/${p.id}`}
-                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3 hover:bg-slate-50"
-              >
-                <span className="flex items-center gap-3">
-                  <span className="font-medium">{p.nome}</span>
-                  <StatusBadge status={p.status} />
-                </span>
-                <span className="text-sm text-slate-500">{p.telefone ? formatarTelefoneBR(p.telefone) : "—"}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <ListaPacientes pacientes={lista} />
       )}
     </div>
   );
