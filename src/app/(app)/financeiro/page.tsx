@@ -10,9 +10,7 @@ import {
   type Pagamento,
 } from "@/lib/financeiro/types";
 import { mesAtual, mesAnterior, mesSeguinte, primeiroDia, ultimoDia, rotuloMes } from "@/lib/financeiro/mes";
-import { StatusBadge } from "./StatusBadge";
-import { MarcarPagoForm } from "./MarcarPagoForm";
-import { marcarComoPago } from "./actions";
+import { ListaLancamentos } from "./ListaLancamentos";
 
 export const metadata = { title: "Financeiro" };
 
@@ -130,39 +128,16 @@ export default async function FinanceiroPage({
           Nenhum lançamento referente a este mês.
         </p>
       ) : (
-        <ul className="divide-y rounded-lg border">
-          {lista.map((l) => {
-            const status = statusExibicao(l, hoje);
-            return (
-              <li
-                key={l.id}
-                className="flex flex-col gap-2 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3"
-              >
-                <Link
-                  href={`/financeiro/${l.id}`}
-                  className="flex min-w-0 flex-1 flex-col hover:underline"
-                >
-                  <span className="break-words font-medium">
-                    {l.pacientes?.nome ?? "Paciente"} · {formatarBRL(l.valor)}
-                  </span>
-                  <span className="text-xs text-slate-500">
-                    Vencimento {l.vencimento.split("-").reverse().join("/")}
-                  </span>
-                </Link>
-                {/* No celular: nome/valor em cima; situação e ação embaixo. */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusBadge status={status} />
-                  {status !== "pago" && (
-                    <MarcarPagoForm
-                      action={marcarComoPago.bind(null, l.id)}
-                      formaPadrao={l.forma_pagamento}
-                    />
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <ListaLancamentos
+          linhas={lista.map((l) => ({
+            id: l.id,
+            pacienteNome: l.pacientes?.nome ?? "Paciente",
+            valor: Number(l.valor),
+            vencimento: l.vencimento,
+            formaPagamento: l.forma_pagamento,
+            status: statusExibicao(l, hoje),
+          }))}
+        />
       )}
     </div>
   );
@@ -187,7 +162,9 @@ function Tile({
   return (
     <div className={`card ${cores} ${className}`}>
       <div className="text-xs">{rotulo}</div>
-      <div className="text-lg font-semibold">{valor}</div>
+      <div className="text-lg font-semibold" data-sensivel>
+        {valor}
+      </div>
     </div>
   );
 }
