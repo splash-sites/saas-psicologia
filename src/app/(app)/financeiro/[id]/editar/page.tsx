@@ -5,6 +5,7 @@ import type { Pagamento } from "@/lib/financeiro/types";
 import { consultasDisponiveis } from "@/lib/financeiro/consultasDisponiveis";
 import { atualizarPagamento } from "../../actions";
 import { PagamentoForm } from "../../PagamentoForm";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 export const metadata = { title: "Editar lançamento" };
 
@@ -34,7 +35,7 @@ export default async function EditarPagamentoPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-xl font-semibold">Editar lançamento</h1>
+      <CabecalhoPagina titulo="Editar lançamento" voltar={{ href: `/financeiro/${id}`, rotulo: "Lançamento" }} />
       <PagamentoForm
         action={atualizarPagamento.bind(null, id)}
         pagamento={pagamentoRow as Pagamento}

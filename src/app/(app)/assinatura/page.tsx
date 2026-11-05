@@ -15,6 +15,7 @@ import { ConfigurarAssinaturaForm } from "./ConfigurarAssinaturaForm";
 import { VerificarPagamentoButton } from "./VerificarPagamentoButton";
 import { AtualizarAoPagar } from "./AtualizarAoPagar";
 import { cancelarAssinatura, simularPagamentoConfirmado } from "./actions";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 export const metadata = { title: "Assinatura" };
 
@@ -37,8 +38,8 @@ export default async function AssinaturaPage() {
   const { assinatura, enforcementAtivo, somenteLeitura } = await buscarStatusAssinatura(user.id);
   if (!assinatura) {
     return (
-      <div className="flex w-full max-w-2xl flex-col gap-4">
-        <h1 className="text-xl font-semibold">Assinatura</h1>
+      <div className="flex w-full max-w-2xl flex-col gap-6">
+        <CabecalhoPagina titulo="Assinatura" />
         <p className="alert alert-error">
           Não encontramos a assinatura da sua conta. Fale com o suporte.
         </p>
@@ -52,16 +53,18 @@ export default async function AssinaturaPage() {
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Assinatura</h1>
-        <span
-          className={`rounded-full px-3 py-1 text-sm font-medium ${
-            encerrado ? "bg-amber-100 text-amber-800" : STATUS_TOM[assinatura.status]
-          }`}
-        >
-          {encerrado ? "Teste encerrado" : ASSINATURA_STATUS_LABEL[assinatura.status]}
-        </span>
-      </div>
+      <CabecalhoPagina
+        titulo="Assinatura"
+        junto={
+          <span
+            className={`rounded-full px-3 py-1 text-sm font-medium ${
+              encerrado ? "bg-amber-100 text-amber-800" : STATUS_TOM[assinatura.status]
+            }`}
+          >
+            {encerrado ? "Teste encerrado" : ASSINATURA_STATUS_LABEL[assinatura.status]}
+          </span>
+        }
+      />
 
       {!enforcementAtivo && (
         <p className="alert alert-warning">

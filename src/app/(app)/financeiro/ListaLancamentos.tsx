@@ -111,6 +111,7 @@ export function ListaLancamentos({ linhas }: { linhas: LinhaLancamento[] }) {
                   <MarcarPagoForm
                     action={marcarComoPago.bind(null, l.id)}
                     formaPadrao={l.formaPagamento}
+                    compacto
                   />
                 )}
               </div>

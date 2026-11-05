@@ -2,11 +2,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import { VoltarLink } from "@/components/VoltarLink";
 import { formatarBRL, statusExibicao, type Pagamento } from "@/lib/financeiro/types";
 import { StatusBadge } from "../StatusBadge";
 import { MarcarPagoForm } from "../MarcarPagoForm";
 import { marcarComoPago, desmarcarComoPago, arquivarPagamento } from "../actions";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 type Row = Pagamento & { pacientes: { id: string; nome: string } | null };
 
@@ -38,21 +38,23 @@ export default async function PagamentoDetailPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <VoltarLink href="/financeiro">Financeiro</VoltarLink>
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">{formatarBRL(p.valor)}</h1>
-          <p className="text-sm text-slate-600">
-            {p.pacientes && (
-              <Link href={`/pacientes/${p.pacientes.id}`} className="underline">
-                {p.pacientes.nome}
-              </Link>
-            )}
-          </p>
-        </div>
-        <StatusBadge status={status} />
-      </div>
+      <CabecalhoPagina
+        titulo={<span data-sensivel>{formatarBRL(p.valor)}</span>}
+        voltar={{ href: "/financeiro", rotulo: "Financeiro" }}
+        junto={<StatusBadge status={status} />}
+        acoes={
+          <Link href={`/financeiro/${id}/editar`} className="btn btn-outline">
+            Editar
+          </Link>
+        }
+        descricao={
+          p.pacientes && (
+            <Link href={`/pacientes/${p.pacientes.id}`} className="underline" data-sensivel>
+              {p.pacientes.nome}
+            </Link>
+          )
+        }
+      />
 
       <dl className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 gap-y-3 card text-sm">
         <Item rotulo="Referente a" valor={dataBR(p.data_referencia)} />
@@ -77,13 +79,7 @@ export default async function PagamentoDetailPage({
         </Link>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 border-t pt-4">
-        <Link
-          href={`/financeiro/${id}/editar`}
-          className="btn btn-outline"
-        >
-          Editar
-        </Link>
+      <div className="flex flex-wrap items-center gap-3">
         {status === "pago" ? (
           <form action={desmarcarComoPago.bind(null, id)}>
             <button className="btn btn-outline">
@@ -96,7 +92,10 @@ export default async function PagamentoDetailPage({
             formaPadrao={p.forma_pagamento}
           />
         )}
-        <form action={arquivarPagamento.bind(null, id)} className="ml-auto">
+      </div>
+
+      <div className="border-t pt-4">
+        <form action={arquivarPagamento.bind(null, id)}>
           <button className="text-sm text-red-600 hover:underline">
             Arquivar lançamento
           </button>

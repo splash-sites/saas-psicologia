@@ -4,6 +4,7 @@ import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Evolucao } from "@/lib/prontuario/types";
 import { atualizarEvolucao } from "../../actions";
 import { EvolucaoForm } from "../../EvolucaoForm";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 export const metadata = { title: "Editar evolução" };
 
@@ -30,7 +31,7 @@ export default async function EditarEvolucaoPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-xl font-semibold">Editar evolução</h1>
+      <CabecalhoPagina titulo="Editar evolução" voltar={{ href: `/pacientes/${id}/evolucoes/${evolucaoId}`, rotulo: "Evolução" }} />
       <EvolucaoForm
         action={atualizarEvolucao.bind(null, id, evolucaoId)}
         evolucao={evolucao}

@@ -5,6 +5,7 @@ import type { Consulta } from "@/lib/agenda/types";
 import { dataChaveBR, horaBR } from "@/lib/agenda/datas";
 import { atualizarConsulta } from "../../actions";
 import { ConsultaEdicaoForm } from "../../ConsultaEdicaoForm";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 export const metadata = { title: "Editar consulta" };
 
@@ -33,7 +34,7 @@ export default async function EditarConsultaPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-xl font-semibold">Editar consulta</h1>
+      <CabecalhoPagina titulo="Editar consulta" voltar={{ href: `/agenda/${id}`, rotulo: "Consulta" }} />
       <ConsultaEdicaoForm
         action={atualizarConsulta.bind(null, id)}
         cancelHref={`/agenda/${id}`}

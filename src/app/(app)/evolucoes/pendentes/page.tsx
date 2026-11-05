@@ -6,7 +6,7 @@ import { usuarioAtual } from "@/lib/auth/usuario";
 import { dataChaveBR, dataLongaBR, horaBR } from "@/lib/agenda/datas";
 import { marcarSessaoNaoRealizada } from "@/app/(app)/agenda/actions";
 import { EstadoVazio } from "@/components/EstadoVazio";
-import { VoltarLink } from "@/components/VoltarLink";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 export const metadata = { title: "Evoluções pendentes" };
 
@@ -55,15 +55,11 @@ export default async function EvolucoesPendentesPage() {
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <VoltarLink href="/dashboard">Painel</VoltarLink>
-        <h1 className="text-xl font-semibold">Evoluções pendentes</h1>
-        <p className="text-sm text-slate-500">
-          Sessões que já aconteceram e ainda não têm evolução registrada, de
-          qualquer data. Se a sessão não aconteceu, marque falta ou cancelada
-          para ela sair da lista.
-        </p>
-      </div>
+      <CabecalhoPagina
+        titulo="Evoluções pendentes"
+        voltar={{ href: "/dashboard", rotulo: "Painel" }}
+        descricao="Sessões que já aconteceram e ainda não têm evolução registrada, de qualquer data. Se a sessão não aconteceu, marque falta ou cancelada para ela sair da lista."
+      />
 
       {error ? (
         <p className="alert alert-error" role="alert">

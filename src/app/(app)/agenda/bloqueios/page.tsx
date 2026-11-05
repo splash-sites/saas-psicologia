@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import { VoltarLink } from "@/components/VoltarLink";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import { EstadoVazio } from "@/components/EstadoVazio";
+import { Plus, CalendarOff } from "lucide-react";
 import type { Bloqueio } from "@/lib/agenda/types";
 import { horaBR, dataLongaBR } from "@/lib/agenda/datas";
 import { excluirBloqueio } from "../actions";
@@ -23,20 +25,29 @@ export default async function BloqueiosPage() {
   const lista = (bloqueios ?? []) as Bloqueio[];
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Bloqueios de horário</h1>
-        <Link
-          href="/agenda/bloqueios/novo"
-          className="btn btn-primary"
-        >
-          Novo bloqueio
-        </Link>
-      </div>
-      <VoltarLink href="/agenda">Agenda</VoltarLink>
+    <div className="flex w-full max-w-3xl flex-col gap-6">
+      <CabecalhoPagina
+        titulo="Bloqueios de horário"
+        voltar={{ href: "/agenda", rotulo: "Agenda" }}
+        acoes={
+          <Link href="/agenda/bloqueios/novo" className="btn btn-primary">
+            <Plus className="size-4" aria-hidden />
+            Novo bloqueio
+          </Link>
+        }
+      />
 
       {lista.length === 0 ? (
-        <p className="text-sm text-slate-500">Nenhum bloqueio futuro.</p>
+        <EstadoVazio
+          icon={CalendarOff}
+          titulo="Nenhum bloqueio futuro"
+          texto="Bloqueie férias, almoço ou outros horários em que você não atende."
+        >
+          <Link href="/agenda/bloqueios/novo" className="btn btn-primary">
+            <Plus className="size-4" aria-hidden />
+            Novo bloqueio
+          </Link>
+        </EstadoVazio>
       ) : (
         <ul className="divide-y rounded-lg border">
           {lista.map((b) => (

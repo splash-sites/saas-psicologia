@@ -4,6 +4,7 @@ import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Paciente } from "@/lib/pacientes/types";
 import { atualizarPaciente } from "../../actions";
 import { PacienteForm } from "../../PacienteForm";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 export const metadata = { title: "Editar paciente" };
 
@@ -28,7 +29,7 @@ export default async function EditarPacientePage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-xl font-semibold">Editar paciente</h1>
+      <CabecalhoPagina titulo="Editar paciente" voltar={{ href: `/pacientes/${id}`, rotulo: "Paciente" }} />
       <PacienteForm
         action={atualizarPaciente.bind(null, id)}
         paciente={paciente as Paciente}

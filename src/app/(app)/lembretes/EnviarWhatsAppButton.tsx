@@ -27,8 +27,8 @@ export function EnviarWhatsAppButton({
       }}
       className={
         enviado
-          ? "btn btn-outline disabled:opacity-50"
-          : "btn btn-success-outline disabled:opacity-50"
+          ? "btn btn-outline btn-sm disabled:opacity-50"
+          : "btn btn-success-outline btn-sm disabled:opacity-50"
       }
     >
       {enviado ? "Enviar de novo" : "Enviar no WhatsApp"}

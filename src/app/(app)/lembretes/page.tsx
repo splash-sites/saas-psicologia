@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 import { redirect } from "next/navigation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import { EstadoVazio } from "@/components/EstadoVazio";
+import { NavegacaoPeriodo } from "@/components/NavegacaoPeriodo";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { MODALIDADE_LABEL, type Modalidade } from "@/lib/agenda/types";
@@ -120,45 +123,35 @@ export default async function LembretesPage({
   ).length;
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold">Lembretes</h1>
-        <p className="text-sm first-letter:uppercase text-slate-600">
-          {dataLongaBR(`${dia}T12:00:00${BR_OFFSET}`)}
-          {dia === padrao && " (padrão)"}
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <Link
-          href={`/lembretes?data=${addDias(dia, -1)}`}
-          className="btn btn-outline"
-          aria-label="Dia anterior"
-        >
-          <ChevronLeft className="size-4" aria-hidden />
-          <span className="hidden sm:inline">Dia anterior</span>
-        </Link>
-        <Link href="/lembretes" className="btn btn-outline">
-          Padrão
-        </Link>
-        <Link
-          href={`/lembretes?data=${addDias(dia, 1)}`}
-          className="btn btn-outline"
-          aria-label="Dia seguinte"
-        >
-          <span className="hidden sm:inline">Dia seguinte</span>
-          <ChevronRight className="size-4" aria-hidden />
-        </Link>
-        <Link
-          href="/configuracoes"
-          className="ml-auto text-slate-500 underline"
-        >
-          Editar mensagem
-        </Link>
-      </div>
+    <div className="flex w-full max-w-3xl flex-col gap-6">
+      <CabecalhoPagina
+        titulo="Lembretes"
+        periodo={
+          <NavegacaoPeriodo
+            anterior={{ href: `/lembretes?data=${addDias(dia, -1)}`, rotulo: "Dia anterior" }}
+            atual={{ href: "/lembretes", rotulo: "Padrão" }}
+            proximo={{ href: `/lembretes?data=${addDias(dia, 1)}`, rotulo: "Dia seguinte" }}
+            periodo={
+              <>
+                {dataLongaBR(`${dia}T12:00:00${BR_OFFSET}`)}
+                {dia === padrao && <span className="font-normal text-slate-500"> (padrão)</span>}
+              </>
+            }
+          />
+        }
+        acoes={
+          <Link href="/configuracoes" className="btn btn-outline">
+            Editar mensagem
+          </Link>
+        }
+      />
 
       {itens.length === 0 ? (
-        <p className="text-sm text-slate-500">Nenhuma consulta agendada neste dia.</p>
+        <EstadoVazio
+          icon={MessageCircle}
+          titulo="Nenhuma consulta agendada neste dia"
+          texto="Use as setas para ver outro dia."
+        />
       ) : (
         <>
           <p className="text-sm text-slate-500">
@@ -169,11 +162,11 @@ export default async function LembretesPage({
             {itens.map(({ c, pac, enviado, registro, href }) => (
               <li
                 key={c.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+                className="flex flex-col gap-2 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3"
               >
                 <div className="flex flex-col">
                   <span className="font-medium">
-                    {horaBR(c.inicio)} · {pac?.nome ?? "Paciente"}
+                    {horaBR(c.inicio)} · <span data-sensivel>{pac?.nome ?? "Paciente"}</span>
                   </span>
                   <span className="text-xs text-slate-500">
                     {MODALIDADE_LABEL[c.modalidade]}

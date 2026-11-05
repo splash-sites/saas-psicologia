@@ -2,10 +2,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import { VoltarLink } from "@/components/VoltarLink";
 import { CAMPOS_EVOLUCAO, type Evolucao } from "@/lib/prontuario/types";
 import { arquivarEvolucao } from "../actions";
 import { ArquivarForm } from "./ArquivarForm";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 function dataBR(iso: string): string {
   const [a, m, d] = iso.split("-");
@@ -46,27 +46,23 @@ export default async function EvolucaoDetailPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <VoltarLink href={`/pacientes/${id}/evolucoes`}>Evoluções</VoltarLink>
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">
-            Sessão de {dataBR(e.data_sessao)}
-          </h1>
-          <p className="text-xs text-slate-500">
+      <CabecalhoPagina
+        titulo={`Sessão de ${dataBR(e.data_sessao)}`}
+        voltar={{ href: `/pacientes/${id}/evolucoes`, rotulo: "Evoluções" }}
+        descricao={
+          <>
             Registrada em {dataHoraBR(e.created_at)}
             {editado && ` · editada em ${dataHoraBR(e.updated_at)}`}
-          </p>
-        </div>
-        {!arquivada && (
-          <Link
-            href={`/pacientes/${id}/evolucoes/${evolucaoId}/editar`}
-            className="btn btn-outline"
-          >
-            Editar
-          </Link>
-        )}
-      </div>
+          </>
+        }
+        acoes={
+          !arquivada && (
+            <Link href={`/pacientes/${id}/evolucoes/${evolucaoId}/editar`} className="btn btn-outline">
+              Editar
+            </Link>
+          )
+        }
+      />
 
       {arquivada && (
         <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700">

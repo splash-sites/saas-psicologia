@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Wallet } from "lucide-react";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import { EstadoVazio } from "@/components/EstadoVazio";
+import { NavegacaoPeriodo } from "@/components/NavegacaoPeriodo";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { hojeBR } from "@/lib/agenda/datas";
@@ -74,43 +77,28 @@ export default async function FinanceiroPage({
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Financeiro</h1>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/financeiro/historico"
-            className="btn btn-outline"
-          >
-            Histórico mensal
-          </Link>
-          <Link
-            href="/financeiro/novo"
-            className="btn btn-primary"
-          >
-            Novo lançamento
-          </Link>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between gap-2 text-sm sm:justify-start sm:gap-3">
-        <Link
-          href={`/financeiro?mes=${mesAnterior(mes)}`}
-          className="btn btn-outline"
-          aria-label="Mês anterior"
-        >
-          <ChevronLeft className="size-4" aria-hidden />
-          <span className="hidden sm:inline">Mês anterior</span>
-        </Link>
-        <span className="font-medium first-letter:uppercase">{rotuloMes(mes)}</span>
-        <Link
-          href={`/financeiro?mes=${mesSeguinte(mes)}`}
-          className="btn btn-outline"
-          aria-label="Próximo mês"
-        >
-          <span className="hidden sm:inline">Próximo mês</span>
-          <ChevronRight className="size-4" aria-hidden />
-        </Link>
-      </div>
+      <CabecalhoPagina
+        titulo="Financeiro"
+        periodo={
+          <NavegacaoPeriodo
+            anterior={{ href: `/financeiro?mes=${mesAnterior(mes)}`, rotulo: "Mês anterior" }}
+            atual={{ href: "/financeiro", rotulo: "Este mês" }}
+            proximo={{ href: `/financeiro?mes=${mesSeguinte(mes)}`, rotulo: "Próximo mês" }}
+            periodo={rotuloMes(mes)}
+          />
+        }
+        acoes={
+          <>
+            <Link href="/financeiro/historico" className="btn btn-outline">
+              Histórico mensal
+            </Link>
+            <Link href="/financeiro/novo" className="btn btn-primary">
+              <Plus className="size-4" aria-hidden />
+              Novo lançamento
+            </Link>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Tile rotulo="Recebido no mês" valor={formatarBRL(recebidoNoMes)} tom="green" />
@@ -124,9 +112,12 @@ export default async function FinanceiroPage({
       </div>
 
       {lista.length === 0 ? (
-        <p className="text-sm text-slate-500">
-          Nenhum lançamento referente a este mês.
-        </p>
+        <EstadoVazio icon={Wallet} titulo="Nenhum lançamento neste mês">
+          <Link href="/financeiro/novo" className="btn btn-primary">
+            <Plus className="size-4" aria-hidden />
+            Novo lançamento
+          </Link>
+        </EstadoVazio>
       ) : (
         <ListaLancamentos
           linhas={lista.map((l) => ({

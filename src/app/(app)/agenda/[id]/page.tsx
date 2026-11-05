@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import { VoltarLink } from "@/components/VoltarLink";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import type { Consulta } from "@/lib/agenda/types";
 import {
   MODALIDADE_LABEL,
@@ -47,26 +47,22 @@ export default async function ConsultaDetailPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <VoltarLink href="/agenda">Agenda</VoltarLink>
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">
-            {c.pacientes?.nome ?? "Consulta"}
-          </h1>
-          <p className="text-sm first-letter:uppercase text-slate-600">
+      <CabecalhoPagina
+        titulo={<span data-sensivel>{c.pacientes?.nome ?? "Consulta"}</span>}
+        voltar={{ href: "/agenda", rotulo: "Agenda" }}
+        descricao={
+          <span className="inline-block first-letter:uppercase">
             {dataLongaBR(c.inicio)} · {horaBR(c.inicio)}–{horaBR(c.fim)}
-          </p>
-        </div>
-        {c.status !== "cancelada" && (
-          <Link
-            href={`/agenda/${id}/editar`}
-            className="btn btn-outline"
-          >
-            Editar
-          </Link>
-        )}
-      </div>
+          </span>
+        }
+        acoes={
+          c.status !== "cancelada" && (
+            <Link href={`/agenda/${id}/editar`} className="btn btn-outline">
+              Editar
+            </Link>
+          )
+        }
+      />
 
       <dl className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 gap-y-3 card text-sm">
         <Item rotulo="Modalidade" valor={MODALIDADE_LABEL[c.modalidade]} />

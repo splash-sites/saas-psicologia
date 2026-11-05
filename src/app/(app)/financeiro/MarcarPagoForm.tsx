@@ -10,10 +10,13 @@ import type { FormState } from "./actions";
 export function MarcarPagoForm({
   action,
   formaPadrao,
+  compacto = false,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   // Forma já informada no lançamento — vem preenchida, sem redigitar.
   formaPadrao?: string | null;
+  /** Dentro de uma lista: botão pequeno, como as outras ações de linha. */
+  compacto?: boolean;
 }) {
   const [aberto, setAberto] = useState(false);
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -27,7 +30,7 @@ export function MarcarPagoForm({
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="btn btn-success-outline"
+        className={`btn btn-success-outline${compacto ? " btn-sm" : ""}`}
       >
         Marcar como pago
       </button>

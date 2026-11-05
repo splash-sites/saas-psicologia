@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { criarEvolucao } from "../actions";
 import { EvolucaoForm } from "../EvolucaoForm";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 export const metadata = { title: "Nova evolução" };
 
@@ -30,14 +31,11 @@ export default async function NovaEvolucaoPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-xl font-semibold">
-        Nova evolução — {paciente.nome}
-      </h1>
-      <p className="text-sm text-slate-500">
-        Os quatro campos são obrigatórios. Junto com a ficha e a anamnese do
-        paciente, a evolução compõe o registro documental (Resolução CFP nº
-        01/2009).
-      </p>
+      <CabecalhoPagina
+        titulo="Nova evolução"
+        voltar={{ href: `/pacientes/${id}`, rotulo: <span data-sensivel>{paciente.nome}</span> }}
+        descricao="Os quatro campos são obrigatórios. Junto com a ficha e a anamnese do paciente, a evolução compõe o registro documental (Resolução CFP nº 01/2009)."
+      />
       <EvolucaoForm
         action={criarEvolucao.bind(null, id)}
         consultaId={consulta}

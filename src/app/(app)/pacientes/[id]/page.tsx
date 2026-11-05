@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import { VoltarLink } from "@/components/VoltarLink";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import type { Anamnese, Paciente } from "@/lib/pacientes/types";
 import { whatsappLink } from "@/lib/pacientes/whatsapp";
 import { formatarCpf, formatarTelefoneBR } from "@/lib/pacientes/formatacao";
@@ -54,15 +54,13 @@ export default async function PacienteDetailPage({
   const wa = whatsappLink(paciente.telefone);
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <VoltarLink href="/pacientes">Pacientes</VoltarLink>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="flex items-center gap-3 text-xl font-semibold">
-            {paciente.nome}
-            <StatusBadge status={paciente.status} />
-          </h1>
-          <div className="flex gap-2">
+    <div className="flex w-full max-w-2xl flex-col gap-6">
+      <CabecalhoPagina
+        titulo={<span data-sensivel>{paciente.nome}</span>}
+        voltar={{ href: "/pacientes", rotulo: "Pacientes" }}
+        junto={<StatusBadge status={paciente.status} />}
+        acoes={
+          <>
             {wa && (
               <a
                 href={wa}
@@ -86,9 +84,9 @@ export default async function PacienteDetailPage({
             >
               Editar
             </Link>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <section className="grid grid-cols-1 gap-x-6 gap-y-3 card text-sm sm:grid-cols-2">
         <Dado rotulo="E-mail" valor={paciente.email} />

@@ -5,6 +5,7 @@ import { usuarioAtual } from "@/lib/auth/usuario";
 import { consultasDisponiveis } from "@/lib/financeiro/consultasDisponiveis";
 import { criarPagamento } from "../actions";
 import { PagamentoForm } from "../PagamentoForm";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 export const metadata = { title: "Novo lançamento" };
 
@@ -27,7 +28,7 @@ export default async function NovoPagamentoPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-xl font-semibold">Novo lançamento</h1>
+      <CabecalhoPagina titulo="Novo lançamento" voltar={{ href: "/financeiro", rotulo: "Financeiro" }} />
       {lista.length === 0 ? (
         <p className="text-sm text-slate-500">
           Cadastre um paciente antes de lançar um pagamento.{" "}

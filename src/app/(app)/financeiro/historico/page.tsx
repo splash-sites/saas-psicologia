@@ -2,9 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import { VoltarLink } from "@/components/VoltarLink";
 import { formatarBRL } from "@/lib/financeiro/types";
 import { mesAtual, primeiroDia, rotuloMes, ultimosMeses } from "@/lib/financeiro/mes";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 export const metadata = { title: "Histórico financeiro" };
 
@@ -44,15 +44,19 @@ export default async function HistoricoFinanceiroPage() {
   const totalRecebido = [...porMes.values()].reduce((s, b) => s + b.recebido, 0);
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-6">
-      <VoltarLink href="/financeiro">Financeiro</VoltarLink>
-      <h1 className="text-xl font-semibold">Histórico financeiro</h1>
-      <p className="text-sm text-slate-500">
-        Últimos {N_MESES} meses · total recebido no período:{" "}
-        <span className="font-medium text-slate-800">
-          {formatarBRL(totalRecebido)}
-        </span>
-      </p>
+    <div className="flex w-full max-w-3xl flex-col gap-6">
+      <CabecalhoPagina
+        titulo="Histórico financeiro"
+        voltar={{ href: "/financeiro", rotulo: "Financeiro" }}
+        descricao={
+          <>
+            Últimos {N_MESES} meses · total recebido no período:{" "}
+            <span className="font-medium text-slate-800" data-sensivel>
+              {formatarBRL(totalRecebido)}
+            </span>
+          </>
+        }
+      />
 
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Bloqueio, Consulta } from "@/lib/agenda/types";
@@ -17,6 +17,8 @@ import {
   faixaDeHoras,
 } from "@/lib/agenda/grade";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import { NavegacaoPeriodo } from "@/components/NavegacaoPeriodo";
 import { GradeSemana } from "./GradeSemana";
 import { DiaLista } from "./DiaLista";
 import { linkDaConsulta } from "@/lib/agenda/linkOnline";
@@ -247,43 +249,34 @@ export default async function AgendaPage({
     <div className="flex w-full flex-col gap-4">
       <AutoRefresh />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <h1 className="text-xl font-semibold sm:text-2xl">Agenda</h1>
-          <div className="flex items-center gap-1">
-            <Link
-              href={agendaHref({ semana: addDias(segunda, -7), ocultarCanceladas: params.ocultarCanceladas })}
-              className="btn btn-outline size-10 !min-h-0 !p-0"
-              aria-label="Semana anterior"
-            >
-              <ChevronLeft className="size-4" aria-hidden />
+      <CabecalhoPagina
+        titulo="Agenda"
+        periodo={
+          <NavegacaoPeriodo
+            anterior={{
+              href: agendaHref({ semana: addDias(segunda, -7), ocultarCanceladas: params.ocultarCanceladas }),
+              rotulo: "Semana anterior",
+            }}
+            atual={{ href: params.ocultarCanceladas ? "/agenda?canceladas=0" : "/agenda", rotulo: "Hoje" }}
+            proximo={{
+              href: agendaHref({ semana: addDias(segunda, 7), ocultarCanceladas: params.ocultarCanceladas }),
+              rotulo: "Próxima semana",
+            }}
+            periodo={rotuloSemana(semana)}
+          />
+        }
+        acoes={
+          <>
+            <Link href="/agenda/bloqueios" className="btn btn-outline">
+              Bloqueios
             </Link>
-            <Link
-              href={params.ocultarCanceladas ? "/agenda?canceladas=0" : "/agenda"}
-              className="btn btn-outline"
-            >
-              Hoje
+            <Link href="/agenda/nova" className="btn btn-primary">
+              <Plus className="size-4" aria-hidden />
+              Nova consulta
             </Link>
-            <Link
-              href={agendaHref({ semana: addDias(segunda, 7), ocultarCanceladas: params.ocultarCanceladas })}
-              className="btn btn-outline size-10 !min-h-0 !p-0"
-              aria-label="Próxima semana"
-            >
-              <ChevronRight className="size-4" aria-hidden />
-            </Link>
-          </div>
-          <span className="text-base font-semibold">{rotuloSemana(semana)}</span>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/agenda/bloqueios" className="btn btn-outline">
-            Bloqueios
-          </Link>
-          <Link href="/agenda/nova" className="btn btn-primary">
-            <Plus className="size-4" aria-hidden />
-            Nova consulta
-          </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-700">
         <div className="flex flex-wrap gap-2">

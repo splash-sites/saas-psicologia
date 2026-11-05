@@ -16,6 +16,7 @@ import {
   salvarLinkAtendimento,
   salvarPreferenciasLembrete,
 } from "./actions";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 export const metadata = { title: "Configurações" };
 
@@ -62,7 +63,7 @@ export default async function ConfiguracoesPage({
   return (
     <LinkAtendimentoProvider inicial={psicologa?.link_atendimento_online ?? null}>
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-xl font-semibold">Configurações</h1>
+      <CabecalhoPagina titulo="Configurações" />
 
       {!meetAutomatico && (
         <section className="flex flex-col gap-3 card">

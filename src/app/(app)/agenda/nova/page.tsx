@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { criarConsulta } from "../actions";
 import { ConsultaForm } from "../ConsultaForm";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
 export const metadata = { title: "Nova consulta" };
 
@@ -28,7 +29,7 @@ export default async function NovaConsultaPage({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-xl font-semibold">Nova consulta</h1>
+      <CabecalhoPagina titulo="Nova consulta" voltar={{ href: "/agenda", rotulo: "Agenda" }} />
       {lista.length === 0 ? (
         <p className="text-sm text-slate-500">
           Cadastre um paciente antes de agendar.{" "}

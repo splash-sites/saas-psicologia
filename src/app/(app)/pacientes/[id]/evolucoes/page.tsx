@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Plus, FileText } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import { VoltarLink } from "@/components/VoltarLink";
 import type { Evolucao } from "@/lib/prontuario/types";
+import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import { EstadoVazio } from "@/components/EstadoVazio";
 
 export const metadata = { title: "Evoluções" };
 
@@ -50,22 +52,19 @@ export default async function EvolucoesTimelinePage({
   >[];
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-6">
-      <VoltarLink href={`/pacientes/${id}`}>{paciente.nome}</VoltarLink>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">
-          Evoluções {mostrarArquivadas && "arquivadas"}
-        </h1>
-        {!mostrarArquivadas && (
-          <Link
-            href={`/pacientes/${id}/evolucoes/nova`}
-            className="btn btn-primary"
-          >
-            Nova evolução
-          </Link>
-        )}
-      </div>
+    <div className="flex w-full max-w-3xl flex-col gap-6">
+      <CabecalhoPagina
+        titulo={mostrarArquivadas ? "Evoluções arquivadas" : "Evoluções"}
+        voltar={{ href: `/pacientes/${id}`, rotulo: <span data-sensivel>{paciente.nome}</span> }}
+        acoes={
+          !mostrarArquivadas && (
+            <Link href={`/pacientes/${id}/evolucoes/nova`} className="btn btn-primary">
+              <Plus className="size-4" aria-hidden />
+              Nova evolução
+            </Link>
+          )
+        }
+      />
 
       <nav className="flex gap-3 text-sm">
         <Link
@@ -83,11 +82,17 @@ export default async function EvolucoesTimelinePage({
       </nav>
 
       {lista.length === 0 ? (
-        <p className="text-sm text-slate-500">
-          {mostrarArquivadas
-            ? "Nenhuma evolução arquivada."
-            : "Nenhuma evolução registrada ainda."}
-        </p>
+        <EstadoVazio
+          icon={FileText}
+          titulo={mostrarArquivadas ? "Nenhuma evolução arquivada" : "Nenhuma evolução registrada ainda"}
+        >
+          {!mostrarArquivadas && (
+            <Link href={`/pacientes/${id}/evolucoes/nova`} className="btn btn-primary">
+              <Plus className="size-4" aria-hidden />
+              Nova evolução
+            </Link>
+          )}
+        </EstadoVazio>
       ) : (
         <ol className="flex flex-col gap-3">
           {lista.map((e) => (
