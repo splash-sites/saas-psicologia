@@ -114,4 +114,59 @@ describe.skipIf(!hasLocalSupabase)("consultasDisponiveis", () => {
     expect(ids).toContain(doAtivo);
     expect(ids).not.toContain(doArquivado);
   });
+
+  it("pagamento arquivado libera a consulta de novo", async () => {
+    const s = Date.now();
+    const a = await signUpPsicologa(`cd-e-${s}@teste.local`);
+    const ca = userClient(a.accessToken);
+    const pac = await pacienteDe(ca, a.id, "Paula");
+    const consulta = await consultaDe(ca, a.id, pac, "2026-06-01T14:00:00Z");
+    const { data: pg } = await ca
+      .from("pagamentos")
+      .insert({
+        psicologa_id: a.id,
+        paciente_id: pac,
+        consulta_id: consulta,
+        valor: 100,
+        data_referencia: "2026-06-01",
+        vencimento: "2026-06-10",
+      })
+      .select("id")
+      .single();
+    expect((await consultasDisponiveis(ca)).map((c) => c.id)).not.toContain(consulta);
+
+    await ca.from("pagamentos").update({ deleted_at: new Date().toISOString() }).eq("id", pg!.id);
+    expect((await consultasDisponiveis(ca)).map((c) => c.id)).toContain(consulta);
+  });
+
+  it("consultas já pagas não ocupam o limite, e a do lançamento editado entra mesmo fora dele", async () => {
+    const s = Date.now();
+    const a = await signUpPsicologa(`cd-f-${s}@teste.local`);
+    const ca = userClient(a.accessToken);
+    const pac = await pacienteDe(ca, a.id, "Rui");
+    // 3 consultas antigas sem lançamento; 5 mais novas, todas pagas.
+    const antigas = [];
+    for (let d = 1; d <= 3; d++) antigas.push(await consultaDe(ca, a.id, pac, `2026-07-0${d}T14:00:00Z`));
+    const pagas = [];
+    for (let d = 10; d <= 14; d++) pagas.push(await consultaDe(ca, a.id, pac, `2026-07-${d}T14:00:00Z`));
+    const { error } = await ca.from("pagamentos").insert(
+      pagas.map((consulta_id) => ({
+        psicologa_id: a.id,
+        paciente_id: pac,
+        consulta_id,
+        valor: 100,
+        data_referencia: "2026-07-10",
+        vencimento: "2026-07-20",
+      })),
+    );
+    expect(error).toBeNull();
+
+    // Limite 3: as 3 antigas cabem, porque as pagas nem vêm do banco.
+    const ids = (await consultasDisponiveis(ca, null, 3)).map((c) => c.id);
+    expect(ids).toEqual([...antigas].reverse());
+
+    // Limite 1, editando o lançamento de uma consulta paga: ela entra também.
+    const editando = (await consultasDisponiveis(ca, pagas[0], 1)).map((c) => c.id);
+    expect(editando).toEqual([pagas[0], antigas[2]]);
+  });
 });

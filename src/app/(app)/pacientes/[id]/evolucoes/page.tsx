@@ -39,7 +39,8 @@ export default async function EvolucoesTimelinePage({
     .from("evolucoes")
     .select("id, data_sessao, demanda, deleted_at, deleted_motivo, updated_at")
     .eq("paciente_id", id)
-    .order("data_sessao", { ascending: false });
+    .order("data_sessao", { ascending: false })
+    .order("created_at", { ascending: false });
   q = mostrarArquivadas ? q.not("deleted_at", "is", null) : q.is("deleted_at", null);
 
   const { data: evolucoes } = await q;

@@ -50,7 +50,8 @@ export default async function FinanceiroPage({
       .is("deleted_at", null)
       .gte("data_referencia", inicio)
       .lte("data_referencia", fim)
-      .order("data_referencia"),
+      .order("data_referencia")
+      .order("created_at"),
     supabase
       .from("pagamentos")
       .select("valor")

@@ -48,6 +48,7 @@ export default async function PacienteDetailPage({
     .eq("paciente_id", id)
     .is("deleted_at", null)
     .order("data_sessao", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(3);
 
   const wa = whatsappLink(paciente.telefone);
