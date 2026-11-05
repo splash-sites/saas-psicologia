@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 import {
   TEMPLATE_PADRAO,
   VARIAVEIS_TEMPLATE,
@@ -35,6 +37,7 @@ export function PreferenciasLembreteForm({
   );
   const [template, setTemplate] = useState(defaults.mensagem_template ?? "");
   const fe = state.fieldErrors ?? {};
+  const { erros, formProps } = useValidacao();
 
   // Com a Agenda conectada, a prévia mostra um exemplo de link do Meet (cada
   // consulta ganha o seu). Sem ela, usa o link digitado em "Atendimento
@@ -53,7 +56,7 @@ export function PreferenciasLembreteForm({
   });
 
   return (
-    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
+    <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
       {state.error && (
         <p className="alert alert-error">
           {state.error}
@@ -78,9 +81,7 @@ export function PreferenciasLembreteForm({
         <span className="text-xs text-slate-500">
           Define para qual dia a lista de Lembretes abre por padrão (24h = amanhã).
         </span>
-        {fe.antecedencia_horas && (
-          <span className="text-xs text-red-600">{fe.antecedencia_horas[0]}</span>
-        )}
+        <ErroCampo nome="antecedencia_horas" cliente={erros} servidor={fe.antecedencia_horas} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
@@ -98,9 +99,7 @@ export function PreferenciasLembreteForm({
           {VARIAVEIS_TEMPLATE.map((v) => v.nome).join(" ")}. Não coloque
           informação clínica na mensagem.
         </span>
-        {fe.mensagem_template && (
-          <span className="text-xs text-red-600">{fe.mensagem_template[0]}</span>
-        )}
+        <ErroCampo nome="mensagem_template" cliente={erros} servidor={fe.mensagem_template} />
       </label>
 
       <div className="rounded-md bg-slate-50 p-3 text-sm">

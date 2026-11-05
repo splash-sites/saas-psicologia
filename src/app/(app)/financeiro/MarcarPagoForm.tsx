@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 import { hojeBR } from "@/lib/agenda/datas";
 import type { FormState } from "./actions";
 
@@ -18,6 +20,7 @@ export function MarcarPagoForm({
     action,
     {},
   );
+  const { erros, formProps } = useValidacao();
 
   if (!aberto) {
     return (
@@ -32,7 +35,7 @@ export function MarcarPagoForm({
   }
 
   return (
-    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-wrap items-end gap-2">
+    <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-wrap items-end gap-2">
       {state.error && (
         <p className="w-full text-sm text-red-700">{state.error}</p>
       )}
@@ -45,6 +48,7 @@ export function MarcarPagoForm({
           defaultValue={hojeBR()}
           className="input w-auto"
         />
+        <ErroCampo nome="data_pagamento" cliente={erros} servidor={state.fieldErrors?.data_pagamento} />
       </label>
       <label className="flex flex-col gap-1 text-xs">
         Forma

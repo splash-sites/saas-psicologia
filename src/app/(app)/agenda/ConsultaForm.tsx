@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 import Link from "next/link";
 import {
   MODALIDADES,
@@ -20,10 +22,6 @@ type Props = {
   horaPadrao?: string;
 };
 
-function FieldError({ errors }: { errors?: string[] }) {
-  if (!errors?.length) return null;
-  return <p className="mt-1 text-xs text-red-600">{errors[0]}</p>;
-}
 
 export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -32,9 +30,10 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
   );
   const [recorrente, setRecorrente] = useState(false);
   const fe = state.fieldErrors ?? {};
+  const { erros, formProps } = useValidacao();
 
   return (
-    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
+    <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
       {state.error && (
         <p className="alert alert-error">
           {state.error}
@@ -43,7 +42,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
 
       <div>
         <PacienteSelect pacientes={pacientes} />
-        <FieldError errors={fe.paciente_id} />
+        <ErroCampo nome="paciente_id" cliente={erros} servidor={fe.paciente_id} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -56,7 +55,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
             required
             className="input"
           />
-          <FieldError errors={fe.data} />
+          <ErroCampo nome="data" cliente={erros} servidor={fe.data} />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Hora *
@@ -67,7 +66,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
             required
             className="input"
           />
-          <FieldError errors={fe.hora} />
+          <ErroCampo nome="hora" cliente={erros} servidor={fe.hora} />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Duração (min) *
@@ -79,9 +78,10 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
             max={480}
             step={5}
             required
+            data-obrigatorio="Informe a duração."
             className="input"
           />
-          <FieldError errors={fe.duracao_min} />
+          <ErroCampo nome="duracao_min" cliente={erros} servidor={fe.duracao_min} />
         </label>
       </div>
 
@@ -94,6 +94,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
             </option>
           ))}
         </select>
+        <ErroCampo nome="modalidade" cliente={erros} servidor={fe.modalidade} />
       </label>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -123,7 +124,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
               max={52}
               className="input"
             />
-            <FieldError errors={fe.ocorrencias} />
+            <ErroCampo nome="ocorrencias" cliente={erros} servidor={fe.ocorrencias} />
           </label>
         )}
       </div>

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { traduzErroAuth } from "@/lib/auth/mensagens";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 
 // Alternativa ao login com Google (item pedido pelo usuário, 2026-10-06):
 // nem toda psicóloga tem ou quer usar conta Google pra entrar. Quem criar
@@ -57,6 +59,7 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
   // mostra o botão de reenviar o link.
   const [aguardandoConfirmacao, setAguardandoConfirmacao] = useState(false);
   const [reenviando, setReenviando] = useState(false);
+  const { erros, formProps } = useValidacao();
 
   async function reenviarConfirmacao() {
     if (reenviando) return;
@@ -132,6 +135,7 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
   const OlhoIcone = verSenha ? EyeOff : Eye;
 
   function campoSenha(
+    campo: string,
     rotulo: string,
     valor: string,
     aoMudar: (v: string) => void,
@@ -146,6 +150,8 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
             type={verSenha ? "text" : "password"}
             required
             minLength={6}
+            data-campo={campo}
+            data-obrigatorio="Informe a senha."
             value={valor}
             onChange={(e) => aoMudar(e.target.value)}
             autoComplete={autoComplete}
@@ -162,24 +168,28 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
             <OlhoIcone className="size-5" aria-hidden />
           </button>
         </span>
+        <ErroCampo nome={campo} cliente={erros} />
       </label>
     );
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form {...formProps} onSubmit={handleSubmit} className="flex flex-col gap-4">
         {criando && (
           <label className="flex flex-col gap-1 text-sm font-medium text-slate-800">
             Nome completo
             <input
               type="text"
               required
+              data-campo="nome"
+              data-obrigatorio="Informe seu nome."
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               autoComplete="name"
               className="input"
             />
+            <ErroCampo nome="nome" cliente={erros} />
           </label>
         )}
 
@@ -189,16 +199,19 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
             type="email"
             inputMode="email"
             required
+            data-campo="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             placeholder="voce@exemplo.com"
             className="input"
           />
+          <ErroCampo nome="email" cliente={erros} />
         </label>
 
         <div className="flex flex-col gap-2">
           {campoSenha(
+            "senha",
             "Senha",
             senha,
             setSenha,
@@ -214,6 +227,7 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
 
         {criando &&
           campoSenha(
+            "confirmar_senha",
             "Confirmar senha",
             confirmarSenha,
             setConfirmarSenha,

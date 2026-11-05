@@ -77,6 +77,10 @@ html[data-privado] [data-sensivel] {
   textarea.input {
     @apply min-h-0;
   }
+  /* Campo com erro de validação (useValidacao marca aria-invalid). */
+  .input[aria-invalid="true"] {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
+  }
 
   .card {
     @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm;

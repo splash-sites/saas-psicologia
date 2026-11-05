@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 import Link from "next/link";
 import { PACIENTE_STATUS, PACIENTE_STATUS_LABEL } from "@/lib/pacientes/types";
 import type { Paciente } from "@/lib/pacientes/types";
@@ -16,10 +18,6 @@ type Props = {
   cancelHref: string;
 };
 
-function FieldError({ errors }: { errors?: string[] }) {
-  if (!errors?.length) return null;
-  return <p className="mt-1 text-xs text-red-600">{errors[0]}</p>;
-}
 
 export function PacienteForm({
   action,
@@ -32,6 +30,7 @@ export function PacienteForm({
     {},
   );
   const fe = state.fieldErrors ?? {};
+  const { erros, formProps } = useValidacao();
 
   // Controlados só pra aplicar máscara/capitalização ao digitar — o envio
   // continua pela própria action do formulário (FormData nativo), sem
@@ -41,7 +40,7 @@ export function PacienteForm({
   const [cpf, setCpf] = useState(formatarCpf(paciente?.cpf ?? ""));
 
   return (
-    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
+    <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
       {state.error && (
         <p className="alert alert-error">
           {state.error}
@@ -52,13 +51,14 @@ export function PacienteForm({
         Nome *
         <input
           name="nome"
+          data-obrigatorio="Informe o nome do paciente."
           required
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           onBlur={() => setNome((atual) => capitalizarNome(atual))}
           className="input"
         />
-        <FieldError errors={fe.nome} />
+        <ErroCampo nome="nome" cliente={erros} servidor={fe.nome} />
       </label>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -70,7 +70,7 @@ export function PacienteForm({
             defaultValue={paciente?.email ?? ""}
             className="input"
           />
-          <FieldError errors={fe.email} />
+          <ErroCampo nome="email" cliente={erros} servidor={fe.email} />
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
@@ -84,7 +84,7 @@ export function PacienteForm({
             maxLength={15}
             className="input"
           />
-          <FieldError errors={fe.telefone} />
+          <ErroCampo nome="telefone" cliente={erros} servidor={fe.telefone} />
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
@@ -95,7 +95,7 @@ export function PacienteForm({
             defaultValue={paciente?.data_nascimento ?? ""}
             className="input"
           />
-          <FieldError errors={fe.data_nascimento} />
+          <ErroCampo nome="data_nascimento" cliente={erros} servidor={fe.data_nascimento} />
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
@@ -109,7 +109,7 @@ export function PacienteForm({
             maxLength={14}
             className="input"
           />
-          <FieldError errors={fe.cpf} />
+          <ErroCampo nome="cpf" cliente={erros} servidor={fe.cpf} />
         </label>
       </div>
 
@@ -120,7 +120,7 @@ export function PacienteForm({
           defaultValue={paciente?.endereco ?? ""}
           className="input"
         />
-        <FieldError errors={fe.endereco} />
+        <ErroCampo nome="endereco" cliente={erros} servidor={fe.endereco} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
@@ -146,7 +146,7 @@ export function PacienteForm({
           defaultValue={paciente?.observacoes ?? ""}
           className="input"
         />
-        <FieldError errors={fe.observacoes} />
+        <ErroCampo nome="observacoes" cliente={erros} servidor={fe.observacoes} />
       </label>
 
       <label className="flex items-start gap-2 text-sm">

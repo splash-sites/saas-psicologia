@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 import Link from "next/link";
 import {
   MODALIDADES,
@@ -24,10 +26,6 @@ type Props = {
   cancelHref: string;
 };
 
-function FieldError({ errors }: { errors?: string[] }) {
-  if (!errors?.length) return null;
-  return <p className="mt-1 text-xs text-red-600">{errors[0]}</p>;
-}
 
 export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -35,9 +33,10 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
     {},
   );
   const fe = state.fieldErrors ?? {};
+  const { erros, formProps } = useValidacao();
 
   return (
-    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
+    <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
       {state.error && (
         <p className="alert alert-error">
           {state.error}
@@ -54,7 +53,7 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
             required
             className="input"
           />
-          <FieldError errors={fe.data} />
+          <ErroCampo nome="data" cliente={erros} servidor={fe.data} />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Hora
@@ -65,12 +64,13 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
             required
             className="input"
           />
-          <FieldError errors={fe.hora} />
+          <ErroCampo nome="hora" cliente={erros} servidor={fe.hora} />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Duração (min)
           <input
             name="duracao_min"
+            data-obrigatorio="Informe a duração."
             type="number"
             defaultValue={defaults.duracao_min}
             min={15}
@@ -79,7 +79,7 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
             required
             className="input"
           />
-          <FieldError errors={fe.duracao_min} />
+          <ErroCampo nome="duracao_min" cliente={erros} servidor={fe.duracao_min} />
         </label>
       </div>
 

@@ -81,6 +81,19 @@ test("sem login, o painel manda para o login", async () => {
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test("campo obrigatório: mensagem do app embaixo do campo, e o texto digitado depois não se perde", async () => {
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
+  await expect(page.getByText("Informe o e-mail.")).toBeVisible();
+  await expect(page.getByText("Informe a senha.")).toBeVisible();
+  await expect(page.locator('input[type="email"]')).toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator('input[type="email"]')).toBeFocused();
+  // Input.insertText (como teclados de celular): o texto tem de ficar no campo.
+  await page.keyboard.insertText("x@y.com");
+  await expect(page.locator('input[type="email"]')).toHaveValue("x@y.com");
+  await expect(page.getByText("Informe o e-mail.")).toHaveCount(0);
+});
+
 test("login por e-mail e senha", async () => {
   await entrar(page, EMAIL_A);
   await expect(page.getByRole("link", { name: "Pacientes" })).toBeVisible();

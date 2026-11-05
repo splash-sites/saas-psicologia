@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 import type { FormState } from "../actions";
 
 export function ArquivarForm({
@@ -14,6 +16,7 @@ export function ArquivarForm({
     action,
     {},
   );
+  const { erros, formProps } = useValidacao();
 
   if (!aberto) {
     return (
@@ -28,7 +31,7 @@ export function ArquivarForm({
   }
 
   return (
-    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-2">
+    <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-2">
       <p className="text-sm text-slate-600">
         A evolução deixa de aparecer na timeline ativa, mas continua guardada
         (exigência de guarda mínima de 5 anos). Informe o motivo:
@@ -41,11 +44,10 @@ export function ArquivarForm({
         required
         minLength={3}
         placeholder="Ex.: registro duplicado, erro de digitação corrigido em nova evolução"
-        className="rounded-md border px-3 py-2 text-sm"
+        data-obrigatorio="Informe o motivo do arquivamento."
+        className="input"
       />
-      {state.fieldErrors?.motivo && (
-        <p className="text-xs text-red-600">{state.fieldErrors.motivo[0]}</p>
-      )}
+      <ErroCampo nome="motivo" cliente={erros} servidor={state.fieldErrors?.motivo} />
       <div className="flex gap-3">
         <button
           type="submit"

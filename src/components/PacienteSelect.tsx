@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { EVENTO_CAMPO_VALIDO } from "@/lib/form/validacao";
 
 type Opcao = { id: string; nome: string };
 
@@ -69,7 +70,12 @@ export function PacienteSelect({
   }
 
   useEffect(() => {
-    campo.current?.setCustomValidity(required && !atual ? "Escolha um paciente da lista." : "");
+    const el = campo.current;
+    if (!el) return;
+    el.setCustomValidity(required && !atual ? "Escolha um paciente da lista." : "");
+    // Escolher pela lista não dispara digitação: avisa o formulário que o
+    // campo ficou válido, para o erro embaixo dele sumir.
+    if (atual) el.dispatchEvent(new Event(EVENTO_CAMPO_VALIDO, { bubbles: true }));
   }, [required, atual]);
 
   useEffect(() => {
@@ -97,6 +103,7 @@ export function PacienteSelect({
           autoComplete="off"
           className="input pr-10"
           data-sensivel
+          data-campo={name}
           onClick={() => (aberto ? null : abrir())}
           onFocus={(e) => e.currentTarget.select()}
           onChange={(e) => {

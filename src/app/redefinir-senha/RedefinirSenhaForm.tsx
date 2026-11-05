@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { traduzErroAuth } from "@/lib/auth/mensagens";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 
 // Chega aqui pelo link do e-mail de recuperação: /auth/confirm já abriu a
 // sessão, então basta trocar a senha da conta logada.
@@ -15,6 +17,7 @@ export function RedefinirSenhaForm() {
   const [verSenha, setVerSenha] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const { erros, formProps } = useValidacao();
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,6 +39,7 @@ export function RedefinirSenhaForm() {
 
   const OlhoIcone = verSenha ? EyeOff : Eye;
   const campo = (
+    chave: string,
     rotulo: string,
     valor: string,
     aoMudar: (v: string) => void,
@@ -48,6 +52,8 @@ export function RedefinirSenhaForm() {
           type={verSenha ? "text" : "password"}
           required
           minLength={6}
+          data-campo={chave}
+          data-obrigatorio="Informe a nova senha."
           value={valor}
           onChange={(e) => aoMudar(e.target.value)}
           autoComplete="new-password"
@@ -64,13 +70,14 @@ export function RedefinirSenhaForm() {
           <OlhoIcone className="size-5" aria-hidden />
         </button>
       </span>
+      <ErroCampo nome={chave} cliente={erros} />
     </label>
   );
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      {campo("Nova senha", senha, setSenha, "Mínimo de 6 caracteres")}
-      {campo("Confirmar nova senha", confirmar, setConfirmar, "Repita a senha")}
+    <form {...formProps} onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {campo("senha", "Nova senha", senha, setSenha, "Mínimo de 6 caracteres")}
+      {campo("confirmar", "Confirmar nova senha", confirmar, setConfirmar, "Repita a senha")}
       {erro && (
         <p className="alert alert-error" role="alert">
           {erro}

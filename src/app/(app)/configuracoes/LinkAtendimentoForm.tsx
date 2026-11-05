@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 import type { FormState } from "./actions";
 import { useLinkAtendimento } from "./LinkAtendimentoContext";
 
@@ -14,9 +16,10 @@ export function LinkAtendimentoForm({ action, valorAtual }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, {});
   const compartilhado = useLinkAtendimento();
   const fe = state.fieldErrors ?? {};
+  const { erros, formProps } = useValidacao();
 
   return (
-    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-3">
+    <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-3">
       {state.error && <p className="alert alert-error">{state.error}</p>}
       {state.ok && <p className="alert alert-success">Link salvo.</p>}
 
@@ -37,9 +40,7 @@ export function LinkAtendimentoForm({ action, valorAtual }: Props) {
           &ldquo;Criar uma reunião para depois&rdquo; gera um link que não
           muda. Deixe em branco para remover.
         </span>
-        {fe.link_atendimento_online && (
-          <span className="text-xs text-red-600">{fe.link_atendimento_online[0]}</span>
-        )}
+        <ErroCampo nome="link_atendimento_online" cliente={erros} servidor={fe.link_atendimento_online} />
       </label>
 
       <button type="submit" disabled={pending} className="w-fit btn btn-primary">

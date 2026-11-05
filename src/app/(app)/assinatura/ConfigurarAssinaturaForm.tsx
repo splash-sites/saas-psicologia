@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { configurarAssinatura, type FormState } from "./actions";
+import { useValidacao } from "@/lib/form/validacao";
 import { ASSINATURA_PLANO, PLANOS, type AssinaturaPlano } from "@/lib/assinatura/types";
 import { mascararCpfCnpj, validarCpfCnpj } from "@/lib/assinatura/cpfCnpj";
 
@@ -16,6 +17,7 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
   const [cpfCnpj, setCpfCnpj] = useState("");
   // Erro só depois de sair do campo ou tentar enviar — não enquanto digita.
   const [erroCpfCnpj, setErroCpfCnpj] = useState<string | null>(null);
+  const { erros, formProps } = useValidacao();
 
   function conferirCpfCnpj(): boolean {
     const ok = validarCpfCnpj(cpfCnpj).valido;
@@ -49,7 +51,7 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form {...formProps} onSubmit={handleSubmit} className="flex flex-col gap-4">
       {state.error && <p className="alert alert-error">{state.error}</p>}
 
       <fieldset className="flex flex-col gap-2">
@@ -88,6 +90,7 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
         <input
           name="cpf_cnpj"
           required
+          data-obrigatorio="Informe o CPF ou CNPJ."
           value={cpfCnpj}
           onChange={(e) => {
             setCpfCnpj(mascararCpfCnpj(e.target.value));
@@ -98,7 +101,7 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
           inputMode="numeric"
           autoComplete="off"
           maxLength={18}
-          aria-invalid={Boolean(erroCpfCnpj || state.fieldErrors?.cpf_cnpj)}
+          aria-invalid={Boolean(erros.cpf_cnpj || erroCpfCnpj || state.fieldErrors?.cpf_cnpj)}
           aria-describedby="cpf-cnpj-ajuda"
           className="input"
         />
@@ -107,9 +110,9 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
           dados de cartão: você escolhe Pix, boleto ou cartão na página do
           Asaas.
         </span>
-        {(erroCpfCnpj ?? state.fieldErrors?.cpf_cnpj?.[0]) && (
+        {(erros.cpf_cnpj ?? erroCpfCnpj ?? state.fieldErrors?.cpf_cnpj?.[0]) && (
           <span className="text-xs text-red-600" role="alert">
-            {erroCpfCnpj ?? state.fieldErrors?.cpf_cnpj?.[0]}
+            {erros.cpf_cnpj ?? erroCpfCnpj ?? state.fieldErrors?.cpf_cnpj?.[0]}
           </span>
         )}
       </label>

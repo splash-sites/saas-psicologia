@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 import Link from "next/link";
 import type { Pagamento } from "@/lib/financeiro/types";
 import type { ConsultaDisponivel } from "@/lib/financeiro/consultasDisponiveis";
@@ -21,10 +23,6 @@ type Props = {
   cancelHref: string;
 };
 
-function FieldError({ errors }: { errors?: string[] }) {
-  if (!errors?.length) return null;
-  return <p className="mt-1 text-xs text-red-600">{errors[0]}</p>;
-}
 
 export function PagamentoForm({
   action,
@@ -42,6 +40,7 @@ export function PagamentoForm({
     {},
   );
   const fe = state.fieldErrors ?? {};
+  const { erros, formProps } = useValidacao();
   const hoje = hojeBR();
   const dataRefInicial = pagamento?.data_referencia ?? dataPadrao ?? hoje;
 
@@ -66,7 +65,7 @@ export function PagamentoForm({
   }
 
   return (
-    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
+    <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
       {state.error && (
         <p className="alert alert-error">
           {state.error}
@@ -95,7 +94,7 @@ export function PagamentoForm({
 
       <div>
         <PacienteSelect pacientes={pacientes} value={pacienteId} onChange={setPacienteId} />
-        <FieldError errors={fe.paciente_id} />
+        <ErroCampo nome="paciente_id" cliente={erros} servidor={fe.paciente_id} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -103,6 +102,7 @@ export function PagamentoForm({
           Valor (R$) *
           <input
             name="valor"
+            data-obrigatorio="Informe o valor."
             type="number"
             step="0.01"
             min="0.01"
@@ -110,7 +110,7 @@ export function PagamentoForm({
             defaultValue={pagamento?.valor ?? ""}
             className="input"
           />
-          <FieldError errors={fe.valor} />
+          <ErroCampo nome="valor" cliente={erros} servidor={fe.valor} />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Referente a (sessão/mês) *
@@ -122,7 +122,7 @@ export function PagamentoForm({
             onChange={(e) => setDataRef(e.target.value)}
             className="input"
           />
-          <FieldError errors={fe.data_referencia} />
+          <ErroCampo nome="data_referencia" cliente={erros} servidor={fe.data_referencia} />
         </label>
       </div>
 
@@ -162,7 +162,7 @@ export function PagamentoForm({
             defaultValue={pagamento?.data_pagamento ?? hoje}
             className="input"
           />
-          <FieldError errors={fe.data_pagamento} />
+          <ErroCampo nome="data_pagamento" cliente={erros} servidor={fe.data_pagamento} />
         </label>
       ) : (
         <label className="flex flex-col gap-1 text-sm">
@@ -174,7 +174,7 @@ export function PagamentoForm({
             defaultValue={pagamento?.vencimento ?? dataRef}
             className="input"
           />
-          <FieldError errors={fe.vencimento} />
+          <ErroCampo nome="vencimento" cliente={erros} servidor={fe.vencimento} />
         </label>
       )}
 

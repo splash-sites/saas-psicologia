@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 import Link from "next/link";
 import { CAMPOS_EVOLUCAO, type Evolucao } from "@/lib/prontuario/types";
 import { hojeBR } from "@/lib/agenda/datas";
@@ -16,10 +18,6 @@ type Props = {
   cancelHref: string;
 };
 
-function FieldError({ errors }: { errors?: string[] }) {
-  if (!errors?.length) return null;
-  return <p className="mt-1 text-xs text-red-600">{errors[0]}</p>;
-}
 
 export function EvolucaoForm({
   action,
@@ -34,9 +32,10 @@ export function EvolucaoForm({
     {},
   );
   const fe = state.fieldErrors ?? {};
+  const { erros, formProps } = useValidacao();
 
   return (
-    <form onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-5">
+    <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-5">
       {state.error && (
         <p className="alert alert-error">
           {state.error}
@@ -64,7 +63,7 @@ export function EvolucaoForm({
           }
           className="input"
         />
-        <FieldError errors={fe.data_sessao} />
+        <ErroCampo nome="data_sessao" cliente={erros} servidor={fe.data_sessao} />
       </label>
 
       {CAMPOS_EVOLUCAO.map((campo) => (
@@ -75,10 +74,11 @@ export function EvolucaoForm({
             name={campo.nome}
             rows={4}
             required
+            data-obrigatorio={`Preencha “${campo.rotulo}”.`}
             defaultValue={evolucao?.[campo.nome] ?? ""}
             className="input mt-1"
           />
-          <FieldError errors={fe[campo.nome]} />
+          <ErroCampo nome={campo.nome} cliente={erros} servidor={fe[campo.nome]} />
         </label>
       ))}
 
@@ -94,7 +94,7 @@ export function EvolucaoForm({
           defaultValue={evolucao?.notas_privadas ?? ""}
           className="input mt-1"
         />
-        <FieldError errors={fe.notas_privadas} />
+        <ErroCampo nome="notas_privadas" cliente={erros} servidor={fe.notas_privadas} />
       </label>
 
       <div className="flex gap-3">

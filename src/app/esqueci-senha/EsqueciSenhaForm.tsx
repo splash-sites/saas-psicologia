@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { traduzErroAuth } from "@/lib/auth/mensagens";
+import { useValidacao } from "@/lib/form/validacao";
+import { ErroCampo } from "@/components/ErroCampo";
 
 // Pede o link de troca de senha. A resposta é sempre a mesma, exista ou não
 // conta com o e-mail — senão a tela diria quem é cliente. O link chega pelo
@@ -13,6 +15,7 @@ export function EsqueciSenhaForm() {
   const [carregando, setCarregando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const { erros, formProps } = useValidacao();
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -39,19 +42,21 @@ export function EsqueciSenhaForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form {...formProps} onSubmit={handleSubmit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1 text-sm font-medium text-slate-800">
         E-mail da sua conta
         <input
           type="email"
           inputMode="email"
           required
+          data-campo="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
           placeholder="voce@exemplo.com"
           className="input"
         />
+        <ErroCampo nome="email" cliente={erros} />
       </label>
       {erro && (
         <p className="alert alert-error" role="alert">
