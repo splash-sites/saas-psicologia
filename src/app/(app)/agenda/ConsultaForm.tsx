@@ -9,6 +9,7 @@ import {
   RECORRENCIAS,
   RECORRENCIA_LABEL,
 } from "@/lib/agenda/types";
+import { PacienteSelect } from "@/components/PacienteSelect";
 import type { FormState } from "./actions";
 
 type Props = {
@@ -40,18 +41,10 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
         </p>
       )}
 
-      <label className="flex flex-col gap-1 text-sm">
-        Paciente *
-        <select name="paciente_id" required className="input">
-          <option value="">Selecione...</option>
-          {pacientes.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nome}
-            </option>
-          ))}
-        </select>
+      <div>
+        <PacienteSelect pacientes={pacientes} />
         <FieldError errors={fe.paciente_id} />
-      </label>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm">

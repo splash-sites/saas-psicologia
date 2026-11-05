@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { Pagamento } from "@/lib/financeiro/types";
 import type { ConsultaDisponivel } from "@/lib/financeiro/consultasDisponiveis";
 import { dataBR, dataChaveBR, hojeBR, horaBR } from "@/lib/agenda/datas";
+import { PacienteSelect } from "@/components/PacienteSelect";
 import type { FormState } from "./actions";
 
 type Props = {
@@ -92,24 +93,10 @@ export function PagamentoForm({
         </span>
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Paciente *
-        <select
-          name="paciente_id"
-          required
-          value={pacienteId}
-          onChange={(e) => setPacienteId(e.target.value)}
-          className="input"
-        >
-          <option value="">Selecione...</option>
-          {pacientes.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nome}
-            </option>
-          ))}
-        </select>
+      <div>
+        <PacienteSelect pacientes={pacientes} value={pacienteId} onChange={setPacienteId} />
         <FieldError errors={fe.paciente_id} />
-      </label>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
