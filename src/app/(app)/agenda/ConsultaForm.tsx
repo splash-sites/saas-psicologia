@@ -77,6 +77,8 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
             min={15}
             max={480}
             step={5}
+            data-faixa="A duração vai de 15 a 480 minutos (8 horas)."
+            data-passo="Use múltiplos de 5 minutos (ex.: 45, 50, 60)."
             required
             data-obrigatorio="Informe a duração."
             className="input"
@@ -122,6 +124,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
               defaultValue={4}
               min={2}
               max={52}
+              data-faixa="Escolha de 2 a 52 ocorrências (até 1 ano de consultas semanais)."
               className="input"
             />
             <ErroCampo nome="ocorrencias" cliente={erros} servidor={fe.ocorrencias} />

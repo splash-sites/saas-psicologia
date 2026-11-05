@@ -106,6 +106,8 @@ export function PagamentoForm({
             type="number"
             step="0.01"
             min="0.01"
+            data-faixa="O valor mínimo é R$ 0,01."
+            data-passo="Use no máximo 2 casas decimais (ex.: 150,50)."
             required
             defaultValue={pagamento?.valor ?? ""}
             className="input"

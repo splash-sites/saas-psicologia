@@ -76,6 +76,8 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
             min={15}
             max={480}
             step={5}
+            data-faixa="A duração vai de 15 a 480 minutos (8 horas)."
+            data-passo="Use múltiplos de 5 minutos (ex.: 45, 50, 60)."
             required
             className="input"
           />

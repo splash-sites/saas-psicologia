@@ -75,6 +75,7 @@ export function PreferenciasLembreteForm({
           type="number"
           min={1}
           max={168}
+          data-faixa="Escolha de 1 a 168 horas (até 7 dias antes da consulta)."
           defaultValue={defaults.antecedencia_horas}
           className="input w-28"
         />

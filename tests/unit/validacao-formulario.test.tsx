@@ -39,6 +39,19 @@ describe("mensagemValidacao", () => {
     expect(mensagemValidacao(valor)).toBe("O mínimo é 0,01.");
   });
 
+  it("faixa e passo com a mensagem do campo (unidade)", () => {
+    const duracao = campo(`<input type="number" min="15" max="480" step="5" data-faixa="A duração vai de 15 a 480 minutos (8 horas)." data-passo="Use múltiplos de 5 minutos (ex.: 45, 50, 60).">`);
+    duracao.value = "600";
+    expect(mensagemValidacao(duracao)).toBe("A duração vai de 15 a 480 minutos (8 horas).");
+    duracao.value = "10";
+    expect(mensagemValidacao(duracao)).toBe("A duração vai de 15 a 480 minutos (8 horas).");
+    duracao.value = "52";
+    expect(mensagemValidacao(duracao)).toBe("Use múltiplos de 5 minutos (ex.: 45, 50, 60).");
+    const valor = campo(`<input type="number" min="0.01" step="0.01" data-faixa="O valor mínimo é R$ 0,01." data-passo="Use no máximo 2 casas decimais (ex.: 150,50).">`);
+    valor.value = "150.555";
+    expect(mensagemValidacao(valor)).toBe("Use no máximo 2 casas decimais (ex.: 150,50).");
+  });
+
   it("mensagem própria (setCustomValidity) passa direto", () => {
     const c = campo(`<input>`);
     c.setCustomValidity("Escolha um paciente da lista.");

@@ -24,7 +24,9 @@ function campoVazioDeData(el: Campo): string | null {
 /**
  * Mensagem em português para a validação nativa do navegador, específica
  * por tipo de campo (o balão padrão só diz "Preencha este campo").
- * `data-obrigatorio` no campo troca a mensagem de campo vazio.
+ * No campo, troca a mensagem padrão: `data-obrigatorio` (vazio),
+ * `data-faixa` (abaixo do min ou acima do max, com a unidade) e
+ * `data-passo` (fora do step: número quebrado).
  */
 export function mensagemValidacao(el: Campo): string {
   const v = el.validity;
@@ -48,6 +50,9 @@ export function mensagemValidacao(el: Campo): string {
   }
   if (v.tooShort && "minLength" in el) return `Mínimo de ${el.minLength} caracteres.`;
   if (v.tooLong && "maxLength" in el) return `Máximo de ${el.maxLength} caracteres.`;
+  const dados = (el as HTMLElement).dataset;
+  if ((v.rangeUnderflow || v.rangeOverflow) && dados.faixa) return dados.faixa;
+  if (v.stepMismatch && dados.passo) return dados.passo;
   if (v.rangeUnderflow && el instanceof HTMLInputElement) return `O mínimo é ${el.min.replace(".", ",")}.`;
   if (v.rangeOverflow && el instanceof HTMLInputElement) return `O máximo é ${el.max.replace(".", ",")}.`;
   if (v.stepMismatch) return "Valor inválido.";
