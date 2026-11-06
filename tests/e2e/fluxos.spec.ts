@@ -94,6 +94,19 @@ test("campo obrigatório: mensagem do app embaixo do campo, e o texto digitado d
   await expect(page.getByText("Informe o e-mail.")).toHaveCount(0);
 });
 
+test("entrar e criar conta são telas separadas, com links entre elas", async () => {
+  await page.goto("/login");
+  await expect(page.getByRole("heading", { name: "Boas-vindas de volta" })).toBeVisible();
+  await expect(page.getByLabel("Lembrar de mim")).toBeChecked();
+  await page.getByRole("link", { name: "Criar conta grátis" }).click();
+  await page.waitForURL("**/cadastro");
+  await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible();
+  await expect(page.getByLabel("Nome completo")).toBeVisible();
+  await expect(page.getByLabel("Lembrar de mim")).toHaveCount(0);
+  await page.getByRole("link", { name: "Entrar", exact: true }).click();
+  await page.waitForURL("**/login");
+});
+
 test("login por e-mail e senha", async () => {
   await entrar(page, EMAIL_A);
   await expect(page.getByRole("link", { name: "Pacientes" })).toBeVisible();

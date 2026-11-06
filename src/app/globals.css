@@ -13,6 +13,15 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Títulos da marca (logo em Onest Bold) — por ora só nas telas de login. */
+  --font-display: var(--font-onest), var(--font-geist-sans), system-ui, sans-serif;
+  /* Cores da marca (public/marca/LEIA-ME.txt). */
+  --color-tinta: #12302B;
+  --color-tinta-escura: #0B201C;
+  --color-ambar: #F0B93B;
+  --color-papel: #F4F7F6;
+  --color-nevoa: #DFEBE7;
+  --color-tinta-suave: #52645F;
 }
 
 /* Tailwind v4 usa currentColor como cor de borda padrão (bordas pretas).

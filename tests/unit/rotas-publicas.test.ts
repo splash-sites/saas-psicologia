@@ -3,7 +3,7 @@ import { rotaPublica } from "@/lib/supabase/rotas-publicas";
 
 describe("rotaPublica", () => {
   it("libera login, callback, políticas e o webhook do Asaas", () => {
-    for (const p of ["/login", "/auth/callback", "/auth/confirm", "/esqueci-senha", "/privacidade", "/termos", "/api/asaas/webhook"]) {
+    for (const p of ["/login", "/cadastro", "/auth/callback", "/auth/confirm", "/esqueci-senha", "/privacidade", "/termos", "/api/asaas/webhook"]) {
       expect(rotaPublica(p)).toBe(true);
     }
   });

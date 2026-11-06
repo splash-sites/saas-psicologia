@@ -160,7 +160,7 @@ const A = await semear("teste-a@teste.local", "Psico A", "09:00");
 const B = await semear("teste-b@teste.local", "Psico B", "15:00");
 const cA = await cookieHeader("teste-a@teste.local");
 
-const rotasPublicas = ["/login", "/privacidade", "/termos"];
+const rotasPublicas = ["/login", "/cadastro", "/privacidade", "/termos"];
 const rotasPrivadas = (x) => [
   "/", "/dashboard", "/agenda", `/agenda?consulta=${x.consulta}`, "/agenda/nova",
   `/agenda/${x.consulta}`, `/agenda/${x.consulta}/editar`, "/agenda/bloqueios", "/agenda/bloqueios/novo",

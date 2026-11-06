@@ -2,6 +2,7 @@
 // cookie — ele se autentica pelo próprio token (asaas-access-token).
 const PUBLIC_PATHS = [
   "/login",
+  "/cadastro",
   "/auth/callback",
   // Links dos e-mails (confirmação e recuperação) e o pedido de nova senha.
   "/auth/confirm",

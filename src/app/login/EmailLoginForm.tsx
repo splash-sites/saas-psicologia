@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { salvarEscolhaLembrar } from "@/lib/supabase/lembrar";
 import { traduzErroAuth } from "@/lib/auth/mensagens";
 import { useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
+import { LINK_AUTH } from "@/components/TelaAuth";
 
+// Formulário de e-mail e senha das telas /login (modo "entrar") e /cadastro
+// (modo "criar") — separadas desde 2026-11-06; antes era uma tela só com troca
+// de modo.
+//
 // Alternativa ao login com Google (item pedido pelo usuário, 2026-10-06):
 // nem toda psicóloga tem ou quer usar conta Google pra entrar. Quem criar
 // conta por aqui não tem o refresh token do Google — a sincronização de
@@ -19,21 +25,16 @@ import { ErroCampo } from "@/components/ErroCampo";
 // preenche, então handle_new_user() (que faz coalesce(full_name, email)) não
 // precisou mudar nada pros dois jeitos de criar conta.
 //
-// Login direto após criar conta (sem precisar confirmar e-mail antes) exige
-// desligar "Confirm email" no Supabase Auth — ver CLAUDE.md. Se a confirmação
-// estiver ligada, o Supabase não devolve sessão no signUp e caímos no aviso
-// de "confira seu e-mail" como fallback (não quebra, só muda o fluxo).
+// Com "Confirm email" ligado no Supabase (produção), o signUp não devolve
+// sessão e a tela mostra o aviso de confirmar o e-mail; sem ele, entra direto.
 //
-// `google`: o botão do Google e o aviso da Agenda, que a tela mostra entre o
-// "Entrar" e o "Criar conta grátis" — só visual, a lógica fica no LoginButton.
+// `google`: o botão do Google, que fica embaixo do botão principal — só
+// visual, a lógica fica no LoginButton.
+//
+// "Confirmar senha" saiu do cadastro (desenho de 2026-11-06): o olho mostra a
+// senha digitada e "Esqueci minha senha" cobre um erro de digitação.
 
 type Modo = "entrar" | "criar";
-
-// Contraste AA (≥ 4,5:1 no branco) e foco visível nos links da tela.
-const LINK =
-  "rounded font-medium text-teal-700 underline hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600";
-// Sublinhado só em "Esqueci minha senha" e "Criar conta" (decisão do usuário, 2026-11-06).
-const LINK_SEM_SUBLINHADO = LINK.replace(" underline", "");
 
 // Login: mensagem genérica, sem dizer se o e-mail existe (nem "e-mail não
 // confirmado"). Só o limite de tentativas tem texto próprio — não revela nada.
@@ -45,14 +46,23 @@ function erroDeLogin(mensagem: string): string {
     : "E-mail ou senha incorretos.";
 }
 
-export function EmailLoginForm({ google }: { google: React.ReactNode }) {
+export function EmailLoginForm({
+  modo,
+  google,
+  lembrarInicial = true,
+}: {
+  modo: Modo;
+  google: React.ReactNode;
+  /** Última escolha de "Lembrar de mim" (a página lê o cookie no servidor). */
+  lembrarInicial?: boolean;
+}) {
   const router = useRouter();
-  const [modo, setModo] = useState<Modo>("entrar");
+  const criando = modo === "criar";
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [confirmarSenha, setConfirmarSenha] = useState("");
   const [verSenha, setVerSenha] = useState(false);
+  const [lembrar, setLembrar] = useState(lembrarInicial);
   const [carregando, setCarregando] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: "erro" | "sucesso"; texto: string } | null>(
     null,
@@ -62,6 +72,16 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
   const [aguardandoConfirmacao, setAguardandoConfirmacao] = useState(false);
   const [reenviando, setReenviando] = useState(false);
   const { erros, formProps } = useValidacao();
+
+  // Criar conta volta ao padrão (lembrar): a tela de cadastro não tem a caixa.
+  useEffect(() => {
+    if (criando) salvarEscolhaLembrar(true);
+  }, [criando]);
+
+  function mudarLembrar(valor: boolean) {
+    setLembrar(valor);
+    salvarEscolhaLembrar(valor); // vale também para o botão do Google
+  }
 
   async function reenviarConfirmacao() {
     if (reenviando) return;
@@ -79,15 +99,10 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
     e.preventDefault();
     if (carregando) return;
     setMensagem(null);
+    setCarregando(true);
+    const supabase = createClient();
 
-    if (modo === "criar") {
-      if (senha !== confirmarSenha) {
-        setMensagem({ tipo: "erro", texto: "As senhas não coincidem." });
-        return;
-      }
-
-      setCarregando(true);
-      const supabase = createClient();
+    if (criando) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password: senha,
@@ -110,13 +125,11 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
       setAguardandoConfirmacao(true);
       setMensagem({
         tipo: "sucesso",
-        texto: `Conta criada. Enviamos um link para ${email}: clique nele para ativar a conta e depois entre aqui.`,
+        texto: `Conta criada. Enviamos um link para ${email}: clique nele para ativar a conta e depois entre por aqui.`,
       });
       return;
     }
 
-    setCarregando(true);
-    const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
     if (error) {
       setCarregando(false);
@@ -127,160 +140,119 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
     router.push("/dashboard");
   }
 
-  function trocarModo() {
-    setModo(modo === "criar" ? "entrar" : "criar");
-    setMensagem(null);
-    setAguardandoConfirmacao(false);
-  }
-
-  const criando = modo === "criar";
   const OlhoIcone = verSenha ? EyeOff : Eye;
+  const rotulo = "flex flex-col gap-2 text-sm font-semibold text-tinta";
 
-  function campoSenha(
-    campo: string,
-    rotulo: string,
-    valor: string,
-    aoMudar: (v: string) => void,
-    autoComplete: string,
-    placeholder: string,
-  ) {
-    return (
-      <label className="flex flex-col gap-1 text-sm font-medium text-slate-800">
-        {rotulo}
+  return (
+    <form {...formProps} onSubmit={handleSubmit} className="flex flex-col gap-[18px]">
+      {criando && (
+        <label className={rotulo}>
+          Nome completo
+          <input
+            type="text"
+            required
+            data-campo="nome"
+            data-obrigatorio="Informe seu nome."
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            autoComplete="name"
+            className="input min-h-12 font-normal"
+          />
+          <ErroCampo nome="nome" cliente={erros} />
+        </label>
+      )}
+
+      <label className={rotulo}>
+        E-mail
+        <input
+          type="email"
+          inputMode="email"
+          required
+          data-campo="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          placeholder="Seu e-mail"
+          className="input min-h-12 font-normal"
+        />
+        <ErroCampo nome="email" cliente={erros} />
+      </label>
+
+      <label className={rotulo}>
+        Senha
         <span className="relative">
           <input
             type={verSenha ? "text" : "password"}
             required
             minLength={6}
-            data-campo={campo}
+            data-campo="senha"
             data-obrigatorio="Informe a senha."
-            value={valor}
-            onChange={(e) => aoMudar(e.target.value)}
-            autoComplete={autoComplete}
-            placeholder={placeholder}
-            className="input pr-11"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            autoComplete={criando ? "new-password" : "current-password"}
+            placeholder={criando ? "Mínimo de 6 caracteres" : "Sua senha"}
+            className="input min-h-12 pr-12 font-normal"
           />
           <button
             type="button"
             onClick={() => setVerSenha(!verSenha)}
             aria-label={verSenha ? "Ocultar senha" : "Mostrar senha"}
             aria-pressed={verSenha}
-            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-600 hover:text-slate-900 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal-600"
+            className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-lg text-tinta-suave hover:text-tinta focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal-600"
           >
             <OlhoIcone className="size-5" aria-hidden />
           </button>
         </span>
-        <ErroCampo nome={campo} cliente={erros} />
+        <ErroCampo nome="senha" cliente={erros} />
       </label>
-    );
-  }
 
-  return (
-    <div className="flex flex-col gap-5">
-      <form {...formProps} onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {criando && (
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-800">
-            Nome completo
+      {!criando && (
+        <div className="flex flex-wrap items-center justify-between gap-x-3">
+          <label className="flex min-h-11 items-center gap-2 text-sm text-tinta-suave">
             <input
-              type="text"
-              required
-              data-campo="nome"
-              data-obrigatorio="Informe seu nome."
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              autoComplete="name"
-              className="input"
+              type="checkbox"
+              checked={lembrar}
+              onChange={(e) => mudarLembrar(e.target.checked)}
+              className="size-[18px] accent-tinta"
             />
-            <ErroCampo nome="nome" cliente={erros} />
+            Lembrar de mim
           </label>
-        )}
-
-        <label className="flex flex-col gap-1 text-sm font-medium text-slate-800">
-          E-mail
-          <input
-            type="email"
-            inputMode="email"
-            required
-            data-campo="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            placeholder="voce@exemplo.com"
-            className="input"
-          />
-          <ErroCampo nome="email" cliente={erros} />
-        </label>
-
-        <div className="flex flex-col gap-2">
-          {campoSenha(
-            "senha",
-            "Senha",
-            senha,
-            setSenha,
-            criando ? "new-password" : "current-password",
-            criando ? "Mínimo de 6 caracteres" : "Sua senha",
-          )}
-          {!criando && (
-            <Link href="/esqueci-senha" className={`self-end text-sm ${LINK}`}>
-              Esqueci minha senha
-            </Link>
-          )}
+          <Link href="/esqueci-senha" className={`flex min-h-11 items-center text-sm ${LINK_AUTH}`}>
+            Esqueci minha senha
+          </Link>
         </div>
+      )}
 
-        {criando &&
-          campoSenha(
-            "confirmar_senha",
-            "Confirmar senha",
-            confirmarSenha,
-            setConfirmarSenha,
-            "new-password",
-            "Repita a senha",
-          )}
-
-        {mensagem && (
-          <p
-            className={`alert ${mensagem.tipo === "erro" ? "alert-error" : "alert-success"}`}
-            role="alert"
-          >
-            {mensagem.texto}
-          </p>
-        )}
-        {aguardandoConfirmacao && (
-          <button
-            type="button"
-            onClick={reenviarConfirmacao}
-            disabled={reenviando}
-            className={`self-start text-sm ${LINK_SEM_SUBLINHADO}`}
-          >
-            {reenviando ? "Reenviando..." : "Não recebeu? Reenviar o link"}
-          </button>
-        )}
-
-        <button
-          type="submit"
-          disabled={carregando}
-          aria-busy={carregando}
-          className="btn btn-primary w-full"
+      {mensagem && (
+        <p
+          className={`alert ${mensagem.tipo === "erro" ? "alert-error" : "alert-success"}`}
+          role="alert"
         >
-          {carregando && <Loader2 className="size-4 animate-spin" aria-hidden />}
-          {carregando ? "Aguarde..." : criando ? "Criar conta" : "Entrar"}
+          {mensagem.texto}
+        </p>
+      )}
+      {aguardandoConfirmacao && (
+        <button
+          type="button"
+          onClick={reenviarConfirmacao}
+          disabled={reenviando}
+          className={`self-start text-sm ${LINK_AUTH}`}
+        >
+          {reenviando ? "Reenviando..." : "Não recebeu? Reenviar o link"}
         </button>
-      </form>
+      )}
 
-      <div className="flex items-center gap-3 text-sm text-slate-600">
-        <span className="h-px flex-1 bg-slate-200" />
-        ou
-        <span className="h-px flex-1 bg-slate-200" />
-      </div>
+      <button
+        type="submit"
+        disabled={carregando}
+        aria-busy={carregando}
+        className="btn mt-1 min-h-12 w-full bg-tinta font-display text-base font-semibold text-papel hover:bg-tinta-escura sm:min-h-12"
+      >
+        {carregando && <Loader2 className="size-4 animate-spin" aria-hidden />}
+        {carregando ? "Aguarde..." : criando ? "Criar conta grátis" : "Entrar"}
+      </button>
 
       {google}
-
-      <p className="text-center text-sm text-slate-600">
-        {criando ? "Já tem conta?" : "Ainda não tem conta?"}{" "}
-        <button type="button" onClick={trocarModo} className={`font-semibold ${LINK}`}>
-          {criando ? "Entrar" : "Criar conta grátis"}
-        </button>
-      </p>
-    </div>
+    </form>
   );
 }

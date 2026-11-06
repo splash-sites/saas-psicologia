@@ -225,6 +225,8 @@ try {
     const pLogin = await ctx.newPage();
     await pLogin.goto(`${BASE}/login`, { waitUntil: "networkidle", timeout: 60_000 });
     await pLogin.screenshot({ path: `${OUT}/${vp.nome}-login.png`, fullPage: true });
+    await pLogin.goto(`${BASE}/cadastro`, { waitUntil: "networkidle", timeout: 60_000 });
+    await pLogin.screenshot({ path: `${OUT}/${vp.nome}-cadastro.png`, fullPage: true });
     await pLogin.close();
 
     await ctx.addCookies(cookies);

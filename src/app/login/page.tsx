@@ -1,14 +1,11 @@
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { cookies } from "next/headers";
+import { COOKIE_LEMBRAR, lembrarDoValor } from "@/lib/supabase/lembrar";
 import { LoginButton } from "./LoginButton";
 import { EmailLoginForm } from "./EmailLoginForm";
-import { Logo } from "@/components/Logo";
+import { LINK_AUTH, TelaAuth } from "@/components/TelaAuth";
 
 export const metadata = { title: "Entrar" };
-
-// Links do rodapé: contraste AA e foco visível.
-const LINK_RODAPE =
-  "rounded font-medium text-teal-700 hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600";
 
 export default async function LoginPage({
   searchParams,
@@ -16,58 +13,59 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const lembrarInicial = lembrarDoValor((await cookies()).get(COOKIE_LEMBRAR)?.value);
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="card flex w-full max-w-sm flex-col gap-6 p-6 sm:p-8">
-        <div className="flex flex-col gap-3">
-          <h1>
-            <Logo className="h-10 w-auto" />
-          </h1>
-          <p className="text-sm text-slate-600">
-            Agenda, prontuário e financeiro do seu consultório em um só lugar.
+    <TelaAuth
+      titulo="Boas-vindas de volta"
+      subtitulo="Entre para ver a agenda do dia."
+      painel={{
+        titulo: "Seu consultório, organizado.",
+        texto: "Agenda, prontuário e financeiro em um só lugar.",
+      }}
+      rodape={
+        <>
+          <p className="text-[15px] text-tinta-suave">
+            Ainda não tem conta?{" "}
+            <Link href="/cadastro" className={LINK_AUTH}>
+              Criar conta grátis
+            </Link>
           </p>
-        </div>
-
-        {error && (
-          <p className="alert alert-error" role="alert">
-            {error === "link" ? (
-              <>
-                O link expirou ou já foi usado. Para trocar a senha, peça um
-                novo em{" "}
-                <Link href="/esqueci-senha" className="underline">
-                  Esqueci minha senha
-                </Link>
-                .
-              </>
-            ) : (
-              "Não foi possível entrar. Tente novamente."
-            )}
-          </p>
-        )}
-
-        <EmailLoginForm
-          google={<LoginButton clientId={process.env.GOOGLE_OAUTH_CLIENT_ID ?? ""} />}
-        />
-
-        <div className="flex flex-col gap-2 border-t border-slate-200 pt-4 text-center text-xs text-slate-600">
-          <p className="flex items-center justify-center gap-1.5 font-medium text-slate-700">
-            <Lock className="size-3.5" aria-hidden />
-            Seus dados ficam protegidos com criptografia e acesso restrito
-          </p>
-          <p>
-            Ao continuar, você concorda com os{" "}
-            <Link href="/termos" className={LINK_RODAPE}>
+          {/* Links para os Termos e a Privacidade: a verificação do Google confere
+              que as páginas do app levam à política de privacidade. O aceite em
+              si fica no cadastro. */}
+          <p className="text-xs text-tinta-suave">
+            <Link href="/termos" className="hover:underline">
               Termos de Uso
             </Link>{" "}
-            e a{" "}
-            <Link href="/privacidade" className={LINK_RODAPE}>
-              Política de Privacidade
+            ·{" "}
+            <Link href="/privacidade" className="hover:underline">
+              Privacidade
             </Link>
-            .
           </p>
-        </div>
-      </div>
-    </main>
+        </>
+      }
+    >
+      {error && (
+        <p className="alert alert-error" role="alert">
+          {error === "link" ? (
+            <>
+              O link expirou ou já foi usado. Para trocar a senha, peça um novo em{" "}
+              <Link href="/esqueci-senha" className="underline">
+                Esqueci minha senha
+              </Link>
+              .
+            </>
+          ) : (
+            "Não foi possível entrar. Tente novamente."
+          )}
+        </p>
+      )}
+      <EmailLoginForm
+        modo="entrar"
+        lembrarInicial={lembrarInicial}
+        google={<LoginButton clientId={process.env.GOOGLE_OAUTH_CLIENT_ID ?? ""} />}
+      />
+    </TelaAuth>
   );
 }

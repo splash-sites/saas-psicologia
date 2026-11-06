@@ -81,7 +81,7 @@ export function LoginButton({ clientId }: { clientId: string }) {
         onClick={entrar}
         disabled={!pronto || carregando}
         aria-busy={carregando}
-        className={`${googleSans.className} flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-[#747775] bg-white px-3 text-sm leading-5 font-medium text-[#1F1F1F] transition-colors hover:bg-[#F8FAFF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 disabled:cursor-wait`}
+        className={`${googleSans.className} flex h-12 w-full items-center justify-center gap-2.5 rounded-lg border border-[#747775] bg-white px-3 text-sm leading-5 font-medium text-[#1F1F1F] transition-colors hover:bg-[#F8FAFF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 disabled:cursor-wait`}
       >
         <LogoGoogle />
         <span>Continuar com o Google</span>
