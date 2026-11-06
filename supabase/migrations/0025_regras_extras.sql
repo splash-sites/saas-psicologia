@@ -6,7 +6,8 @@
 --   3. data de nascimento não pode ser no futuro (dia de Brasília).
 --
 -- No cloud, ANTES de aplicar, rode esta consulta no SQL Editor (só leitura).
--- Zero linhas = pode aplicar. Se aparecer algo, corrija e rode de novo:
+-- Zero linhas = pode aplicar. Se aparecer algo, corrija e rode de novo
+-- (exceção: CPF inválido antigo não impede — ver o item 3 abaixo):
 --
 --   select 'pagamento pendente com data de pagamento' problema, id
 --   from public.pagamentos where status = 'pendente' and data_pagamento is not null
@@ -56,22 +57,30 @@ begin
 end;
 $$;
 
-alter table public.pacientes
-  drop constraint if exists pacientes_cpf_valido;
-alter table public.pacientes
-  add constraint pacientes_cpf_valido
-    check (cpf is null or public.cpf_valido(cpf)) not valid;
-alter table public.pacientes
-  validate constraint pacientes_cpf_valido;
-
--- 3. Nascimento no futuro: trigger (CHECK não pode depender de "hoje").
--- Só confere quando a data muda, para não travar a edição de outros campos.
-create or replace function public.validar_nascimento_paciente()
+-- 3. Nascimento no futuro.
+--
+-- CPF e nascimento num trigger (não CHECK), conferidos só quando o campo é
+-- gravado ou alterado. Motivo: o Postgres confere uma CHECK em qualquer UPDATE
+-- da linha — em produção (2026-11-06) havia 1 paciente ativo de uma cliente
+-- com CPF de dígito inválido, gravado antes da checagem no Zod; com CHECK, a
+-- psicóloga não conseguiria nem arquivar esse paciente. Não mexemos em dado de
+-- paciente sem ela; o CPF é corrigido na próxima vez que ela editar o cadastro
+-- (o formulário já exige). A CHECK de formato da 0013 (11 dígitos) continua.
+-- "Hoje" no nascimento também impede CHECK (precisa ser imutável).
+-- O nome começa com "pacientes_validar" para rodar depois de
+-- "pacientes_normalizar" (triggers rodam em ordem alfabética): CPF já em dígitos.
+create or replace function public.validar_paciente()
 returns trigger
 language plpgsql
 set search_path = public
 as $$
 begin
+  if new.cpf is not null
+     and (tg_op = 'INSERT' or new.cpf is distinct from old.cpf)
+     and not public.cpf_valido(new.cpf) then
+    raise exception 'CPF inválido'
+      using errcode = 'check_violation';
+  end if;
   if new.data_nascimento is not null
      and (tg_op = 'INSERT' or new.data_nascimento is distinct from old.data_nascimento)
      and new.data_nascimento > (now() at time zone 'America/Sao_Paulo')::date then
@@ -82,7 +91,7 @@ begin
 end;
 $$;
 
-drop trigger if exists pacientes_validar_nascimento on public.pacientes;
-create trigger pacientes_validar_nascimento
+drop trigger if exists pacientes_validar on public.pacientes;
+create trigger pacientes_validar
   before insert or update on public.pacientes
-  for each row execute function public.validar_nascimento_paciente();
+  for each row execute function public.validar_paciente();
