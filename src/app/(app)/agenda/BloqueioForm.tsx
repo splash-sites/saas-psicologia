@@ -6,6 +6,7 @@ import { useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
 import Link from "next/link";
 import type { FormState } from "./actions";
+import { LIMITES } from "@/lib/limites";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -66,6 +67,7 @@ export function BloqueioForm({ action }: Props) {
         Motivo
         <input
           name="motivo"
+          maxLength={LIMITES.bloqueio.motivo}
           placeholder="Férias, almoço, compromisso pessoal..."
           className="input"
         />

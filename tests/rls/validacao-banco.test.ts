@@ -70,13 +70,16 @@ describe.skipIf(!hasLocalSupabase)("Banco: validação e padronização", () => 
       { data_referencia: "1900-01-01" },
       { vencimento: "2999-12-31" },
       { forma_pagamento: "z".repeat(61) },
+      { forma_pagamento: "Pix" }, // fora da lista fixa (0024): só códigos
+      { status: "pendente", data_pagamento: "2026-03-10" }, // 0025
       { observacoes: "o".repeat(2001) },
     ];
     for (const extra of casos) {
       const { error } = await c.from("pagamentos").insert({ ...base, ...extra });
       expect(error, JSON.stringify(extra).slice(0, 80)).not.toBeNull();
     }
-    const { error: ok } = await c.from("pagamentos").insert({ ...base, forma_pagamento: "  Pix  " });
+    // Espaços em volta são limpos pelo trigger antes da CHECK da lista.
+    const { error: ok } = await c.from("pagamentos").insert({ ...base, forma_pagamento: "  pix  " });
     expect(ok).toBeNull();
   });
 

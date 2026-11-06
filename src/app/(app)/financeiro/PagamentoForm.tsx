@@ -10,6 +10,8 @@ import type { ConsultaDisponivel } from "@/lib/financeiro/consultasDisponiveis";
 import { dataBR, dataChaveBR, hojeBR, horaBR } from "@/lib/agenda/datas";
 import { PacienteSelect } from "@/components/PacienteSelect";
 import type { FormState } from "./actions";
+import { SelectFormaPagamento } from "./SelectFormaPagamento";
+import { LIMITES } from "@/lib/limites";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -102,6 +104,7 @@ export function PagamentoForm({
           Valor (R$) *
           <input
             name="valor"
+            max={LIMITES.pagamento.valorMax}
             data-obrigatorio="Informe o valor."
             type="number"
             step="0.01"
@@ -182,18 +185,14 @@ export function PagamentoForm({
 
       <label className="flex flex-col gap-1 text-sm">
         {recebido ? "Forma de pagamento" : "Forma de pagamento prevista"}
-        <input
-          name="forma_pagamento"
-          placeholder="Pix, dinheiro, cartão..."
-          defaultValue={pagamento?.forma_pagamento ?? ""}
-          className="input"
-        />
+        <SelectFormaPagamento defaultValue={pagamento?.forma_pagamento} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
         Observações
         <textarea
           name="observacoes"
+          maxLength={LIMITES.pagamento.observacoes}
           rows={2}
           defaultValue={pagamento?.observacoes ?? ""}
           className="input"

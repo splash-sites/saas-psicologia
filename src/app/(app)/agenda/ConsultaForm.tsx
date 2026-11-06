@@ -13,6 +13,7 @@ import {
 } from "@/lib/agenda/types";
 import { PacienteSelect } from "@/components/PacienteSelect";
 import type { FormState } from "./actions";
+import { LIMITES } from "@/lib/limites";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -74,8 +75,8 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
             name="duracao_min"
             type="number"
             defaultValue={50}
-            min={15}
-            max={480}
+            min={LIMITES.consulta.duracaoMin}
+            max={LIMITES.consulta.duracaoMax}
             step={5}
             data-faixa="A duração vai de 15 a 480 minutos (8 horas)."
             data-passo="Use múltiplos de 5 minutos (ex.: 45, 50, 60)."
@@ -123,7 +124,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
               type="number"
               defaultValue={4}
               min={2}
-              max={52}
+              max={LIMITES.consulta.ocorrenciasMax}
               data-faixa="Escolha de 2 a 52 ocorrências (até 1 ano de consultas semanais)."
               className="input"
             />
@@ -136,6 +137,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
         Observações
         <textarea
           name="observacoes"
+          maxLength={LIMITES.consulta.observacoes}
           rows={2}
           className="input"
         />

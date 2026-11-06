@@ -2,6 +2,9 @@ import { z } from "zod";
 import { PACIENTE_STATUS } from "./types";
 import { capitalizarNome } from "./formatacao";
 import { validarCpfCnpj } from "@/lib/assinatura/cpfCnpj";
+import { LIMITES } from "@/lib/limites";
+
+const L = LIMITES.paciente;
 
 // Normaliza strings de formulário: "" (campo vazio) vira undefined.
 const optionalText = z
@@ -26,10 +29,10 @@ function hojeISO(): string {
 }
 
 export const pacienteSchema = z.object({
-  nome: z.string().trim().min(1, "Nome é obrigatório").max(200, "Máximo de 200 caracteres").transform(capitalizarNome),
+  nome: z.string().trim().min(1, "Nome é obrigatório").max(L.nome, `Máximo de ${L.nome} caracteres`).transform(capitalizarNome),
   email: optionalText
     .transform((v) => v?.toLowerCase())
-    .pipe(z.string().max(254, "E-mail longo demais").email("E-mail inválido").optional()),
+    .pipe(z.string().max(L.email, "E-mail longo demais").email("E-mail inválido").optional()),
   telefone: optionalText
     .transform((v) => (v === undefined ? undefined : telefoneNacional(v)))
     .pipe(z.string().regex(/^\d{10,11}$/, "Telefone inválido. Use DDD + número").optional()),
@@ -48,9 +51,9 @@ export const pacienteSchema = z.object({
         .refine((v) => validarCpfCnpj(v).tipo === "cpf", "CPF inválido")
         .optional(),
     ),
-  endereco: optionalText.pipe(z.string().max(300, "Máximo de 300 caracteres").optional()),
+  endereco: optionalText.pipe(z.string().max(L.endereco, `Máximo de ${L.endereco} caracteres`).optional()),
   status: z.enum(PACIENTE_STATUS).default("ativo"),
-  observacoes: optionalText.pipe(z.string().max(5000, "Máximo de 5000 caracteres").optional()),
+  observacoes: optionalText.pipe(z.string().max(L.observacoes, `Máximo de ${L.observacoes} caracteres`).optional()),
   // Checkbox de formulário: marcado envia "on", desmarcado não envia nada.
   aceita_lembretes: z.preprocess(
     (v) => v === "on" || v === "true" || v === true,
@@ -60,7 +63,7 @@ export const pacienteSchema = z.object({
 
 export type PacienteInput = z.infer<typeof pacienteSchema>;
 
-const textoLongo = optionalText.pipe(z.string().max(20000, "Máximo de 20000 caracteres").optional());
+const textoLongo = optionalText.pipe(z.string().max(LIMITES.textoClinico, `Máximo de ${LIMITES.textoClinico} caracteres`).optional());
 
 export const anamneseSchema = z.object({
   demanda: textoLongo,

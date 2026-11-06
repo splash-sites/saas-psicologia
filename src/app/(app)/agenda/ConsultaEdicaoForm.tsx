@@ -12,6 +12,7 @@ import {
   CONSULTA_STATUS_LABEL,
 } from "@/lib/agenda/types";
 import type { FormState } from "./actions";
+import { LIMITES } from "@/lib/limites";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -73,8 +74,8 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
             data-obrigatorio="Informe a duração."
             type="number"
             defaultValue={defaults.duracao_min}
-            min={15}
-            max={480}
+            min={LIMITES.consulta.duracaoMin}
+            max={LIMITES.consulta.duracaoMax}
             step={5}
             data-faixa="A duração vai de 15 a 480 minutos (8 horas)."
             data-passo="Use múltiplos de 5 minutos (ex.: 45, 50, 60)."
@@ -120,6 +121,7 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
         Observações
         <textarea
           name="observacoes"
+          maxLength={LIMITES.consulta.observacoes}
           rows={2}
           defaultValue={defaults.observacoes ?? ""}
           className="input"

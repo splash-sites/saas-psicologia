@@ -10,6 +10,7 @@ import type { Paciente } from "@/lib/pacientes/types";
 import { capitalizarNome, formatarTelefoneBR, formatarCpf } from "@/lib/pacientes/formatacao";
 import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 import type { FormState } from "./actions";
+import { LIMITES } from "@/lib/limites";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -51,6 +52,7 @@ export function PacienteForm({
         Nome *
         <input
           name="nome"
+          maxLength={LIMITES.paciente.nome}
           data-obrigatorio="Informe o nome do paciente."
           required
           value={nome}
@@ -66,6 +68,7 @@ export function PacienteForm({
           E-mail
           <input
             name="email"
+            maxLength={LIMITES.paciente.email}
             type="email"
             defaultValue={paciente?.email ?? ""}
             className="input"
@@ -117,6 +120,7 @@ export function PacienteForm({
         Endereço
         <input
           name="endereco"
+          maxLength={LIMITES.paciente.endereco}
           defaultValue={paciente?.endereco ?? ""}
           className="input"
         />
@@ -142,6 +146,7 @@ export function PacienteForm({
         Observações
         <textarea
           name="observacoes"
+          maxLength={LIMITES.paciente.observacoes}
           rows={3}
           defaultValue={paciente?.observacoes ?? ""}
           className="input"

@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { CONSULTA_STATUS, MODALIDADES, RECORRENCIAS } from "./types";
+import { LIMITES } from "@/lib/limites";
+
+const C = LIMITES.consulta;
 
 const dataStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
 const horaStr = z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida");
@@ -9,14 +12,14 @@ export const consultaSchema = z
     paciente_id: z.string().uuid("Selecione um paciente"),
     data: dataStr,
     hora: horaStr,
-    duracao_min: z.coerce.number().int().min(15).max(480),
+    duracao_min: z.coerce.number().int().min(C.duracaoMin).max(C.duracaoMax),
     modalidade: z.enum(MODALIDADES),
     recorrencia: z.enum(RECORRENCIAS).default("nenhuma"),
-    ocorrencias: z.coerce.number().int().min(1).max(52).default(1),
+    ocorrencias: z.coerce.number().int().min(1).max(C.ocorrenciasMax).default(1),
     observacoes: z
       .string()
       .trim()
-      .max(2000, "Máximo de 2000 caracteres")
+      .max(C.observacoes, `Máximo de ${C.observacoes} caracteres`)
       .transform((v) => (v === "" ? undefined : v))
       .optional(),
   })
@@ -31,13 +34,13 @@ export type ConsultaInput = z.infer<typeof consultaSchema>;
 export const consultaEdicaoSchema = z.object({
   data: dataStr,
   hora: horaStr,
-  duracao_min: z.coerce.number().int().min(15).max(480),
+  duracao_min: z.coerce.number().int().min(C.duracaoMin).max(C.duracaoMax),
   modalidade: z.enum(MODALIDADES),
   status: z.enum(CONSULTA_STATUS),
   observacoes: z
     .string()
     .trim()
-    .max(2000, "Máximo de 2000 caracteres")
+    .max(C.observacoes, `Máximo de ${C.observacoes} caracteres`)
     .transform((v) => (v === "" ? undefined : v))
     .optional(),
 });
@@ -52,7 +55,7 @@ export const bloqueioSchema = z
     motivo: z
       .string()
       .trim()
-      .max(200, "Máximo de 200 caracteres")
+      .max(LIMITES.bloqueio.motivo, `Máximo de ${LIMITES.bloqueio.motivo} caracteres`)
       .transform((v) => (v === "" ? undefined : v))
       .optional(),
   })

@@ -11,6 +11,7 @@ import {
 } from "@/lib/lembretes/template";
 import type { FormState } from "./actions";
 import { useLinkAtendimento } from "./LinkAtendimentoContext";
+import { LIMITES } from "@/lib/limites";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -73,8 +74,8 @@ export function PreferenciasLembreteForm({
         <input
           name="antecedencia_horas"
           type="number"
-          min={1}
-          max={168}
+          min={LIMITES.lembrete.antecedenciaMin}
+          max={LIMITES.lembrete.antecedenciaMax}
           data-faixa="Escolha de 1 a 168 horas (até 7 dias antes da consulta)."
           defaultValue={defaults.antecedencia_horas}
           className="input w-28"
@@ -89,6 +90,7 @@ export function PreferenciasLembreteForm({
         Mensagem do lembrete no WhatsApp
         <textarea
           name="mensagem_template"
+          maxLength={LIMITES.lembrete.mensagem}
           rows={4}
           value={template}
           onChange={(e) => setTemplate(e.target.value)}

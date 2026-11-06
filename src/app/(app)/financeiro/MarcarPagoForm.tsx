@@ -5,6 +5,7 @@ import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import { useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
 import { hojeBR } from "@/lib/agenda/datas";
+import { SelectFormaPagamento } from "./SelectFormaPagamento";
 import type { FormState } from "./actions";
 
 export function MarcarPagoForm({
@@ -55,12 +56,7 @@ export function MarcarPagoForm({
       </label>
       <label className="flex flex-col gap-1 text-xs">
         Forma
-        <input
-          name="forma_pagamento"
-          placeholder="Pix, dinheiro..."
-          defaultValue={formaPadrao ?? ""}
-          className="input w-auto"
-        />
+        <SelectFormaPagamento defaultValue={formaPadrao} className="input w-auto" />
       </label>
       <button
         type="submit"

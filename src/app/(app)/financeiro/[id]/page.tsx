@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import { formatarBRL, statusExibicao, type Pagamento } from "@/lib/financeiro/types";
+import { formatarBRL, rotuloFormaPagamento, statusExibicao, type Pagamento } from "@/lib/financeiro/types";
 import { StatusBadge } from "../StatusBadge";
 import { MarcarPagoForm } from "../MarcarPagoForm";
 import { marcarComoPago, desmarcarComoPago, arquivarPagamento } from "../actions";
@@ -60,7 +60,7 @@ export default async function PagamentoDetailPage({
         <Item rotulo="Referente a" valor={dataBR(p.data_referencia)} />
         <Item rotulo="Vencimento" valor={dataBR(p.vencimento)} />
         <Item rotulo="Data do pagamento" valor={dataBR(p.data_pagamento)} />
-        <Item rotulo="Forma de pagamento" valor={p.forma_pagamento ?? "—"} />
+        <Item rotulo="Forma de pagamento" valor={rotuloFormaPagamento(p.forma_pagamento) ?? "—"} />
       </dl>
 
       {p.observacoes && (

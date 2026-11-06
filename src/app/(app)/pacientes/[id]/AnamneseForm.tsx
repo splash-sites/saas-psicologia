@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import type { Anamnese } from "@/lib/pacientes/types";
 import type { FormState } from "../actions";
+import { LIMITES } from "@/lib/limites";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -28,6 +29,7 @@ export function AnamneseForm({ action, anamnese }: Props) {
         Demanda / queixa inicial
         <textarea
           name="demanda"
+          maxLength={LIMITES.textoClinico}
           rows={3}
           defaultValue={anamnese?.demanda ?? ""}
           className="input"
@@ -38,6 +40,7 @@ export function AnamneseForm({ action, anamnese }: Props) {
         Objetivos do trabalho
         <textarea
           name="objetivos"
+          maxLength={LIMITES.textoClinico}
           rows={3}
           defaultValue={anamnese?.objetivos ?? ""}
           className="input"
@@ -48,6 +51,7 @@ export function AnamneseForm({ action, anamnese }: Props) {
         Histórico relevante
         <textarea
           name="historico"
+          maxLength={LIMITES.textoClinico}
           rows={4}
           defaultValue={anamnese?.historico ?? ""}
           className="input"

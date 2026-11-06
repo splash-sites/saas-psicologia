@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { gerarCsv, type Coluna } from "@/lib/exportacao/csv";
 import { dataBRCompleta, dataHoraBR } from "@/lib/exportacao/datas";
+import { formatarCpf, formatarTelefoneBR } from "@/lib/pacientes/formatacao";
+import { rotuloFormaPagamento } from "@/lib/financeiro/types";
 
 // Exportação de TODOS os dados da conta (portabilidade/LGPD e guarda de 5 anos
 // do prontuário): um ZIP com um CSV por tabela. Usa o client da própria
@@ -86,9 +88,9 @@ export async function GET() {
       { titulo: "ID do paciente", valor: txt("id") },
       { titulo: "Nome", valor: txt("nome") },
       { titulo: "E-mail", valor: txt("email") },
-      { titulo: "Telefone", valor: txt("telefone") },
+      { titulo: "Telefone", valor: (l) => (l.telefone ? formatarTelefoneBR(l.telefone as string) : null) },
       { titulo: "Data de nascimento", valor: data("data_nascimento") },
-      { titulo: "CPF", valor: txt("cpf") },
+      { titulo: "CPF", valor: (l) => (l.cpf ? formatarCpf(l.cpf as string) : null) },
       { titulo: "Endereço", valor: txt("endereco") },
       { titulo: "Status", valor: txt("status") },
       { titulo: "Aceita lembretes", valor: (l) => l.aceita_lembretes as boolean },
@@ -142,7 +144,7 @@ export async function GET() {
       { titulo: "Referência", valor: data("data_referencia") },
       { titulo: "Vencimento", valor: data("vencimento") },
       { titulo: "Pago em", valor: data("data_pagamento") },
-      { titulo: "Forma de pagamento", valor: txt("forma_pagamento") },
+      { titulo: "Forma de pagamento", valor: (l) => rotuloFormaPagamento(l.forma_pagamento as string | null) },
       { titulo: "Observações", valor: txt("observacoes") },
       { titulo: "Arquivado em", valor: dataHora("deleted_at") },
     ],

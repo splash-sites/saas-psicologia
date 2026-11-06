@@ -8,6 +8,7 @@ import Link from "next/link";
 import { CAMPOS_EVOLUCAO, type Evolucao } from "@/lib/prontuario/types";
 import { hojeBR } from "@/lib/agenda/datas";
 import type { FormState } from "./actions";
+import { LIMITES } from "@/lib/limites";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -72,6 +73,7 @@ export function EvolucaoForm({
           <span className="text-xs text-slate-500">{campo.ajuda}</span>
           <textarea
             name={campo.nome}
+            maxLength={LIMITES.textoClinico}
             rows={4}
             required
             data-obrigatorio={`Preencha “${campo.rotulo}”.`}
@@ -90,6 +92,7 @@ export function EvolucaoForm({
         </span>
         <textarea
           name="notas_privadas"
+          maxLength={LIMITES.textoClinico}
           rows={3}
           defaultValue={evolucao?.notas_privadas ?? ""}
           className="input mt-1"

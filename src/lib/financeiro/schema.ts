@@ -1,4 +1,12 @@
 import { z } from "zod";
+import { LIMITES } from "@/lib/limites";
+import { FORMAS_PAGAMENTO } from "./types";
+
+// Vazio = não informada.
+const formaPagamento = z
+  .enum(FORMAS_PAGAMENTO, { message: "Escolha uma forma de pagamento da lista" })
+  .optional()
+  .or(z.literal("").transform(() => undefined));
 
 const dataStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
 
@@ -23,21 +31,16 @@ export const pagamentoSchema = z
     valor: z.coerce
       .number()
       .positive("Informe um valor maior que zero")
-      .max(100000, "Valor acima do limite (R$ 100.000)"),
+      .max(LIMITES.pagamento.valorMax, "Valor acima do limite (R$ 100.000)"),
     situacao: z.enum(["recebido", "a_receber"]).default("recebido"),
     data_referencia: dataStr,
     data_pagamento: dataOpcional,
     vencimento: dataOpcional,
-    forma_pagamento: z
-      .string()
-      .trim()
-      .max(60)
-      .transform((v) => (v === "" ? undefined : v))
-      .optional(),
+    forma_pagamento: formaPagamento,
     observacoes: z
       .string()
       .trim()
-      .max(2000)
+      .max(LIMITES.pagamento.observacoes)
       .transform((v) => (v === "" ? undefined : v))
       .optional(),
   })
@@ -77,10 +80,5 @@ export type PagamentoInput = z.output<typeof pagamentoSchema>;
 
 export const marcarPagoSchema = z.object({
   data_pagamento: dataStr,
-  forma_pagamento: z
-    .string()
-    .trim()
-    .max(60)
-    .transform((v) => (v === "" ? undefined : v))
-    .optional(),
+  forma_pagamento: formaPagamento,
 });

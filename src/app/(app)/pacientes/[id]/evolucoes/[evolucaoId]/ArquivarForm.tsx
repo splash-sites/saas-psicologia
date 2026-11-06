@@ -5,6 +5,7 @@ import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import { useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
 import type { FormState } from "../actions";
+import { LIMITES } from "@/lib/limites";
 
 export function ArquivarForm({
   action,
@@ -41,6 +42,7 @@ export function ArquivarForm({
       )}
       <input
         name="motivo"
+        maxLength={LIMITES.evolucao.motivoArquivamento}
         required
         minLength={3}
         placeholder="Ex.: registro duplicado, erro de digitação corrigido em nova evolução"
