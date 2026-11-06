@@ -4,6 +4,7 @@ import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Anamnese, Paciente } from "@/lib/pacientes/types";
 import type { Evolucao } from "@/lib/prontuario/types";
 import { gerarProntuarioPdf } from "@/lib/exportacao/prontuarioPdf";
+import { registrarExportacao, respostaLimiteExportacao } from "@/lib/exportacao/limite";
 
 // Download do prontuário de um paciente em PDF. Client da própria psicóloga:
 // o RLS garante que paciente de outra conta dá 404. Funciona com a assinatura
@@ -31,6 +32,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   const supabase = await createClient();
+  if (!(await registrarExportacao(supabase, "prontuario", id))) return respostaLimiteExportacao();
+
   const [{ data: paciente }, { data: psicologa }, { data: anamnese }, { data: evolucoes, error }] =
     await Promise.all([
       supabase.from("pacientes").select("*").eq("id", id).maybeSingle(),

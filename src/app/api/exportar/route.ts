@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { gerarCsv, type Coluna } from "@/lib/exportacao/csv";
+import { registrarExportacao, respostaLimiteExportacao } from "@/lib/exportacao/limite";
 import { dataBRCompleta, dataHoraBR } from "@/lib/exportacao/datas";
 import { formatarCpf, formatarTelefoneBR } from "@/lib/pacientes/formatacao";
 import { rotuloFormaPagamento } from "@/lib/financeiro/types";
@@ -63,6 +64,7 @@ export async function GET() {
   const supabase = await createClient();
   const user = await usuarioAtual();
   if (!user) return NextResponse.json({ error: "não autenticado" }, { status: 401 });
+  if (!(await registrarExportacao(supabase, "conta"))) return respostaLimiteExportacao();
 
   let tabelas: Record<string, Linha[]>;
   try {
