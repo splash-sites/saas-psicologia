@@ -74,7 +74,7 @@ export default async function ConsultaDetailPage({
             <dd>
               <Link
                 href={`/pacientes/${c.pacientes.id}`}
-                className="underline"
+                className="font-medium text-teal-700 hover:text-teal-800"
               >
                 {c.pacientes.nome}
               </Link>
@@ -116,7 +116,7 @@ export default async function ConsultaDetailPage({
                 href={link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-700 underline break-all"
+                className="text-blue-700 hover:text-blue-800 break-all"
               >
                 {link}
               </a>
@@ -130,7 +130,7 @@ export default async function ConsultaDetailPage({
           ) : (
             <p className="text-slate-500">
               Sem link de atendimento online.{" "}
-              <Link href="/configuracoes" className="underline">
+              <Link href="/configuracoes" className="font-medium text-teal-700 hover:text-teal-800">
                 Cadastre o seu em Configurações
               </Link>
               .
@@ -157,7 +157,7 @@ export default async function ConsultaDetailPage({
               : ""}
           </span>
           {c.sync_status === "desativada" && (
-            <Link href="/configuracoes" className="text-xs underline">
+            <Link href="/configuracoes" className="text-xs font-medium text-teal-700 hover:text-teal-800">
               Ir para Configurações
             </Link>
           )}
@@ -174,13 +174,13 @@ export default async function ConsultaDetailPage({
       {c.status !== "cancelada" && (
         <div className="flex flex-wrap gap-3 border-t pt-4">
           <form action={cancelarConsulta.bind(null, id, "esta")}>
-            <button className="text-sm text-red-600 hover:underline">
+            <button className="text-sm text-red-600 hover:opacity-80">
               Cancelar esta consulta
             </button>
           </form>
           {c.serie_id && (
             <form action={cancelarConsulta.bind(null, id, "serie")}>
-              <button className="text-sm text-red-600 hover:underline">
+              <button className="text-sm text-red-600 hover:opacity-80">
                 Cancelar esta e as próximas da série
               </button>
             </form>

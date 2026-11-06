@@ -13,6 +13,7 @@ import {
   minutosNoDiaBR,
 } from "@/lib/agenda/grade";
 import { horaBR } from "@/lib/agenda/datas";
+import { NaAlturaDeAgora } from "@/components/Relogio";
 import { BLOCO_ESTADO, HACHURA_BLOQUEIO } from "./estilos";
 import {
   agendaHref,
@@ -60,8 +61,6 @@ export function GradeSemana({
     return { top: px(a) + 1, height: Math.max(px(b) - px(a) - 3, 22) };
   };
 
-  const agoraMin = minutosNoDiaBR(agoraISO);
-  const mostrarAgora = agoraMin >= minIni && agoraMin < minFim;
   const cols = `3.5rem repeat(${dias.length}, minmax(0, 1fr))`;
 
   return (
@@ -120,13 +119,16 @@ export function GradeSemana({
               {String(h).padStart(2, "0")}:00
             </span>
           ))}
-          {mostrarAgora && dias.includes(hoje) && (
-            <span
+          {dias.includes(hoje) && (
+            <NaAlturaDeAgora
+              inicialISO={agoraISO}
+              minIni={minIni}
+              minFim={minFim}
+              horaPx={HORA_PX}
+              ajuste={-8}
+              rotulo
               className="absolute right-1 z-30 rounded bg-red-600 px-1 text-[11px] font-bold text-white"
-              style={{ top: px(agoraMin) - 8 }}
-            >
-              {horaBR(agoraISO)}
-            </span>
+            />
           )}
         </div>
 
@@ -224,15 +226,18 @@ export function GradeSemana({
                 );
               })}
 
-              {ehHoje && mostrarAgora && (
-                <div
+              {ehHoje && (
+                <NaAlturaDeAgora
+                  inicialISO={agoraISO}
+                  minIni={minIni}
+                  minFim={minFim}
+                  horaPx={HORA_PX}
+                  ajuste={-1}
                   className="pointer-events-none absolute inset-x-0 z-30"
-                  style={{ top: px(agoraMin) - 1 }}
-                  aria-hidden
                 >
                   <div className="h-0.5 bg-red-600" />
                   <div className="absolute -left-1 -top-1 size-2.5 rounded-full bg-red-600" />
-                </div>
+                </NaAlturaDeAgora>
               )}
             </div>
           );

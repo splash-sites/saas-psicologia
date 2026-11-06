@@ -4,6 +4,7 @@ import { ESTADO_VISUAL_LABEL } from "@/lib/agenda/grade";
 import { horaBR, dataLongaBR, BR_OFFSET } from "@/lib/agenda/datas";
 import { estadoSessao, meetEmDestaque } from "@/lib/agenda/estado";
 import { MODALIDADE_LABEL } from "@/lib/agenda/types";
+import { HoraAgora } from "@/components/Relogio";
 import { BLOCO_ESTADO, HACHURA_BLOQUEIO } from "./estilos";
 import { IconesConsulta } from "./GradeSemana";
 import {
@@ -116,7 +117,7 @@ export function DiaLista({
               return (
                 <li key="agora" className="flex items-center gap-2" aria-label="Agora">
                   <span className="w-12 shrink-0 rounded bg-red-600 text-center text-[11px] font-bold text-white">
-                    {horaBR(agoraISO)}
+                    <HoraAgora inicialISO={agoraISO} />
                   </span>
                   <span className="h-0.5 flex-1 bg-red-600" />
                 </li>

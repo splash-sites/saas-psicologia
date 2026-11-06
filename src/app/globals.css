@@ -25,6 +25,27 @@
   ::file-selector-button {
     border-color: var(--color-slate-200);
   }
+
+  /* Tailwind v4 tirou o cursor de mãozinha dos botões (preflight usa
+     cursor: default). Tudo que é clicável volta a mostrar a mãozinha. */
+  button,
+  [role="button"],
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  [type="checkbox"],
+  [type="radio"],
+  select,
+  summary,
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]),
+  ::file-selector-button {
+    cursor: pointer;
+  }
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 body {

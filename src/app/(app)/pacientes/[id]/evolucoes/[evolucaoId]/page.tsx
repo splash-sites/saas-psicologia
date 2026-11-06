@@ -94,7 +94,7 @@ export default async function EvolucaoDetailPage({
       {e.consulta_id && (
         <Link
           href={`/agenda/${e.consulta_id}`}
-          className="text-sm text-slate-500 underline"
+          className="text-sm text-slate-500 hover:text-slate-700"
         >
           Ver consulta vinculada
         </Link>

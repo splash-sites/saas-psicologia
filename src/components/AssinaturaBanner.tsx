@@ -14,7 +14,7 @@ export function AssinaturaBanner({ status }: { status: StatusAssinatura }) {
         {assinatura.status === "cancelada"
           ? "Assinatura cancelada: o painel está em modo somente leitura."
           : "Pagamento pendente: o painel está em modo somente leitura."}{" "}
-        <Link href="/assinatura" className="font-medium underline">
+        <Link href="/assinatura" className="font-semibold hover:opacity-80">
           {assinatura.status === "cancelada" ? "Assinar de novo" : "Regularizar assinatura"}
         </Link>
       </div>
@@ -27,7 +27,7 @@ export function AssinaturaBanner({ status }: { status: StatusAssinatura }) {
       return (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-800 sm:px-6 lg:px-8">
           Seu teste grátis termina em {dias} dia{dias === 1 ? "" : "s"}.{" "}
-          <Link href="/assinatura" className="font-medium underline">
+          <Link href="/assinatura" className="font-semibold hover:opacity-80">
             Configurar pagamento
           </Link>
         </div>
@@ -47,7 +47,7 @@ export function AssinaturaBanner({ status }: { status: StatusAssinatura }) {
             href={assinatura.invoice_url_atual}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium underline"
+            className="font-semibold hover:opacity-80"
           >
             Pagar agora
           </a>

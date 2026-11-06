@@ -23,7 +23,7 @@ export function ArquivarForm({
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="text-sm text-red-600 hover:underline"
+        className="text-sm text-red-600 hover:opacity-80"
       >
         Arquivar evolução
       </button>

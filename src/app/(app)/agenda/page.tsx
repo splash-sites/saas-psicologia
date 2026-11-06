@@ -17,6 +17,7 @@ import {
   faixaDeHoras,
 } from "@/lib/agenda/grade";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { marcosDoDia } from "@/lib/agenda/marcos";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { NavegacaoPeriodo } from "@/components/NavegacaoPeriodo";
 import { GradeSemana } from "./GradeSemana";
@@ -247,7 +248,7 @@ export default async function AgendaPage({
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <AutoRefresh />
+      <AutoRefresh marcos={marcosDoDia(rows, hoje)} />
 
       <CabecalhoPagina
         titulo="Agenda"
@@ -300,7 +301,7 @@ export default async function AgendaPage({
           <Link
             href={agendaHref({ ...params, consulta: undefined, ocultarCanceladas: !params.ocultarCanceladas })}
             scroll={false}
-            className="text-sm font-medium text-teal-800 hover:underline"
+            className="text-sm font-medium text-teal-800 hover:opacity-80"
           >
             {params.ocultarCanceladas ? "Mostrar canceladas" : "Ocultar canceladas"}
           </Link>

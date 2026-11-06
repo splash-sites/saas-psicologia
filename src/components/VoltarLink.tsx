@@ -14,7 +14,7 @@ export function VoltarLink({
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1 text-sm text-slate-500 hover:underline"
+      className="inline-flex items-center gap-1 text-sm text-slate-500 hover:opacity-80"
     >
       <ChevronLeft className="size-4" aria-hidden />
       {children}

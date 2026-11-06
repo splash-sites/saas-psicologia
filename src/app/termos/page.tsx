@@ -11,7 +11,7 @@ export default function TermosDeUsoPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-6 text-sm leading-relaxed text-slate-700 sm:p-10">
       <div>
-        <Link href="/login" className="inline-flex items-center gap-1 text-xs text-teal-700 underline">
+        <Link href="/login" className="inline-flex items-center gap-1 text-xs text-teal-700 hover:text-teal-800">
           <ChevronLeft className="size-3.5" aria-hidden />
           Voltar
         </Link>
@@ -24,7 +24,7 @@ export default function TermosDeUsoPage() {
           O Gradatim é oferecido por Bernardo Dornelles, pessoa física,
           Torres/RS. Ao
           criar uma conta, você concorda com estes termos e com a nossa{" "}
-          <Link href="/privacidade" className="underline">
+          <Link href="/privacidade" className="font-medium text-teal-700 hover:text-teal-800">
             Política de Privacidade
           </Link>
           .
@@ -102,7 +102,7 @@ export default function TermosDeUsoPage() {
           A integração com o Google Agenda é opcional e de mão única: o
           sistema cria eventos na sua agenda e não lê o que já está nela. Você
           pode revogar essa permissão a qualquer momento em{" "}
-          <Link href="/configuracoes" className="underline">
+          <Link href="/configuracoes" className="font-medium text-teal-700 hover:text-teal-800">
             Configurações
           </Link>{" "}
           ou na sua conta Google, e a plataforma continua funcionando sem a
@@ -149,7 +149,7 @@ export default function TermosDeUsoPage() {
 
       <Secao titulo="11. Contato">
         <p>
-          <a href="mailto:contato@splashsistemas.com.br" className="underline">
+          <a href="mailto:contato@splashsistemas.com.br" className="font-medium text-teal-700 hover:text-teal-800">
             contato@splashsistemas.com.br
           </a>
         </p>

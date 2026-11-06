@@ -152,7 +152,7 @@ export default async function ConfiguracoesPage({
         <h2 className="font-medium">Lembretes de consulta</h2>
         <p className="text-sm text-slate-600">
           Na página{" "}
-          <Link href="/lembretes" className="underline">
+          <Link href="/lembretes" className="font-medium text-teal-700 hover:text-teal-800">
             Lembretes
           </Link>{" "}
           você vê as consultas do dia seguinte e envia a mensagem pelo seu

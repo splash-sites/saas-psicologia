@@ -75,7 +75,7 @@ export default async function HistoricoFinanceiroPage() {
               return (
                 <tr key={mes}>
                   <td className="px-4 py-2 first-letter:uppercase">
-                    <Link href={`/financeiro?mes=${mes}`} className="hover:underline">
+                    <Link href={`/financeiro?mes=${mes}`} className="hover:opacity-80">
                       {rotuloMes(mes)}
                     </Link>
                   </td>

@@ -32,7 +32,7 @@ export default async function NovoPagamentoPage({
       {lista.length === 0 ? (
         <p className="text-sm text-slate-500">
           Cadastre um paciente antes de lançar um pagamento.{" "}
-          <Link href="/pacientes/novo" className="underline">
+          <Link href="/pacientes/novo" className="font-medium text-teal-700 hover:text-teal-800">
             Novo paciente
           </Link>
         </p>

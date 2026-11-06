@@ -9,8 +9,17 @@ export type StatusAssinatura = {
   somenteLeitura: boolean;
 };
 
+/** Função do banco ainda não criada (migration não aplicada): PostgREST PGRST202. */
+export function funcaoAusente(error: { code?: string } | null | undefined): boolean {
+  return error?.code === "PGRST202";
+}
+
 /**
  * Busca a assinatura da psicóloga logada + se a trava está ligada.
+ *
+ * Uma consulta só: rpc status_assinatura() (migration 0023). Enquanto ela não
+ * estiver aplicada no banco, cai nas duas consultas de antes — o deploy do
+ * código pode vir antes da migration sem quebrar nada.
  *
  * cache(): layout (faixa de aviso) + página /assinatura da mesma requisição
  * consultam uma vez só. O rpc é POST, que o Next não deduplica sozinho.
@@ -19,14 +28,25 @@ export const buscarStatusAssinatura = cache(async (
   psicologaId: string,
 ): Promise<StatusAssinatura> => {
   const supabase = await createClient();
-  const [{ data: assinatura }, { data: enforcementAtivo }] = await Promise.all([
-    supabase.from("assinaturas").select("*").eq("psicologa_id", psicologaId).maybeSingle(),
-    supabase.rpc("assinatura_enforcement_ativo"),
-  ]);
+  let assinatura: Assinatura | null;
+  let enforcement: boolean;
 
-  const enforcement = Boolean(enforcementAtivo);
+  const { data, error } = await supabase.rpc("status_assinatura");
+  if (!funcaoAusente(error)) {
+    const status = (data ?? {}) as { assinatura?: Assinatura | null; enforcement?: boolean };
+    assinatura = status.assinatura ?? null;
+    enforcement = Boolean(status.enforcement);
+  } else {
+    const [{ data: linha }, { data: enforcementAtivo }] = await Promise.all([
+      supabase.from("assinaturas").select("*").eq("psicologa_id", psicologaId).maybeSingle(),
+      supabase.rpc("assinatura_enforcement_ativo"),
+    ]);
+    assinatura = linha as Assinatura | null;
+    enforcement = Boolean(enforcementAtivo);
+  }
+
   return {
-    assinatura: assinatura as Assinatura | null,
+    assinatura,
     enforcementAtivo: enforcement,
     somenteLeitura: assinatura ? !permiteEscrita(assinatura, enforcement) : false,
   };

@@ -16,7 +16,7 @@ export default function PoliticaDePrivacidadePage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-6 text-sm leading-relaxed text-slate-700 sm:p-10">
       <div>
-        <Link href="/login" className="inline-flex items-center gap-1 text-xs text-teal-700 underline">
+        <Link href="/login" className="inline-flex items-center gap-1 text-xs text-teal-700 hover:text-teal-800">
           <ChevronLeft className="size-3.5" aria-hidden />
           Voltar
         </Link>
@@ -34,7 +34,7 @@ export default function PoliticaDePrivacidadePage() {
         </p>
         <p>
           Contato:{" "}
-          <a href="mailto:contato@splashsistemas.com.br" className="underline">
+          <a href="mailto:contato@splashsistemas.com.br" className="font-medium text-teal-700 hover:text-teal-800">
             contato@splashsistemas.com.br
           </a>
         </p>
@@ -104,7 +104,7 @@ export default function PoliticaDePrivacidadePage() {
           informações recebidas das APIs do Google seguem a{" "}
           <a
             href="https://developers.google.com/terms/api-services-user-data-policy"
-            className="underline"
+            className="font-medium text-teal-700 hover:text-teal-800"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -131,7 +131,7 @@ export default function PoliticaDePrivacidadePage() {
             do próprio paciente, e para o acesso à sua Google Agenda (permissão
             pedida explicitamente no login, que você pode revogar a qualquer
             momento em{" "}
-            <Link href="/configuracoes" className="underline">
+            <Link href="/configuracoes" className="font-medium text-teal-700 hover:text-teal-800">
               Configurações
             </Link>{" "}
             ou direto na sua conta Google).

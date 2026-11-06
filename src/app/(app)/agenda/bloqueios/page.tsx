@@ -65,7 +65,7 @@ export default async function BloqueiosPage() {
                 )}
               </span>
               <form action={excluirBloqueio.bind(null, b.id)}>
-                <button className="text-red-600 hover:underline">Remover</button>
+                <button className="text-red-600 hover:opacity-80">Remover</button>
               </form>
             </li>
           ))}

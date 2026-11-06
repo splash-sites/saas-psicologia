@@ -383,7 +383,7 @@ function PainelStatus({
                 >
                   {estado === "atrasada" ? "Atrasada" : estado === "ativa" ? "Agendada" : "Em aberto"}
                 </span>
-                <a href={fatura} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-teal-800 hover:underline">
+                <a href={fatura} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-teal-800 hover:opacity-80">
                   Ver no Asaas
                 </a>
               </div>
@@ -392,7 +392,7 @@ function PainelStatus({
             <p className="text-sm text-slate-700">
               Não há fatura em aberto para pagar por aqui. Se o pagamento foi
               estornado ou contestado, escreva para{" "}
-              <a href="mailto:contato@splashsistemas.com.br" className="underline">
+              <a href="mailto:contato@splashsistemas.com.br" className="font-medium text-teal-700 hover:text-teal-800">
                 contato@splashsistemas.com.br
               </a>{" "}
               para regularizar.

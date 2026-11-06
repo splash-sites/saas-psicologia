@@ -125,7 +125,7 @@ export default async function PacienteDetailPage({
           <div className="flex gap-2 text-sm">
             <Link
               href={`/pacientes/${id}/evolucoes`}
-              className="text-slate-500 hover:underline"
+              className="text-slate-500 hover:opacity-80"
             >
               Ver todas
             </Link>
@@ -159,7 +159,7 @@ export default async function PacienteDetailPage({
         <form action={excluirPaciente.bind(null, id)}>
           <button
             type="submit"
-            className="text-sm text-red-600 hover:underline"
+            className="text-sm text-red-600 hover:opacity-80"
           >
             Excluir paciente
           </button>

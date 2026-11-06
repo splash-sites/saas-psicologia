@@ -69,13 +69,13 @@ export default async function EvolucoesTimelinePage({
       <nav className="flex gap-3 text-sm">
         <Link
           href={`/pacientes/${id}/evolucoes`}
-          className={!mostrarArquivadas ? "font-medium underline" : "text-slate-500"}
+          className={!mostrarArquivadas ? "font-medium text-teal-800" : "text-slate-500"}
         >
           Ativas
         </Link>
         <Link
           href={`/pacientes/${id}/evolucoes?arquivadas=1`}
-          className={mostrarArquivadas ? "font-medium underline" : "text-slate-500"}
+          className={mostrarArquivadas ? "font-medium text-teal-800" : "text-slate-500"}
         >
           Arquivadas
         </Link>

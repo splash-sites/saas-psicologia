@@ -94,7 +94,7 @@ export function ListaLancamentos({ linhas }: { linhas: LinhaLancamento[] }) {
             >
               <Link
                 href={`/financeiro/${l.id}`}
-                className="flex min-w-0 flex-1 flex-col hover:underline"
+                className="flex min-w-0 flex-1 flex-col hover:opacity-80"
               >
                 <span className="break-words font-medium">
                   <span data-sensivel>{l.pacienteNome}</span> ·{" "}

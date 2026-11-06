@@ -32,6 +32,8 @@ type Modo = "entrar" | "criar";
 // Contraste AA (≥ 4,5:1 no branco) e foco visível nos links da tela.
 const LINK =
   "rounded font-medium text-teal-700 underline hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600";
+// Sublinhado só em "Esqueci minha senha" e "Criar conta" (decisão do usuário, 2026-11-06).
+const LINK_SEM_SUBLINHADO = LINK.replace(" underline", "");
 
 // Login: mensagem genérica, sem dizer se o e-mail existe (nem "e-mail não
 // confirmado"). Só o limite de tentativas tem texto próprio — não revela nada.
@@ -248,7 +250,7 @@ export function EmailLoginForm({ google }: { google: React.ReactNode }) {
             type="button"
             onClick={reenviarConfirmacao}
             disabled={reenviando}
-            className={`self-start text-sm ${LINK}`}
+            className={`self-start text-sm ${LINK_SEM_SUBLINHADO}`}
           >
             {reenviando ? "Reenviando..." : "Não recebeu? Reenviar o link"}
           </button>

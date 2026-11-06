@@ -8,7 +8,7 @@ export const metadata = { title: "Entrar" };
 
 // Links do rodapé: contraste AA e foco visível.
 const LINK_RODAPE =
-  "rounded font-medium text-teal-700 underline hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600";
+  "rounded font-medium text-teal-700 hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600";
 
 export default async function LoginPage({
   searchParams,

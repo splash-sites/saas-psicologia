@@ -44,13 +44,16 @@ import { linkDaConsulta } from "@/lib/agenda/linkOnline";
 import { escopoTemCalendar, integracaoGoogleConfigurada } from "@/lib/google/calendar";
 import { ConectarGoogleButton } from "@/app/(app)/configuracoes/ConectarGoogleButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { MinutosAte } from "@/components/Relogio";
+import { marcosDoDia } from "@/lib/agenda/marcos";
+import { resumoFinanceiroMes } from "@/lib/financeiro/resumo";
 import { EstadoVazio } from "@/components/EstadoVazio";
 
 export const metadata = { title: "Painel" };
 
 type PacienteRef = { id: string; nome: string };
 
-type ConsultaHoje = {
+type ConsultaPainel = {
   id: string;
   inicio: string;
   fim: string;
@@ -58,21 +61,18 @@ type ConsultaHoje = {
   status: ConsultaStatus;
   confirmada_em: string | null;
   meet_link: string | null;
-  pacientes: PacienteRef | PacienteRef[] | null;
+  pacientes:
+    | (PacienteRef & { telefone: string | null; aceita_lembretes: boolean })
+    | (PacienteRef & { telefone: string | null; aceita_lembretes: boolean })[]
+    | null;
+  lembretes: { consulta_inicio: string }[] | null;
 };
 
-type ConsultaProxima = {
-  id: string;
-  inicio: string;
-  modalidade: Modalidade;
-  pacientes: PacienteRef | PacienteRef[] | null;
-};
-
-type ConsultaPassada = {
-  id: string;
-  inicio: string;
-  fim: string;
-  pacientes: PacienteRef | PacienteRef[] | null;
+type ContextoPainel = {
+  nome: string | null;
+  link_atendimento_online: string | null;
+  preferencias_lembrete: { antecedencia_horas: number } | { antecedencia_horas: number }[] | null;
+  google_oauth_tokens: { escopo: string | null } | { escopo: string | null }[] | null;
 };
 
 function unico<T>(v: T | T[] | null): T | null {
@@ -89,7 +89,8 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   const agora = new Date();
-  const hoje = dataChaveBR(agora.toISOString());
+  const agoraISO = agora.toISOString();
+  const hoje = dataChaveBR(agoraISO);
   const { inicio: diaIni, fim: diaFim } = intervaloDiaBR(hoje);
   const limiteProximos = intervaloDiaBR(addDias(hoje, DIAS_PROXIMOS + 1)).inicio;
   const mes = mesAtual();
@@ -97,122 +98,85 @@ export default async function DashboardPage() {
     agora.getTime() - DIAS_PENDENCIA * 86_400_000,
   ).toISOString();
 
-  const { data: pref } = await supabase
-    .from("preferencias_lembrete")
-    .select("antecedencia_horas")
-    .eq("psicologa_id", user.id)
-    .maybeSingle();
-  const diaAlvo = diaAlvoLembrete(agora, pref?.antecedencia_horas ?? 24);
-  const alvo = intervaloDiaBR(diaAlvo);
-
+  // Tudo numa rodada só, em paralelo (antes: 15 consultas em 3 rodadas).
+  // - consultas: uma janela de DIAS_PENDENCIA dias atrás até DIAS_PROXIMOS à
+  //   frente cobre hoje, próximos dias, pendências recentes e o dia-alvo dos
+  //   lembretes (antecedência máxima é 168 h = 7 dias); separadas aqui no código.
+  //   Os lembretes enviados vêm juntos (embed), sem segunda consulta.
+  // - contexto: nome, link fixo, antecedência do lembrete e escopo do Google.
   const [
-    { data: psicologa },
-    { data: consultasHojeRaw },
-    { data: proximasRaw },
-    { data: passadasRaw },
-    { data: consultasAlvoRaw },
-    { data: recebidosRaw },
-    { data: aReceberRaw },
-    { count: atrasados },
-    { data: tokenGoogle },
+    { data: contextoRaw },
+    { data: consultasRaw },
+    { data: evolucoesRaw },
     { count: pendentesTotalRaw },
+    financeiro,
   ] = await Promise.all([
-    supabase.from("psicologas").select("nome, link_atendimento_online").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("psicologas")
+      .select(
+        "nome, link_atendimento_online, preferencias_lembrete(antecedencia_horas), google_oauth_tokens(escopo)",
+      )
+      .eq("id", user.id)
+      .maybeSingle(),
     supabase
       .from("consultas")
       .select(
-        "id, inicio, fim, modalidade, status, confirmada_em, meet_link, pacientes(id, nome)",
+        "id, inicio, fim, modalidade, status, confirmada_em, meet_link, pacientes(id, nome, telefone, aceita_lembretes), lembretes(consulta_inicio)",
       )
       .is("deleted_at", null)
-      .gte("inicio", diaIni)
-      .lt("inicio", diaFim)
-      .order("inicio"),
-    supabase
-      .from("consultas")
-      .select("id, inicio, modalidade, pacientes(id, nome)")
-      .eq("status", "agendada")
-      .is("deleted_at", null)
-      .gte("inicio", diaFim)
+      .gte("inicio", desdePendencias)
       .lt("inicio", limiteProximos)
       .order("inicio")
-      .limit(MAX_PROXIMOS),
-    // Sessões já encerradas (sem canceladas e faltas) nos últimos DIAS_PENDENCIA dias.
+      .limit(1000),
+    // Evoluções recentes: dizem o que já foi registrado. Uma sessão conta como
+    // registrada se há evolução ligada a ela OU do mesmo paciente na mesma data
+    // (evolução criada pela página do paciente não fica ligada à consulta).
     supabase
-      .from("consultas")
-      .select("id, inicio, fim, pacientes(id, nome)")
-      .in("status", ["agendada", "realizada"])
+      .from("evolucoes")
+      .select("id, consulta_id, paciente_id, data_sessao")
       .is("deleted_at", null)
-      .gte("inicio", desdePendencias)
-      .lt("fim", agora.toISOString())
-      .order("inicio", { ascending: false })
-      .limit(60),
-    supabase
-      .from("consultas")
-      .select("id, inicio, pacientes(telefone, aceita_lembretes)")
-      .eq("status", "agendada")
-      .is("deleted_at", null)
-      .gte("inicio", alvo.inicio)
-      .lt("inicio", alvo.fim),
-    supabase
-      .from("pagamentos")
-      .select("valor")
-      .is("deleted_at", null)
-      .eq("status", "pago")
-      .gte("data_pagamento", primeiroDia(mes))
-      .lte("data_pagamento", ultimoDia(mes)),
-    // A receber no mês: lançamentos pendentes que vencem neste mês.
-    supabase
-      .from("pagamentos")
-      .select("valor")
-      .is("deleted_at", null)
-      .eq("status", "pendente")
-      .gte("vencimento", primeiroDia(mes))
-      .lte("vencimento", ultimoDia(mes)),
-    supabase
-      .from("pagamentos")
-      .select("id", { count: "exact", head: true })
-      .is("deleted_at", null)
-      .eq("status", "pendente")
-      .lt("vencimento", hoje),
-    supabase
-      .from("google_oauth_tokens")
-      .select("escopo")
-      .eq("psicologa_id", user.id)
-      .maybeSingle(),
+      .gte("data_sessao", addDias(hoje, -(DIAS_PENDENCIA + 1)))
+      .limit(1000),
     // Pendências de qualquer data (o card conta todas; a lista do painel só
     // as dos últimos DIAS_PENDENCIA dias).
     supabase.rpc("consultas_sem_evolucao", {}, { count: "exact", head: true }),
+    resumoFinanceiroMes(supabase, primeiroDia(mes), ultimoDia(mes), hoje),
   ]);
+
+  const contexto = contextoRaw as ContextoPainel | null;
+  const tokenGoogle = unico(contexto?.google_oauth_tokens ?? null);
+  const antecedencia = unico(contexto?.preferencias_lembrete ?? null)?.antecedencia_horas ?? 24;
+  const alvo = intervaloDiaBR(diaAlvoLembrete(agora, antecedencia));
+
   // Login em dois passos: a Agenda é conectada depois. Enquanto não estiver,
   // o painel oferece o botão (escopo nulo = token antigo, conta como conectado).
   const agendaPendente =
     integracaoGoogleConfigurada() &&
     (!tokenGoogle || (tokenGoogle.escopo != null && !escopoTemCalendar(tokenGoogle.escopo)));
 
-  const consultasDoDia = ((consultasHojeRaw ?? []) as unknown as ConsultaHoje[]).map((c) => ({
-    ...c,
-    meet_link: linkDaConsulta(c, psicologa?.link_atendimento_online),
-  }));
+  const todas = (consultasRaw ?? []) as unknown as ConsultaPainel[];
+  const consultasDoDia = todas
+    .filter((c) => c.inicio >= diaIni && c.inicio < diaFim)
+    .map((c) => ({ ...c, meet_link: linkDaConsulta(c, contexto?.link_atendimento_online) }));
   const consultasHoje = consultasDoDia.filter((c) => c.status !== "cancelada");
   const proximaHoje = consultasHoje.find(
     (c) => c.status === "agendada" && new Date(c.inicio) > agora,
   );
-  const proximas = (proximasRaw ?? []) as unknown as ConsultaProxima[];
-  const recebido = (recebidosRaw ?? []).reduce((s, r) => s + Number(r.valor), 0);
-  const aReceber = (aReceberRaw ?? []).reduce((s, r) => s + Number(r.valor), 0);
+  const proximas = todas
+    .filter((c) => c.status === "agendada" && c.inicio >= diaFim)
+    .slice(0, MAX_PROXIMOS);
+  // Sessões já encerradas (sem canceladas e faltas) nos últimos DIAS_PENDENCIA dias.
+  const passadas = todas
+    .filter(
+      (c) =>
+        (c.status === "agendada" || c.status === "realizada") &&
+        new Date(c.fim) < agora,
+    )
+    .reverse();
+
+  const { recebido, aReceber, atrasados } = financeiro;
   const previsto = recebido + aReceber;
 
-  const passadas = (passadasRaw ?? []) as unknown as ConsultaPassada[];
-
-  // Evoluções recentes: dizem o que já foi registrado. Uma sessão conta como
-  // registrada se há evolução ligada a ela OU do mesmo paciente na mesma data
-  // (evolução criada pela página do paciente não fica ligada à consulta).
-  const { data: evolucoesRaw } = await supabase
-    .from("evolucoes")
-    .select("id, consulta_id, paciente_id, data_sessao")
-    .is("deleted_at", null)
-    .gte("data_sessao", addDias(hoje, -(DIAS_PENDENCIA + 1)))
-    .limit(1000);
   const evolucaoPorConsulta = new Map<string, string>();
   const evolucaoPorPacienteDia = new Map<string, string>();
   for (const e of evolucoesRaw ?? []) {
@@ -235,30 +199,11 @@ export default async function DashboardPage() {
 
   // Lembretes a enviar: consultas do dia-alvo com paciente que aceita, telefone
   // válido e sem registro de envio para o horário atual.
-  const alvoConsultas = (consultasAlvoRaw ?? []) as unknown as {
-    id: string;
-    inicio: string;
-    pacientes:
-      | { telefone: string | null; aceita_lembretes: boolean }
-      | { telefone: string | null; aceita_lembretes: boolean }[]
-      | null;
-  }[];
-  const { data: enviadosRaw } = alvoConsultas.length
-    ? await supabase
-        .from("lembretes")
-        .select("consulta_id, consulta_inicio")
-        .in(
-          "consulta_id",
-          alvoConsultas.map((c) => c.id),
-        )
-    : { data: [] };
-  const enviados = new Map(
-    (enviadosRaw ?? []).map((l) => [l.consulta_id as string, l.consulta_inicio as string]),
-  );
-  const lembretesAEnviar = alvoConsultas.filter((c) => {
+  const lembretesAEnviar = todas.filter((c) => {
+    if (c.status !== "agendada" || c.inicio < alvo.inicio || c.inicio >= alvo.fim) return false;
     const p = unico(c.pacientes);
     if (!p?.aceita_lembretes || !whatsappLink(p.telefone)) return false;
-    const enviadoPara = enviados.get(c.id);
+    const enviadoPara = unico(c.lembretes)?.consulta_inicio;
     return !(
       enviadoPara && new Date(enviadoPara).getTime() === new Date(c.inicio).getTime()
     );
@@ -270,15 +215,15 @@ export default async function DashboardPage() {
   );
   const evolucoesPendentes = pendentes.length;
   // As duas contas usam a mesma regra; o max só protege de uma diferença de
-  // limite (a lista recente busca no máximo 60 sessões).
+  // momento entre as duas consultas.
   const pendentesTotal = Math.max(pendentesTotalRaw ?? 0, evolucoesPendentes);
   const MAX_PENDENTES_LISTADAS = 6;
 
-  const nome = psicologa?.nome ? primeiroNome(psicologa.nome) : "";
+  const nome = contexto?.nome ? primeiroNome(contexto.nome) : "";
   const proximaConsulta = proximas[0];
 
   // Próximos dias agrupados por dia.
-  const proximasPorDia = new Map<string, ConsultaProxima[]>();
+  const proximasPorDia = new Map<string, ConsultaPainel[]>();
   for (const c of proximas) {
     const chave = dataChaveBR(c.inicio);
     proximasPorDia.set(chave, [...(proximasPorDia.get(chave) ?? []), c]);
@@ -296,7 +241,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <AutoRefresh />
+      <AutoRefresh marcos={marcosDoDia(consultasDoDia, hoje)} />
 
       <div>
         <h1 className="text-xl font-semibold sm:text-2xl">
@@ -383,7 +328,7 @@ export default async function DashboardPage() {
           <Receipt className="size-4" aria-hidden />
           Novo lançamento
         </Link>
-        {(atrasados ?? 0) > 0 && (
+        {atrasados > 0 && (
           <Link href="/financeiro" className="btn btn-outline text-red-700">
             {atrasados} pagamento{atrasados === 1 ? "" : "s"} atrasado
             {atrasados === 1 ? "" : "s"}
@@ -440,7 +385,7 @@ export default async function DashboardPage() {
             })}
           </ul>
           {pendentesTotal > Math.min(pendentes.length, MAX_PENDENTES_LISTADAS) && (
-            <Link href="/evolucoes/pendentes" className="text-sm font-medium text-amber-900 underline">
+            <Link href="/evolucoes/pendentes" className="text-sm font-semibold text-amber-900 hover:text-amber-950">
               Ver todas as {pendentesTotal} pendências
             </Link>
           )}
@@ -497,7 +442,7 @@ export default async function DashboardPage() {
                   >
                     <Link
                       href={`/agenda?consulta=${c.id}`}
-                      className="flex min-w-0 items-start gap-3 hover:underline"
+                      className="flex min-w-0 items-start gap-3 hover:opacity-80"
                     >
                       <span className="flex w-12 shrink-0 flex-col text-sm">
                         <span className="font-semibold">{horaBR(c.inicio)}</span>
@@ -518,7 +463,7 @@ export default async function DashboardPage() {
                           {c.status === "agendada" &&
                             (estado === "proxima" || (estado === "futura" && min <= 60)) && (
                               <span className="font-medium text-teal-800">
-                                Começa em {min} min
+                                Começa em <MinutosAte inicio={c.inicio} inicialISO={agoraISO} /> min
                               </span>
                             )}
                           {!evolucaoId && exigeEvolucao(c, agora) && (
@@ -580,7 +525,7 @@ export default async function DashboardPage() {
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-medium">Próximos dias</h2>
-            <Link href="/agenda" className="text-sm text-slate-500 hover:underline">
+            <Link href="/agenda" className="text-sm text-slate-500 hover:opacity-80">
               Ver agenda
             </Link>
           </div>

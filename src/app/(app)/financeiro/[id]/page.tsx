@@ -49,7 +49,7 @@ export default async function PagamentoDetailPage({
         }
         descricao={
           p.pacientes && (
-            <Link href={`/pacientes/${p.pacientes.id}`} className="underline" data-sensivel>
+            <Link href={`/pacientes/${p.pacientes.id}`} className="font-medium text-teal-700 hover:text-teal-800" data-sensivel>
               {p.pacientes.nome}
             </Link>
           )
@@ -73,7 +73,7 @@ export default async function PagamentoDetailPage({
       {p.consulta_id && (
         <Link
           href={`/agenda/${p.consulta_id}`}
-          className="w-fit text-sm text-slate-500 underline"
+          className="w-fit text-sm text-slate-500 hover:text-slate-700"
         >
           Ver consulta vinculada
         </Link>
@@ -96,7 +96,7 @@ export default async function PagamentoDetailPage({
 
       <div className="border-t pt-4">
         <form action={arquivarPagamento.bind(null, id)}>
-          <button className="text-sm text-red-600 hover:underline">
+          <button className="text-sm text-red-600 hover:opacity-80">
             Arquivar lançamento
           </button>
         </form>

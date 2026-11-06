@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MinutosAte } from "@/components/Relogio";
 import {
   Building2,
   CalendarClock,
@@ -73,7 +74,7 @@ export function PainelConsulta({
 
   // Ação principal: o que a psicóloga mais provavelmente quer agora.
   let principal: React.ReactNode = null;
-  let nota = "";
+  let nota: React.ReactNode = null;
   if (
     c.status === "agendada" &&
     c.modalidade === "online" &&
@@ -96,7 +97,7 @@ export function PainelConsulta({
       est === "em_andamento"
         ? "Sessão em andamento"
         : min <= 60
-          ? `Começa em ${min} min`
+          ? <>Começa em <MinutosAte inicio={c.inicio} inicialISO={agoraISO} /> min</>
           : "O botão fica em destaque 10 min antes";
   } else if (c.evolucaoPendente && novaEvolucao) {
     principal = (
@@ -157,7 +158,7 @@ export function PainelConsulta({
           <div>
             <h2 id="painel-consulta-titulo" className="text-xl font-bold">
               {pac ? (
-                <Link href={`/pacientes/${pac.id}`} className="hover:underline" data-sensivel>
+                <Link href={`/pacientes/${pac.id}`} className="hover:opacity-80" data-sensivel>
                   {pac.nome}
                 </Link>
               ) : (
@@ -234,7 +235,7 @@ export function PainelConsulta({
         <dl className="flex flex-col">
           <Linha icone={CircleDollarSign} rotulo="Pagamento">
             {pagamento && statusPag ? (
-              <Link href={`/financeiro/${pagamento.id}`} className="hover:underline">
+              <Link href={`/financeiro/${pagamento.id}`} className="hover:opacity-80">
                 <span data-sensivel>{formatarBRL(pagamento.valor)}</span> ·{" "}
                 {STATUS_EXIBICAO_LABEL[statusPag]}
               </Link>
@@ -243,7 +244,7 @@ export function PainelConsulta({
             ) : pac ? (
               <Link
                 href={`/financeiro/novo?paciente=${pac.id}&consulta=${c.id}&data=${dataChaveBR(c.inicio)}`}
-                className="text-teal-800 hover:underline"
+                className="text-teal-800 hover:opacity-80"
               >
                 Nenhum lançamento · lançar agora
               </Link>
@@ -256,7 +257,7 @@ export function PainelConsulta({
             {lembreteEnviadoEm ? (
               `WhatsApp enviado em ${dataBR(lembreteEnviadoEm)} às ${horaBR(lembreteEnviadoEm)}`
             ) : c.status === "agendada" && futura ? (
-              <Link href="/lembretes" className="text-teal-800 hover:underline">
+              <Link href="/lembretes" className="text-teal-800 hover:opacity-80">
                 Ainda não enviado · ver lembretes
               </Link>
             ) : (
@@ -275,7 +276,7 @@ export function PainelConsulta({
             {pac && (
               <Link
                 href={`/pacientes/${pac.id}/evolucoes`}
-                className="ml-2 text-teal-800 hover:underline"
+                className="ml-2 text-teal-800 hover:opacity-80"
               >
                 Abrir
               </Link>
@@ -300,14 +301,14 @@ export function PainelConsulta({
           )}
           {c.status !== "cancelada" && c.serie_id && (
             <form action={cancelarConsulta.bind(null, c.id, "serie")}>
-              <button className="w-full text-sm text-red-700 hover:underline">
+              <button className="w-full text-sm text-red-700 hover:opacity-80">
                 Cancelar esta e as próximas da série
               </button>
             </form>
           )}
           <Link
             href={`/agenda/${c.id}`}
-            className="text-center text-sm text-slate-600 hover:underline"
+            className="text-center text-sm text-slate-600 hover:opacity-80"
           >
             Mais detalhes (Google, observações)
           </Link>
