@@ -102,6 +102,7 @@ test("entrar e criar conta são telas separadas, com links entre elas", async ()
   await page.waitForURL("**/cadastro");
   await expect(page.getByRole("heading", { name: "Crie sua conta" })).toBeVisible();
   await expect(page.getByLabel("Nome completo")).toBeVisible();
+  await expect(page.getByLabel("Confirmar senha")).toBeVisible();
   await expect(page.getByLabel("Lembrar de mim")).toHaveCount(0);
   await page.getByRole("link", { name: "Entrar", exact: true }).click();
   await page.waitForURL("**/login");

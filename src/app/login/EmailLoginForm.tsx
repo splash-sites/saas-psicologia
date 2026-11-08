@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { salvarEscolhaLembrar } from "@/lib/supabase/lembrar";
 import { traduzErroAuth } from "@/lib/auth/mensagens";
-import { useValidacao } from "@/lib/form/validacao";
+import { EVENTO_CAMPO_VALIDO, useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
-import { LINK_AUTH } from "@/components/TelaAuth";
+import { BOTAO_AUTH, LINK_AUTH } from "@/components/TelaAuth";
 
 // Formulário de e-mail e senha das telas /login (modo "entrar") e /cadastro
 // (modo "criar") — separadas desde 2026-11-06; antes era uma tela só com troca
@@ -31,8 +31,10 @@ import { LINK_AUTH } from "@/components/TelaAuth";
 // `google`: o botão do Google, que fica embaixo do botão principal — só
 // visual, a lógica fica no LoginButton.
 //
-// "Confirmar senha" saiu do cadastro (desenho de 2026-11-06): o olho mostra a
-// senha digitada e "Esqueci minha senha" cobre um erro de digitação.
+// "Confirmar senha" voltou ao cadastro em 2026-11-08 (decisão do usuário; tinha
+// saído no desenho de 2026-11-06). A diferença entre os dois campos é uma
+// validação do próprio navegador (setCustomValidity no segundo campo), então o
+// erro aparece embaixo dele, como os outros, e o envio fica bloqueado.
 
 type Modo = "entrar" | "criar";
 
@@ -61,6 +63,8 @@ export function EmailLoginForm({
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [confirmar, setConfirmar] = useState("");
+  const confirmarRef = useRef<HTMLInputElement>(null);
   const [verSenha, setVerSenha] = useState(false);
   const [lembrar, setLembrar] = useState(lembrarInicial);
   const [carregando, setCarregando] = useState(false);
@@ -77,6 +81,17 @@ export function EmailLoginForm({
   useEffect(() => {
     if (criando) salvarEscolhaLembrar(true);
   }, [criando]);
+
+  // Roda no onChange (antes do onInput do <form> do useValidacao), para o
+  // campo já estar válido ou inválido quando o erro for limpo. Ao digitar na
+  // primeira senha, o erro do segundo campo some pelo evento campo-valido.
+  function conferirSenhas(primeira: string, segunda: string) {
+    const el = confirmarRef.current;
+    if (!el) return;
+    const diferentes = segunda !== "" && segunda !== primeira;
+    el.setCustomValidity(diferentes ? "As senhas não coincidem." : "");
+    if (!diferentes) el.dispatchEvent(new Event(EVENTO_CAMPO_VALIDO, { bubbles: true }));
+  }
 
   function mudarLembrar(valor: boolean) {
     setLembrar(valor);
@@ -98,6 +113,8 @@ export function EmailLoginForm({
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (carregando) return;
+    // O navegador já barra pelo setCustomValidity; isto é só a segunda trava.
+    if (criando && senha !== confirmar) return;
     setMensagem(null);
     setCarregando(true);
     const supabase = createClient();
@@ -188,7 +205,10 @@ export function EmailLoginForm({
             data-campo="senha"
             data-obrigatorio="Informe a senha."
             value={senha}
-            onChange={(e) => setSenha(e.target.value)}
+            onChange={(e) => {
+              setSenha(e.target.value);
+              if (criando) conferirSenhas(e.target.value, confirmar);
+            }}
             autoComplete={criando ? "new-password" : "current-password"}
             placeholder={criando ? "Mínimo de 6 caracteres" : "Sua senha"}
             className="input min-h-12 pr-12 font-normal"
@@ -205,6 +225,28 @@ export function EmailLoginForm({
         </span>
         <ErroCampo nome="senha" cliente={erros} />
       </label>
+
+      {criando && (
+        <label className={rotulo}>
+          Confirmar senha
+          <input
+            ref={confirmarRef}
+            type={verSenha ? "text" : "password"}
+            required
+            data-campo="confirmar"
+            data-obrigatorio="Repita a senha."
+            value={confirmar}
+            onChange={(e) => {
+              setConfirmar(e.target.value);
+              conferirSenhas(senha, e.target.value);
+            }}
+            autoComplete="new-password"
+            placeholder="Repita a senha"
+            className="input min-h-12 font-normal"
+          />
+          <ErroCampo nome="confirmar" cliente={erros} />
+        </label>
+      )}
 
       {!criando && (
         <div className="flex flex-wrap items-center justify-between gap-x-3">
@@ -246,7 +288,7 @@ export function EmailLoginForm({
         type="submit"
         disabled={carregando}
         aria-busy={carregando}
-        className="btn mt-1 min-h-12 w-full bg-tinta font-display text-base font-semibold text-papel hover:bg-tinta-escura sm:min-h-12"
+        className={BOTAO_AUTH}
       >
         {carregando && <Loader2 className="size-4 animate-spin" aria-hidden />}
         {carregando ? "Aguarde..." : criando ? "Criar conta grátis" : "Entrar"}
