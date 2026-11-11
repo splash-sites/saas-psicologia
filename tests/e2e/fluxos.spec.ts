@@ -164,7 +164,9 @@ test("evolução: erro do servidor não apaga o texto, e depois salva", async ()
   await page.locator('[name="demanda"]').fill("Relatou insônia");
   await page.locator('[name="procedimentos"]').fill("Psicoeducação");
   await page.locator('[name="resultados"]').fill("Mais calma");
-  // Acima do limite de 20 mil caracteres: só o servidor recusa.
+  // Acima do limite de 20 mil caracteres: o campo já corta (maxlength), então
+  // tira o limite para simular um envio que passa dele e só o servidor recusa.
+  await page.locator('[name="encaminhamentos"]').evaluate((el) => el.removeAttribute("maxlength"));
   await page.locator('[name="encaminhamentos"]').fill("x".repeat(20_001));
   await page.locator('[name="notas_privadas"]').fill("Observar evitação");
   await enviar(page, "demanda");

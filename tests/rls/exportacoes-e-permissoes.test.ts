@@ -32,7 +32,8 @@ describe.skipIf(!hasLocalSupabase)("Banco: exportações e permissões das funç
     expect(forjado.error).not.toBeNull();
     await ca.from("exportacoes").delete().eq("psicologa_id", a.id);
     const { count } = await ca.from("exportacoes").select("id", { count: "exact", head: true });
-    expect(count).toBe(12);
+    // Só as aceitas ficam registradas: 1 da conta + 10 de prontuário.
+    expect(count).toBe(11);
   });
 
   it("quem não está logado não executa funções do schema public", async () => {

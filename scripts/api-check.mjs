@@ -292,10 +292,10 @@ const casos = [
   [evo, "criarEvolucao", () => [A.paciente, vazio, fd({ data_sessao: dia(0), demanda: "", procedimentos: "", resultados: "", encaminhamentos: "" })], "validação"],
   [evo, "atualizarEvolucao", () => [A.paciente, A.evolucao, vazio, fd({ data_sessao: dia(-1), demanda: "d2", procedimentos: "p", resultados: "r", encaminhamentos: "e" })], "ok"],
   // financeiro
-  [fin, "criarPagamento", () => [vazio, fd({ paciente_id: A.paciente, valor: "200", situacao: "recebido", data_referencia: dia(0), data_pagamento: dia(0), forma_pagamento: "Pix" })], "ok"],
+  [fin, "criarPagamento", () => [vazio, fd({ paciente_id: A.paciente, valor: "200", situacao: "recebido", data_referencia: dia(0), data_pagamento: dia(0), forma_pagamento: "pix" })], "ok"],
   [fin, "criarPagamento", () => [vazio, fd({ paciente_id: A.paciente, valor: "0", situacao: "a_receber", data_referencia: dia(0) })], "validação"],
   [fin, "atualizarPagamento", () => [A.pagamento, vazio, fd({ paciente_id: A.paciente, valor: "180", situacao: "a_receber", data_referencia: dia(0), vencimento: dia(7) })], "ok"],
-  [fin, "marcarComoPago", () => [A.pagamento, vazio, fd({ data_pagamento: dia(0), forma_pagamento: "Pix" })], "ok"],
+  [fin, "marcarComoPago", () => [A.pagamento, vazio, fd({ data_pagamento: dia(0), forma_pagamento: "pix" })], "ok"],
   [fin, "desmarcarComoPago", () => [A.pagamento, fd({})], "ok"],
   // lembretes / configurações
   ["lembretes/actions", "marcarLembreteEnviado", () => [A.consulta], "ok"],
