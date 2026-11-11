@@ -1,15 +1,15 @@
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { LIMITES } from "@/lib/limites";
 
 export const preferenciasLembreteSchema = z.object({
   antecedencia_horas: z.coerce
-    .number()
+    .number({ error: "Informe a antecedência em horas" })
     .int("Use um número inteiro de horas")
     .min(LIMITES.lembrete.antecedenciaMin, "Mínimo de 1 hora")
     .max(LIMITES.lembrete.antecedenciaMax, "Máximo de 168 horas (7 dias)"),
   // Vazio = usa o texto padrão.
   mensagem_template: z
-    .string()
+    .string({ error: "Mensagem inválida" })
     .trim()
     .max(LIMITES.lembrete.mensagem, `Máximo de ${LIMITES.lembrete.mensagem} caracteres`)
     .transform((v) => (v === "" ? null : v)),

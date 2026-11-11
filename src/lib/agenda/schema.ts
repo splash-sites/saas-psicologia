@@ -1,21 +1,35 @@
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { CONSULTA_STATUS, MODALIDADES, RECORRENCIAS } from "./types";
 import { LIMITES } from "@/lib/limites";
 
 const C = LIMITES.consulta;
+const MSG_DURACAO = `A duração vai de ${C.duracaoMin} a ${C.duracaoMax} minutos`;
+const MSG_OCORRENCIAS = `Escolha de 2 a ${C.ocorrenciasMax} ocorrências`;
 
-const dataStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
-const horaStr = z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida");
+const duracao = z.coerce
+  .number({ error: "Informe a duração em minutos" })
+  .int("Use minutos inteiros")
+  .min(C.duracaoMin, MSG_DURACAO)
+  .max(C.duracaoMax, MSG_DURACAO);
+const modalidade = z.enum(MODALIDADES, { error: "Escolha presencial ou online" });
+
+const dataStr = z.string({ error: "Informe a data" }).regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
+const horaStr = z.string({ error: "Informe o horário" }).regex(/^\d{2}:\d{2}$/, "Hora inválida");
 
 export const consultaSchema = z
   .object({
-    paciente_id: z.string().uuid("Selecione um paciente"),
+    paciente_id: z.string({ error: "Selecione um paciente" }).uuid("Selecione um paciente"),
     data: dataStr,
     hora: horaStr,
-    duracao_min: z.coerce.number().int().min(C.duracaoMin).max(C.duracaoMax),
-    modalidade: z.enum(MODALIDADES),
-    recorrencia: z.enum(RECORRENCIAS).default("nenhuma"),
-    ocorrencias: z.coerce.number().int().min(1).max(C.ocorrenciasMax).default(1),
+    duracao_min: duracao,
+    modalidade,
+    recorrencia: z.enum(RECORRENCIAS, { error: "Escolha uma recorrência da lista" }).default("nenhuma"),
+    ocorrencias: z.coerce
+      .number({ error: "Informe o número de ocorrências" })
+      .int("Use um número inteiro")
+      .min(1, MSG_OCORRENCIAS)
+      .max(C.ocorrenciasMax, MSG_OCORRENCIAS)
+      .default(1),
     observacoes: z
       .string()
       .trim()
@@ -34,9 +48,9 @@ export type ConsultaInput = z.infer<typeof consultaSchema>;
 export const consultaEdicaoSchema = z.object({
   data: dataStr,
   hora: horaStr,
-  duracao_min: z.coerce.number().int().min(C.duracaoMin).max(C.duracaoMax),
-  modalidade: z.enum(MODALIDADES),
-  status: z.enum(CONSULTA_STATUS),
+  duracao_min: duracao,
+  modalidade,
+  status: z.enum(CONSULTA_STATUS, { error: "Escolha um status da lista" }),
   observacoes: z
     .string()
     .trim()

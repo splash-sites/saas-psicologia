@@ -1,10 +1,15 @@
-import { NextResponse } from "next/server";
 import { strToU8, zipSync } from "fflate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { gerarCsv, type Coluna } from "@/lib/exportacao/csv";
-import { registrarExportacao, respostaLimiteExportacao } from "@/lib/exportacao/limite";
+import {
+  MSG_DOWNLOAD_FALHOU,
+  MSG_DOWNLOAD_SEM_LOGIN,
+  registrarExportacao,
+  respostaErroDownload,
+  respostaLimiteExportacao,
+} from "@/lib/exportacao/limite";
 import { dataBRCompleta, dataHoraBR } from "@/lib/exportacao/datas";
 import { formatarCpf, formatarTelefoneBR } from "@/lib/pacientes/formatacao";
 import { rotuloFormaPagamento } from "@/lib/financeiro/types";
@@ -63,7 +68,7 @@ Guarde este arquivo em local seguro: ele contém dados de saúde (LGPD).
 export async function GET() {
   const supabase = await createClient();
   const user = await usuarioAtual();
-  if (!user) return NextResponse.json({ error: "não autenticado" }, { status: 401 });
+  if (!user) return respostaErroDownload(401, MSG_DOWNLOAD_SEM_LOGIN);
   if (!(await registrarExportacao(supabase, "conta"))) return respostaLimiteExportacao();
 
   let tabelas: Record<string, Linha[]>;
@@ -79,7 +84,7 @@ export async function GET() {
       ]);
     tabelas = { pacientes, anamneses, consultas, evolucoes, pagamentos, bloqueios };
   } catch {
-    return NextResponse.json({ error: "não foi possível exportar agora" }, { status: 500 });
+    return respostaErroDownload(500, MSG_DOWNLOAD_FALHOU);
   }
 
   const nomes = new Map(tabelas.pacientes.map((p) => [p.id as string, p.nome as string]));

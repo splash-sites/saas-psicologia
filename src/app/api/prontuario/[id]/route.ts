@@ -1,10 +1,16 @@
-import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Anamnese, Paciente } from "@/lib/pacientes/types";
 import type { Evolucao } from "@/lib/prontuario/types";
 import { gerarProntuarioPdf } from "@/lib/exportacao/prontuarioPdf";
-import { registrarExportacao, respostaLimiteExportacao } from "@/lib/exportacao/limite";
+import {
+  MSG_DOWNLOAD_FALHOU,
+  MSG_DOWNLOAD_NAO_ENCONTRADO,
+  MSG_DOWNLOAD_SEM_LOGIN,
+  registrarExportacao,
+  respostaErroDownload,
+  respostaLimiteExportacao,
+} from "@/lib/exportacao/limite";
 
 // Download do prontuário de um paciente em PDF. Client da própria psicóloga:
 // o RLS garante que paciente de outra conta dá 404. Funciona com a assinatura
@@ -24,11 +30,11 @@ function nomeArquivo(nome: string): string {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await usuarioAtual();
-  if (!user) return NextResponse.json({ error: "não autenticado" }, { status: 401 });
+  if (!user) return respostaErroDownload(401, MSG_DOWNLOAD_SEM_LOGIN);
 
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
-    return NextResponse.json({ error: "não encontrado" }, { status: 404 });
+    return respostaErroDownload(404, MSG_DOWNLOAD_NAO_ENCONTRADO);
   }
 
   const supabase = await createClient();
@@ -48,8 +54,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         .order("created_at"),
     ]);
 
-  if (!paciente) return NextResponse.json({ error: "não encontrado" }, { status: 404 });
-  if (error) return NextResponse.json({ error: "não foi possível gerar agora" }, { status: 500 });
+  if (!paciente) return respostaErroDownload(404, MSG_DOWNLOAD_NAO_ENCONTRADO);
+  if (error) return respostaErroDownload(500, MSG_DOWNLOAD_FALHOU);
 
   const pdf = await gerarProntuarioPdf({
     psicologa: { nome: psicologa?.nome ?? null, crp: psicologa?.crp ?? null },

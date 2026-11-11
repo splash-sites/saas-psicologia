@@ -153,9 +153,25 @@ export async function sincronizarConsulta(
     }
     await marcar(supabase, c.id, {
       sync_status: "erro",
-      sync_erro: mensagem.slice(0, 500),
+      sync_erro: mensagemErroGoogle(mensagem),
     });
   }
+}
+
+/**
+ * O que mostrar à psicóloga quando o Google falha. Nunca o erro cru: ele vem
+ * em inglês, com o JSON da API, e pode repetir dados do evento (nome do
+ * paciente) — fica fora da tela e do banco.
+ */
+export function mensagemErroGoogle(mensagem: string): string {
+  const tenteDeNovo = "Use “Sincronizar agora” para tentar de novo.";
+  if (/: (429|5\d\d)\b|fetch failed|ECONN|ETIMEDOUT|ENOTFOUND|network|socket/i.test(mensagem)) {
+    return `O Google Agenda não respondeu agora. ${tenteDeNovo}`;
+  }
+  if (/renovar token/i.test(mensagem)) {
+    return `Não foi possível falar com o Google agora. ${tenteDeNovo}`;
+  }
+  return `O Google Agenda recusou esta consulta. ${tenteDeNovo} Se continuar, fale com o suporte.`;
 }
 
 // Uma série pode ter até 52 consultas, cada uma com ~5 idas e voltas (banco,

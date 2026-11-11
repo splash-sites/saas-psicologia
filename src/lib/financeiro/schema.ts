@@ -1,14 +1,15 @@
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { LIMITES } from "@/lib/limites";
 import { FORMAS_PAGAMENTO } from "./types";
 
-// Vazio = não informada.
-const formaPagamento = z
-  .enum(FORMAS_PAGAMENTO, { message: "Escolha uma forma de pagamento da lista" })
-  .optional()
-  .or(z.literal("").transform(() => undefined));
+// Vazio = não informada. Preprocess (e não .or()) para o erro ser o do enum:
+// com .or(), um valor fora da lista virava o genérico "Entrada inválida".
+const formaPagamento = z.preprocess(
+  (v) => (v === "" ? undefined : v),
+  z.enum(FORMAS_PAGAMENTO, { error: "Escolha uma forma de pagamento da lista" }).optional(),
+);
 
-const dataStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
+const dataStr = z.string({ error: "Informe a data" }).regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
 
 const dataOpcional = z
   .string()
@@ -22,17 +23,19 @@ const dataOpcional = z
 // o status e as datas derivadas são calculados aqui.
 export const pagamentoSchema = z
   .object({
-    paciente_id: z.string().uuid("Selecione um paciente"),
+    paciente_id: z.string({ error: "Selecione um paciente" }).uuid("Selecione um paciente"),
     consulta_id: z
       .string()
-      .uuid()
+      .uuid("Consulta inválida")
       .optional()
       .or(z.literal("").transform(() => undefined)),
     valor: z.coerce
-      .number()
+      .number({ error: "Informe o valor" })
       .positive("Informe um valor maior que zero")
       .max(LIMITES.pagamento.valorMax, "Valor acima do limite (R$ 100.000)"),
-    situacao: z.enum(["recebido", "a_receber"]).default("recebido"),
+    situacao: z
+      .enum(["recebido", "a_receber"], { error: "Escolha se já recebeu ou se ainda vai receber" })
+      .default("recebido"),
     data_referencia: dataStr,
     data_pagamento: dataOpcional,
     vencimento: dataOpcional,
@@ -40,7 +43,7 @@ export const pagamentoSchema = z
     observacoes: z
       .string()
       .trim()
-      .max(LIMITES.pagamento.observacoes)
+      .max(LIMITES.pagamento.observacoes, `Máximo de ${LIMITES.pagamento.observacoes} caracteres`)
       .transform((v) => (v === "" ? undefined : v))
       .optional(),
   })

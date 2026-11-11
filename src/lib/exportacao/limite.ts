@@ -22,13 +22,24 @@ export async function registrarExportacao(
   return data !== false;
 }
 
-/** Resposta para quem passou do limite (o link abre direto no navegador). */
-export function respostaLimiteExportacao(): Response {
-  return new Response(
-    "Você já exportou há pouco. Aguarde um minuto e tente de novo.",
-    {
-      status: 429,
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Retry-After": "60" },
-    },
-  );
+/**
+ * Erro de um download (PDF/ZIP) em português. O link abre direto no
+ * navegador, então a resposta é a frase que a psicóloga vai ler, não JSON.
+ */
+export function respostaErroDownload(status: number, texto: string, headers: Record<string, string> = {}): Response {
+  return new Response(texto, {
+    status,
+    headers: { "Content-Type": "text/plain; charset=utf-8", ...headers },
+  });
 }
+
+/** Resposta para quem passou do limite. */
+export function respostaLimiteExportacao(): Response {
+  return respostaErroDownload(429, "Você já exportou há pouco. Aguarde um minuto e tente de novo.", {
+    "Retry-After": "60",
+  });
+}
+
+export const MSG_DOWNLOAD_SEM_LOGIN = "Sua sessão terminou. Entre de novo no Gradatim e tente baixar outra vez.";
+export const MSG_DOWNLOAD_NAO_ENCONTRADO = "Não encontramos este paciente. Ele pode ter sido arquivado.";
+export const MSG_DOWNLOAD_FALHOU = "Não foi possível gerar o arquivo agora. Tente de novo em instantes.";

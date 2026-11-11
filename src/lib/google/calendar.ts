@@ -20,6 +20,11 @@ const ESCOPOS_CALENDAR = [
   "https://www.googleapis.com/auth/calendar.events.owned",
 ];
 
+export const MSG_GOOGLE_EXPIRADO =
+  "A conexão com o Google expirou. Reconecte a Google Agenda em Configurações.";
+export const MSG_GOOGLE_NAO_CONECTADO =
+  "A Google Agenda não está conectada. Conecte em Configurações para as consultas irem para lá.";
+
 export const MSG_SEM_PERMISSAO_CALENDAR =
   "O Google não liberou a permissão da Agenda. Reconecte em Configurações e mantenha marcada a permissão de Agenda na tela do Google.";
 
@@ -70,7 +75,7 @@ export async function trocarRefreshToken(
     const txt = await res.text();
     // invalid_grant = refresh token revogado/expirado: exige reconexão.
     if (txt.includes("invalid_grant")) {
-      throw new GoogleNaoConectada("Autorização do Google expirada");
+      throw new GoogleNaoConectada(MSG_GOOGLE_EXPIRADO);
     }
     throw new Error(`Falha ao renovar token do Google: ${res.status}`);
   }
@@ -87,7 +92,7 @@ async function getAccessToken(psicologaId: string): Promise<string> {
     .eq("psicologa_id", psicologaId)
     .maybeSingle();
 
-  if (!data) throw new GoogleNaoConectada("Google Calendar não conectado");
+  if (!data) throw new GoogleNaoConectada(MSG_GOOGLE_NAO_CONECTADO);
 
   try {
     const { accessToken, scope } = await trocarRefreshToken(
@@ -101,7 +106,7 @@ async function getAccessToken(psicologaId: string): Promise<string> {
   } catch (err) {
     if (
       err instanceof GoogleNaoConectada &&
-      err.message === "Autorização do Google expirada"
+      err.message === MSG_GOOGLE_EXPIRADO
     ) {
       await admin
         .from("google_oauth_tokens")

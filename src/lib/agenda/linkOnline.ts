@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/lib/zod";
 
 // Link da videochamada de uma consulta online. O gerado pelo Google
 // (consultas.meet_link, só com a integração ligada) tem prioridade; sem ele,
@@ -14,7 +14,7 @@ export function linkDaConsulta(
 // Mesma regra do CHECK psicologas_link_online_valido (migration 0018).
 export const linkAtendimentoSchema = z.object({
   link_atendimento_online: z
-    .string()
+    .string({ error: "Link inválido" })
     .trim()
     .max(500, "Máximo de 500 caracteres")
     .transform((v) => (v === "" ? null : v))
