@@ -68,6 +68,29 @@ Diferencial deste produto: ser simples e direto ("sem frufru"), com preço únic
 21. Painel de ganhos do mês.
 22. Histórico financeiro mensal (visão de evolução ao longo do tempo).
 
+## Feature nova: cupons e indicadores (decidida em 2026-11-11, em construção)
+
+Decisões do usuário, validadas em três rodadas de perguntas. Entregas em ordem, cada uma testada antes da próxima: **(1)** banco + resgate do cupom (Assinatura, cadastro e link); **(2)** painel de cupons; **(3)** painel de usuários e indicadores.
+
+**Cupons**
+- **Só "dias grátis"**: o cupom estende o teste grátis (`assinaturas.trial_fim`). Desconto em R$ ou % fica fora.
+- **Só para quem ainda não assinou** (sem assinatura no Asaas; cancelada também não, porque já assinou). Inclui teste vencido — serve para reativar quem não assinou.
+- **Um cupom por conta.**
+- **Contagem:** teste correndo → soma ao fim atual (7 restantes + 30 = 37); teste vencido → conta a partir do dia do uso.
+- **Código digitado pelo administrador** (ex.: `PSICO30`), com dias, validade (opcional) e limite de usos (opcional).
+- **Onde usar:** link de divulgação (`/cadastro?cupom=PSICO30`, já preenchido), campo "Tenho um cupom" no cadastro e na tela de Assinatura.
+- **Cupom inválido/esgotado no cadastro:** a conta é criada com o teste normal e a psicóloga vê o motivo; pode tentar outro na Assinatura.
+- **Proteções:** usuários não leem a tabela de cupons (RLS sem policy); resgate atômico no banco (função, trava a linha do cupom — limite de usos não estoura); limite de tentativas erradas por conta (contra adivinhar códigos).
+
+**Painel de administração** (`/admin` no próprio app)
+- **Acesso:** só o e-mail do usuário, em variável de ambiente `ADMIN_EMAIL` (não no código — o repositório é público), conferido no servidor; para qualquer outra conta a rota responde "não encontrada". Consultas do painel com a service role, só no servidor.
+- **Indicadores no topo:** contas por situação (teste, pagando, atrasada, cancelada, somente leitura); receita mensal estimada (assinaturas em dia; trimestral ÷ 3, semestral ÷ 6); conversão do teste (das contas com teste acabado, % que assinou); novos cadastros por semana, e quantos por cupom.
+- **Cupons:** criar, pausar/reativar, editar validade e limite, ver quantos usos e quem usou (e-mail e data).
+- **Usuários:** nome, e-mail, cadastro, situação da assinatura, plano, fim do teste, cupom usado e **uso da conta em números** (pacientes, consultas, evoluções — **nunca conteúdo clínico**). "Ativo" em duas colunas: **pagando** (assinatura em dia) e **usou nos últimos 30 dias** (criou/alterou registros).
+- **Estender teste** de uma conta: só para quem não assinou (a mesma regra do cupom; para quem já assinou, a data da cobrança está no Asaas), com registro de dias, data e motivo, visível no histórico da conta.
+
+**Antes de abrir para clientes:** Privacidade dizer que o administrador vê dados de conta e de uso (não clínicos); Termos com item sobre cupons (validade, um por conta, sem valor em dinheiro) — ambos entram na revisão jurídica. `ADMIN_EMAIL` cadastrada na Vercel.
+
 ## Fora do escopo do MVP (backlog de Fase 2, não implementar sem validação prévia com o usuário)
 
 - Emissão de recibo/nota fiscal (NF-e/NFS-e).
