@@ -209,14 +209,12 @@ const cookieB = await cookieHeader("teste-b@teste.local");
 {
   let r = await req("/admin/cupons");
   registrar("ADMIN", "GET /admin/cupons sem login", (x) => x.destino.startsWith("/login"), r);
-  r = await req("/admin", { cookie: cA });
-  registrar("ADMIN", "GET /admin (admin) vai para cupons", (x) => x.destino.startsWith("/admin/cupons"), r);
-  for (const p of ["/admin/cupons", "/admin/cupons/novo"]) {
+  for (const p of ["/admin", "/admin/usuarios", `/admin/usuarios/${B.pid}`, "/admin/cupons", "/admin/cupons/novo"]) {
     r = await req(p, { cookie: cA });
     r.resumo = resumoPagina(r);
-    registrar("ADMIN", `GET ${p} (admin)`, (x) => x.status === 200 && !x.resumo, r);
+    registrar("ADMIN", `GET ${curto(p)} (admin)`, (x) => x.status === 200 && !x.resumo, r);
     r = await req(p, { cookie: cookieB });
-    registrar("ADMIN", `GET ${p} (outra conta)`, (x) => x.status === 404, r);
+    registrar("ADMIN", `GET ${curto(p)} (outra conta)`, (x) => x.status === 404, r);
   }
 }
 
@@ -353,6 +351,14 @@ for (const [arq, nome, args, tipo] of casos) {
   const { data: criado } = await admin.from("cupons").select("id").eq("codigo", codigo).maybeSingle();
   r.resumo = criado ? "CRIOU cupom" : r.resumo;
   registrar("ADMIN", "criarCupom pela outra conta (B)", (x) => !criado && /Não encontrado/.test(x.retorno ?? ""), r);
+
+  // B tentando estender o próprio teste pela action do painel.
+  const { data: antes } = await admin.from("assinaturas").select("trial_fim").eq("psicologa_id", B.pid).single();
+  const idExt = actionId(mapa, "admin/usuarios/actions", "estenderTeste");
+  const r2 = await chamarAction(idExt, [B.pid, vazio, fd({ dias: "300", motivo: "eu mesma" })], { cookie: cookieB });
+  const { data: depois } = await admin.from("assinaturas").select("trial_fim").eq("psicologa_id", B.pid).single();
+  r2.resumo = antes.trial_fim !== depois.trial_fim ? "ESTENDEU o teste" : r2.resumo;
+  registrar("ADMIN", "estenderTeste pela outra conta (B)", (x) => antes.trial_fim === depois.trial_fim && /Não encontrado/.test(x.retorno ?? ""), r2);
 }
 
 // 5a. O paciente cadastrado com máscara foi gravado no formato padrão.

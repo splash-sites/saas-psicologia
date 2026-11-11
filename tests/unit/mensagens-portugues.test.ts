@@ -6,6 +6,7 @@ import { preferenciasLembreteSchema } from "@/lib/lembretes/schema";
 import { pacienteSchema, anamneseSchema } from "@/lib/pacientes/schema";
 import { linkAtendimentoSchema } from "@/lib/agenda/linkOnline";
 import { edicaoCupomSchema, novoCupomSchema } from "@/lib/admin/cupons";
+import { estenderTesteSchema } from "@/lib/admin/usuarios";
 import type { ZodType } from "zod";
 
 // Toda mensagem de validação que pode chegar à tela tem de estar em
@@ -27,6 +28,7 @@ const schemas: Record<string, ZodType> = {
   linkAtendimentoSchema,
   novoCupomSchema,
   edicaoCupomSchema,
+  estenderTesteSchema,
 };
 
 // Entradas ruins de todo tipo: campo ausente, texto no lugar de número,

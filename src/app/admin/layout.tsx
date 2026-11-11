@@ -21,6 +21,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </span>
           </div>
           <nav className="flex flex-wrap items-center gap-1 text-sm" aria-label="Administração">
+            <Link href="/admin" className="rounded-lg px-3 py-2 font-medium hover:bg-slate-100">
+              Visão geral
+            </Link>
+            <Link href="/admin/usuarios" className="rounded-lg px-3 py-2 font-medium hover:bg-slate-100">
+              Usuários
+            </Link>
             <Link href="/admin/cupons" className="rounded-lg px-3 py-2 font-medium hover:bg-slate-100">
               Cupons
             </Link>
