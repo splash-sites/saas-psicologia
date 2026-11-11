@@ -44,9 +44,35 @@ export function mostraFormulario(estado: EstadoTela): boolean {
  * os 14, então a tela não pode usar um número fixo. Fora do esperado, cai
  * no padrão atual.
  */
-export function duracaoDoTeste(a: Pick<Assinatura, "trial_fim" | "created_at">): number {
-  const dias = diasRestantesTrial(a.trial_fim, a.created_at.slice(0, 10));
-  return dias >= 1 && dias <= 60 ? dias : DIAS_TRIAL;
+export function duracaoDoTeste(
+  a: Pick<Assinatura, "trial_fim" | "created_at">,
+  resgate?: ResgateCupom | null,
+): number {
+  const dias = diasRestantesTrial(a.trial_fim, inicioDoTeste(a, resgate));
+  return dias >= 1 && dias <= 400 ? dias : DIAS_TRIAL;
+}
+
+/** Cupom usado pela conta (cupom_resgates, migration 0027). */
+export type ResgateCupom = { codigo: string; created_at: string; trial_fim_antes: string; trial_fim_depois: string };
+
+/**
+ * Onde o período de teste atual começa: no cadastro, ou no dia em que um
+ * cupom foi usado com o teste já vencido (aí os dias contam a partir dele).
+ */
+export function inicioDoTeste(
+  a: Pick<Assinatura, "created_at">,
+  resgate?: ResgateCupom | null,
+): string {
+  const cadastro = a.created_at.slice(0, 10);
+  if (!resgate) return cadastro;
+  const usoDoCupom = resgate.created_at.slice(0, 10);
+  return resgate.trial_fim_antes < usoDoCupom ? usoDoCupom : cadastro;
+}
+
+/** Dias que o cupom deu (fim depois − fim antes, ou a partir do uso). */
+export function diasDoCupom(resgate: ResgateCupom): number {
+  const base = resgate.trial_fim_antes < resgate.created_at.slice(0, 10) ? resgate.created_at.slice(0, 10) : resgate.trial_fim_antes;
+  return diasRestantesTrial(resgate.trial_fim_depois, base);
 }
 
 /** Dias do teste já usados (0 até a duração), para a barra de progresso. */

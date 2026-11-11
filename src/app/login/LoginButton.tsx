@@ -39,7 +39,8 @@ function LogoGoogle() {
   );
 }
 
-export function LoginButton({ clientId }: { clientId: string }) {
+// `cupom`: só no cadastro — vai junto para o servidor aplicar na conta.
+export function LoginButton({ clientId, cupom }: { clientId: string; cupom?: string }) {
   const { pronto, pedirCodigo } = useGoogleCodeClient(clientId, ESCOPO);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -56,7 +57,7 @@ export function LoginButton({ clientId }: { clientId: string }) {
     const res = await fetch("/api/google/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(pedido),
+      body: JSON.stringify(cupom?.trim() ? { ...pedido, cupom: cupom.trim() } : pedido),
     });
     const json = (await res.json().catch(() => ({}))) as { ok?: boolean; destino?: string };
     if (!json.ok) {

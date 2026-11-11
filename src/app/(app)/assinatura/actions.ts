@@ -14,6 +14,7 @@ import {
   asaasModo,
 } from "@/lib/asaas/client";
 import { PLANOS, ASSINATURA_PLANO, type AssinaturaPlano } from "@/lib/assinatura/types";
+import { FORMATO_CUPOM, mensagemCupom, normalizarCupom } from "@/lib/assinatura/cupom";
 
 export type FormState = {
   error?: string;
@@ -262,4 +263,44 @@ export async function simularPagamentoConfirmado(): Promise<void> {
 
   revalidatePath("/assinatura");
   redirect("/assinatura");
+}
+
+export type CupomState = { tipo?: "sucesso" | "erro"; texto?: string };
+
+/**
+ * "Tenho um cupom" na tela de Assinatura. A regra toda está no banco
+ * (resgatar_cupom, migration 0027): só quem não assinou, um por conta, limite
+ * de usos e de tentativas erradas.
+ */
+export async function usarCupom(_prev: CupomState, formData: FormData): Promise<CupomState> {
+  const user = await usuarioAtual();
+  if (!user) return mensagemCupom("sem_sessao", "");
+
+  const codigo = normalizarCupom(String(formData.get("cupom") ?? ""));
+  if (!codigo) return { tipo: "erro", texto: "Digite o código do cupom." };
+  if (!FORMATO_CUPOM.test(codigo)) return mensagemCupom("invalido", codigo);
+
+  const supabase = await createClient();
+  const { data: status, error } = await supabase.rpc("resgatar_cupom", { p_codigo: codigo });
+  if (error) return { tipo: "erro", texto: "Não foi possível usar o cupom agora. Tente de novo em instantes." };
+
+  let trialFim: string | null = null;
+  if (status === "ok") {
+    const { data } = await supabase.from("assinaturas").select("trial_fim").eq("psicologa_id", user.id).maybeSingle();
+    trialFim = data?.trial_fim ?? null;
+    revalidatePath("/", "layout");
+  }
+  return mensagemCupom(String(status), codigo, trialFim);
+}
+
+/** Fecha o aviso do cupom digitado no cadastro (mostrado uma vez no Painel). */
+export async function marcarAvisoCupomLido(): Promise<void> {
+  const user = await usuarioAtual();
+  if (!user) return;
+  const supabase = await createClient();
+  await supabase
+    .from("cupom_avisos")
+    .update({ lido_em: new Date().toISOString() })
+    .eq("psicologa_id", user.id);
+  revalidatePath("/dashboard");
 }

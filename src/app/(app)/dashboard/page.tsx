@@ -48,6 +48,7 @@ import { MinutosAte } from "@/components/Relogio";
 import { marcosDoDia } from "@/lib/agenda/marcos";
 import { resumoFinanceiroMes } from "@/lib/financeiro/resumo";
 import { EstadoVazio } from "@/components/EstadoVazio";
+import { AvisoCupom } from "./AvisoCupom";
 
 export const metadata = { title: "Painel" };
 
@@ -73,7 +74,11 @@ type ContextoPainel = {
   link_atendimento_online: string | null;
   preferencias_lembrete: { antecedencia_horas: number } | { antecedencia_horas: number }[] | null;
   google_oauth_tokens: { escopo: string | null } | { escopo: string | null }[] | null;
+  cupom_avisos: AvisoCupomRow | AvisoCupomRow[] | null;
+  assinaturas: { trial_fim: string } | { trial_fim: string }[] | null;
 };
+
+type AvisoCupomRow = { codigo: string; status: string; lido_em: string | null };
 
 function unico<T>(v: T | T[] | null): T | null {
   if (!v) return null;
@@ -114,7 +119,7 @@ export default async function DashboardPage() {
     supabase
       .from("psicologas")
       .select(
-        "nome, link_atendimento_online, preferencias_lembrete(antecedencia_horas), google_oauth_tokens(escopo)",
+        "nome, link_atendimento_online, preferencias_lembrete(antecedencia_horas), google_oauth_tokens(escopo), cupom_avisos(codigo, status, lido_em), assinaturas(trial_fim)",
       )
       .eq("id", user.id)
       .maybeSingle(),
@@ -220,6 +225,8 @@ export default async function DashboardPage() {
   const MAX_PENDENTES_LISTADAS = 6;
 
   const nome = contexto?.nome ? primeiroNome(contexto.nome) : "";
+  const avisoCupom = unico(contexto?.cupom_avisos ?? null);
+  const trialFim = unico(contexto?.assinaturas ?? null)?.trial_fim ?? null;
   const proximaConsulta = proximas[0];
 
   // Próximos dias agrupados por dia.
@@ -252,6 +259,10 @@ export default async function DashboardPage() {
           {dataLongaBR(`${hoje}T12:00:00${BR_OFFSET}`)}
         </p>
       </div>
+
+      {avisoCupom && !avisoCupom.lido_em && (
+        <AvisoCupom codigo={avisoCupom.codigo} status={avisoCupom.status} trialFim={trialFim} />
+      )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Indicador

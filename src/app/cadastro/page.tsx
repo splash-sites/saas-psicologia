@@ -1,14 +1,21 @@
 import Link from "next/link";
-import { LoginButton } from "../login/LoginButton";
-import { EmailLoginForm } from "../login/EmailLoginForm";
 import { LINK_AUTH, TelaAuth } from "@/components/TelaAuth";
+import { FormularioCadastro } from "./FormularioCadastro";
 
 export const metadata = { title: "Criar conta" };
 
 // Tela própria de cadastro (antes era um modo da tela de login): a landing pode
 // mandar direto para cá. O Google aqui é o mesmo botão do login — a conta é
 // criada no primeiro acesso por ele.
-export default function CadastroPage() {
+// ?cupom=PSICO30: link de divulgação, já preenche o cupom.
+export default async function CadastroPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cupom?: string }>;
+}) {
+  const { cupom } = await searchParams;
+  const cupomInicial = typeof cupom === "string" ? cupom.trim().slice(0, 30) : "";
+
   return (
     <TelaAuth
       titulo="Crie sua conta"
@@ -39,10 +46,7 @@ export default function CadastroPage() {
         </>
       }
     >
-      <EmailLoginForm
-        modo="criar"
-        google={<LoginButton clientId={process.env.GOOGLE_OAUTH_CLIENT_ID ?? ""} />}
-      />
+      <FormularioCadastro clientId={process.env.GOOGLE_OAUTH_CLIENT_ID ?? ""} cupomInicial={cupomInicial} />
     </TelaAuth>
   );
 }

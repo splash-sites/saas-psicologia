@@ -12,14 +12,18 @@ import {
 import {
   diasUsadosDoTeste,
   distanciaEmDias,
+  diasDoCupom,
   duracaoDoTeste,
   documentoMascarado,
   estadoDaTela,
   mostraFormulario,
   type EstadoTela,
+  type ResgateCupom,
 } from "@/lib/assinatura/tela";
 import { asaasConfigurada, asaasModo } from "@/lib/asaas/client";
 import { ConfigurarAssinaturaForm } from "./ConfigurarAssinaturaForm";
+import { CupomForm } from "./CupomForm";
+import { createClient } from "@/lib/supabase/server";
 import { VerificarPagamentoButton } from "./VerificarPagamentoButton";
 import { AtualizarAoPagar } from "./AtualizarAoPagar";
 import { cancelarAssinatura, simularPagamentoConfirmado } from "./actions";
@@ -68,6 +72,18 @@ export default async function AssinaturaPage() {
   const antes = estado === "teste" || estado === "encerrado";
   const chip = CHIP[estado];
 
+  // Cupom já usado (só importa antes de assinar: muda a barra do teste e
+  // esconde o campo "Tenho um cupom" — um por conta).
+  let resgate: ResgateCupom | null = null;
+  if (antes) {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("cupom_resgates")
+      .select("codigo, created_at, trial_fim_antes, trial_fim_depois")
+      .maybeSingle();
+    resgate = data as ResgateCupom | null;
+  }
+
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
       <CabecalhoPagina
@@ -91,7 +107,10 @@ export default async function AssinaturaPage() {
       )}
 
       {antes ? (
-        <CartaoTeste assinatura={assinatura} encerrado={estado === "encerrado"} hoje={hoje} />
+        <>
+          <CartaoTeste assinatura={assinatura} encerrado={estado === "encerrado"} hoje={hoje} resgate={resgate} />
+          {!resgate && <CupomForm />}
+        </>
       ) : (
         <PainelStatus
           assinatura={assinatura}
@@ -156,12 +175,14 @@ function CartaoTeste({
   assinatura,
   encerrado,
   hoje,
+  resgate,
 }: {
   assinatura: Assinatura;
   encerrado: boolean;
   hoje: string;
+  resgate: ResgateCupom | null;
 }) {
-  const total = duracaoDoTeste(assinatura);
+  const total = duracaoDoTeste(assinatura, resgate);
   // O dia de hoje já conta como usado: no primeiro dia a barra mostra 1.
   const usados = encerrado ? total : Math.max(1, diasUsadosDoTeste(assinatura.trial_fim, total, hoje));
   const restantes = diasRestantesTrial(assinatura.trial_fim, hoje);
@@ -190,18 +211,31 @@ function CartaoTeste({
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuenow={usados}
-        className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}
+        className={total > 31 ? "h-2 overflow-hidden rounded bg-slate-200" : "grid gap-1"}
+        style={total > 31 ? undefined : { gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}
       >
-        {Array.from({ length: total }, (_, i) => (
+        {total > 31 ? (
+          // Período longo (cupom): uma barra só, em vez de dezenas de pedaços.
           <span
-            key={i}
-            className={`h-2 rounded ${
-              i < usados ? (encerrado ? "bg-amber-400" : "bg-teal-700") : "bg-slate-200"
-            }`}
+            className={`block h-full rounded ${encerrado ? "bg-amber-400" : "bg-teal-700"}`}
+            style={{ width: `${Math.round((usados / total) * 100)}%` }}
           />
-        ))}
+        ) : (
+          Array.from({ length: total }, (_, i) => (
+            <span
+              key={i}
+              className={`h-2 rounded ${
+                i < usados ? (encerrado ? "bg-amber-400" : "bg-teal-700") : "bg-slate-200"
+              }`}
+            />
+          ))
+        )}
       </div>
+      {resgate && (
+        <p className="text-sm font-medium text-teal-800">
+          Cupom {resgate.codigo} aplicado: +{diasDoCupom(resgate)} dias de teste grátis.
+        </p>
+      )}
       <p className="text-sm text-slate-700">
         {encerrado
           ? "Seus pacientes, agenda e prontuário estão guardados. Enquanto não assina, a conta fica em modo somente leitura: você consulta e exporta tudo, só não cria nem edita."
