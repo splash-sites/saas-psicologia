@@ -5,6 +5,7 @@ import { evolucaoSchema, arquivarSchema } from "@/lib/prontuario/schema";
 import { preferenciasLembreteSchema } from "@/lib/lembretes/schema";
 import { pacienteSchema, anamneseSchema } from "@/lib/pacientes/schema";
 import { linkAtendimentoSchema } from "@/lib/agenda/linkOnline";
+import { edicaoCupomSchema, novoCupomSchema } from "@/lib/admin/cupons";
 import type { ZodType } from "zod";
 
 // Toda mensagem de validação que pode chegar à tela tem de estar em
@@ -24,6 +25,8 @@ const schemas: Record<string, ZodType> = {
   pacienteSchema,
   anamneseSchema,
   linkAtendimentoSchema,
+  novoCupomSchema,
+  edicaoCupomSchema,
 };
 
 // Entradas ruins de todo tipo: campo ausente, texto no lugar de número,
@@ -38,7 +41,7 @@ const ruins: Record<string, unknown>[] = [
       "data_pagamento", "vencimento", "forma_pagamento", "data_sessao", "demanda", "procedimentos",
       "resultados", "encaminhamentos", "notas_privadas", "antecedencia_horas", "mensagem_template",
       "nome", "email", "telefone", "data_nascimento", "cpf", "endereco", "objetivos", "historico",
-      "link_atendimento_online",
+      "link_atendimento_online", "codigo", "dias", "valido_ate", "limite_usos",
     ].map((k) => [k, "zzz"]),
   ),
   Object.fromEntries(

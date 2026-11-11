@@ -3,7 +3,9 @@
 // BASE, e imprime uma tabela de status/retorno. Também tenta acessos cruzados
 // (A usando ids de B). Recusa qualquer Supabase que não seja local.
 //
-// Uso: npx supabase start; (next dev -p 3100 com env local); node scripts/api-check.mjs
+// Uso: npx supabase start; (next dev -p 3100 com env local e
+// ADMIN_EMAIL=teste-a@teste.local); node scripts/api-check.mjs
+// A conta A é a administradora do painel /admin; a B, uma psicóloga comum.
 
 import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -202,6 +204,22 @@ for (const p of rotasPrivadas(B).filter((p) => /[0-9a-f]{8}-/.test(p))) {
   registrar("GET A→ids de B", curto(p), (x) => !vazou && (soPainel || x.status === 404 || (x.status >= 300 && x.status < 400)), r);
 }
 
+// 3b. Painel /admin: só a administradora (A); para a B, "não encontrada".
+const cookieB = await cookieHeader("teste-b@teste.local");
+{
+  let r = await req("/admin/cupons");
+  registrar("ADMIN", "GET /admin/cupons sem login", (x) => x.destino.startsWith("/login"), r);
+  r = await req("/admin", { cookie: cA });
+  registrar("ADMIN", "GET /admin (admin) vai para cupons", (x) => x.destino.startsWith("/admin/cupons"), r);
+  for (const p of ["/admin/cupons", "/admin/cupons/novo"]) {
+    r = await req(p, { cookie: cA });
+    r.resumo = resumoPagina(r);
+    registrar("ADMIN", `GET ${p} (admin)`, (x) => x.status === 200 && !x.resumo, r);
+    r = await req(p, { cookie: cookieB });
+    registrar("ADMIN", `GET ${p} (outra conta)`, (x) => x.status === 404, r);
+  }
+}
+
 // 4. Rotas de API
 const webhook = (headers, body) => req("/api/asaas/webhook", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body });
 {
@@ -313,6 +331,9 @@ const casos = [
   [fin, "arquivarPagamento", () => [A.pagamento, fd({})], "ok"],
   [ag, "cancelarConsulta", () => [A.consulta, "esta", fd({})], "ok"],
   [pac, "excluirPaciente", () => [A.paciente, fd({})], "ok"],
+  // painel /admin (A é a administradora)
+  ["admin/cupons/actions", "criarCupom", () => [vazio, fd({ codigo: `APICHECK${Date.now().toString(36).toUpperCase()}`, dias: "30", limite_usos: "5" })], "ok"],
+  ["admin/cupons/actions", "criarCupom", () => [vazio, fd({ codigo: "a", dias: "0" })], "validação"],
   ["dashboard/actions", "signOut", () => [], "ok"],
 ];
 
@@ -322,6 +343,16 @@ for (const [arq, nome, args, tipo] of casos) {
   const r = await chamarAction(id, args(), { cookie: cA });
   const esperado = (x) => x.status < 500 && (tipo === "mock" ? /Modo simulado/.test(x.retorno ?? "") : tipo.startsWith("ok") ? !/"error"|fieldErrors|"ok":false/.test(x.retorno ?? "") : /error|fieldErrors/.test(x.retorno ?? ""));
   registrar("ACTION (A)", `${nome} [${tipo}]`, esperado, r);
+}
+
+// 5-admin. A outra conta (B) chamando a action do painel direto: nada é criado.
+{
+  const codigo = `INVASOR${Date.now().toString(36).toUpperCase()}`;
+  const id = actionId(mapa, "admin/cupons/actions", "criarCupom");
+  const r = await chamarAction(id, [vazio, fd({ codigo, dias: "365" })], { cookie: cookieB });
+  const { data: criado } = await admin.from("cupons").select("id").eq("codigo", codigo).maybeSingle();
+  r.resumo = criado ? "CRIOU cupom" : r.resumo;
+  registrar("ADMIN", "criarCupom pela outra conta (B)", (x) => !criado && /Não encontrado/.test(x.retorno ?? ""), r);
 }
 
 // 5a. O paciente cadastrado com máscara foi gravado no formato padrão.
