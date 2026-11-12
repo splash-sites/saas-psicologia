@@ -14,7 +14,7 @@ describe("traduzErroAuth", () => {
 
   it("traduz senha curta", () => {
     expect(traduzErroAuth("Password should be at least 6 characters")).toBe(
-      "A senha precisa ter pelo menos 6 caracteres.",
+      "A senha precisa ter pelo menos 8 caracteres.",
     );
   });
 

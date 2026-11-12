@@ -2,10 +2,12 @@
 // texto que a psicóloga entenda. Função pura — fácil de testar sem precisar
 // de um Supabase de verdade.
 
+import { SENHA_MINIMA } from "./senha";
+
 const MAPA: Array<[RegExp, string]> = [
   [/invalid login credentials/i, "E-mail ou senha incorretos."],
   [/user already registered/i, "Já existe uma conta com esse e-mail. Tente entrar."],
-  [/password should be at least/i, "A senha precisa ter pelo menos 6 caracteres."],
+  [/password should be at least/i, `A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.`],
   [/email not confirmed/i, "Confirme seu e-mail antes de entrar. O link está na sua caixa de entrada."],
   [/rate limit/i, "Muitas tentativas seguidas. Aguarde um pouco e tente de novo."],
   [/unable to validate email address/i, "E-mail inválido."],

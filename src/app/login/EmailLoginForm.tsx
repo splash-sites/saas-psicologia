@@ -10,6 +10,7 @@ import { traduzErroAuth } from "@/lib/auth/mensagens";
 import { EVENTO_CAMPO_VALIDO, useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
 import { BOTAO_AUTH, LINK_AUTH } from "@/components/TelaAuth";
+import { marcarSenhaFraca, SENHA_MINIMA } from "@/lib/auth/senha";
 import { normalizarCupom } from "@/lib/assinatura/cupom";
 
 // Formulário de e-mail e senha das telas /login (modo "entrar") e /cadastro
@@ -160,13 +161,14 @@ export function EmailLoginForm({
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
     if (error) {
       setCarregando(false);
       setAguardandoConfirmacao(/email not confirmed/i.test(error.message));
       setMensagem({ tipo: "erro", texto: erroDeLogin(error.message) });
       return;
     }
+    marcarSenhaFraca(Boolean(data.weakPassword));
     router.push("/dashboard");
   }
 
@@ -214,7 +216,7 @@ export function EmailLoginForm({
           <input
             type={verSenha ? "text" : "password"}
             required
-            minLength={6}
+            minLength={criando ? SENHA_MINIMA : undefined}
             data-campo="senha"
             data-obrigatorio="Informe a senha."
             value={senha}
@@ -223,7 +225,7 @@ export function EmailLoginForm({
               if (criando) conferirSenhas(e.target.value, confirmar);
             }}
             autoComplete={criando ? "new-password" : "current-password"}
-            placeholder={criando ? "Mínimo de 6 caracteres" : "Sua senha"}
+            placeholder={criando ? `Mínimo de ${SENHA_MINIMA} caracteres` : "Sua senha"}
             className="input min-h-12 pr-12 font-normal"
           />
           <button

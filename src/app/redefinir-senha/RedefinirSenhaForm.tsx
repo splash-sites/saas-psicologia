@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { traduzErroAuth } from "@/lib/auth/mensagens";
 import { EVENTO_CAMPO_VALIDO, useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
+import { marcarSenhaFraca, SENHA_MINIMA } from "@/lib/auth/senha";
 import { BOTAO_AUTH } from "@/components/TelaAuth";
 
 // Chega aqui pelo link do e-mail de recuperação: /auth/confirm já abriu a
@@ -47,6 +48,7 @@ export function RedefinirSenhaForm() {
       setErro(traduzErroAuth(error.message));
       return;
     }
+    marcarSenhaFraca(false);
     router.push("/dashboard");
   }
 
@@ -61,7 +63,7 @@ export function RedefinirSenhaForm() {
           <input
             type={verSenha ? "text" : "password"}
             required
-            minLength={6}
+            minLength={SENHA_MINIMA}
             data-campo="senha"
             data-obrigatorio="Informe a nova senha."
             value={senha}
@@ -70,7 +72,7 @@ export function RedefinirSenhaForm() {
               conferirSenhas(e.target.value, confirmar);
             }}
             autoComplete="new-password"
-            placeholder="Mínimo de 6 caracteres"
+            placeholder={`Mínimo de ${SENHA_MINIMA} caracteres`}
             className="input min-h-12 pr-12 font-normal"
           />
           <button

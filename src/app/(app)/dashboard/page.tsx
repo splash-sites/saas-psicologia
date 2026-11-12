@@ -49,6 +49,7 @@ import { marcosDoDia } from "@/lib/agenda/marcos";
 import { resumoFinanceiroMes } from "@/lib/financeiro/resumo";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { AvisoCupom } from "./AvisoCupom";
+import { AvisoSenhaFraca } from "./AvisoSenhaFraca";
 
 export const metadata = { title: "Painel" };
 
@@ -259,6 +260,8 @@ export default async function DashboardPage() {
           {dataLongaBR(`${hoje}T12:00:00${BR_OFFSET}`)}
         </p>
       </div>
+
+      <AvisoSenhaFraca />
 
       {avisoCupom && !avisoCupom.lido_em && (
         <AvisoCupom codigo={avisoCupom.codigo} status={avisoCupom.status} trialFim={trialFim} />
