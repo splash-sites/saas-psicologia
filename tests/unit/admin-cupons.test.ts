@@ -14,6 +14,15 @@ describe("acesso ao painel /admin", () => {
     expect(ehAdmin("dono@exemplo.com", undefined)).toBe(false);
     expect(ehAdmin("dono@exemplo.com", "  ")).toBe(false);
     expect(ehAdmin("", "")).toBe(false);
+    expect(ehAdmin("", ",")).toBe(false);
+  });
+
+  it("aceita mais de um e-mail separado por vírgula", () => {
+    const lista = "dono@exemplo.com, Socia@Exemplo.com ,";
+    expect(ehAdmin("dono@exemplo.com", lista)).toBe(true);
+    expect(ehAdmin("socia@exemplo.com", lista)).toBe(true);
+    expect(ehAdmin("outra@exemplo.com", lista)).toBe(false);
+    expect(ehAdmin("dono@exemplo.com, socia@exemplo.com", lista)).toBe(false);
   });
 });
 
