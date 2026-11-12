@@ -72,3 +72,28 @@ export async function alternarCupom(id: string, ativo: boolean): Promise<void> {
   revalidatePath("/admin/cupons");
   revalidatePath(`/admin/cupons/${id}`);
 }
+
+/**
+ * Exclui de vez — só cupom que ninguém usou (criado por engano). Com uso, o
+ * banco recusa (cupom_resgates aponta para ele com `on delete restrict`): o
+ * histórico de quem ganhou dias não some. Para esse, pausar.
+ */
+export async function excluirCupom(id: string, _prev: FormState): Promise<FormState> {
+  if (!(await adminAtual())) return NAO_ENCONTRADO;
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("cupom_resgates")
+    .select("id", { count: "exact", head: true })
+    .eq("cupom_id", id);
+  if ((count ?? 0) > 0) return { error: MSG_CUPOM_USADO };
+
+  const { error } = await admin.from("cupons").delete().eq("id", id);
+  if (error) {
+    if (error.code === "23503") return { error: MSG_CUPOM_USADO };
+    return { error: "Não foi possível excluir. Tente de novo." };
+  }
+  revalidatePath("/admin/cupons");
+  redirect("/admin/cupons");
+}
+
+const MSG_CUPOM_USADO = "Este cupom já foi usado e não pode ser excluído: o histórico de quem usou fica. Pause o cupom.";

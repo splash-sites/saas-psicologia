@@ -6,6 +6,7 @@ import { situacaoCupom, SITUACAO_CUPOM_LABEL, TOM_SITUACAO, type CupomAdmin } fr
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { alternarCupom } from "../actions";
 import { EditarCupomForm } from "./EditarCupomForm";
+import { ExcluirCupom } from "./ExcluirCupom";
 
 export const metadata = { title: "Cupom" };
 
@@ -114,6 +115,8 @@ export default async function CupomDetalhe({ params }: { params: Promise<{ id: s
           <p className="text-xs text-slate-500">Mostrando os {resgates.length} usos mais recentes de {usos}.</p>
         )}
       </section>
+
+      {usos === 0 && <ExcluirCupom id={cupom.id} codigo={cupom.codigo} />}
     </div>
   );
 }

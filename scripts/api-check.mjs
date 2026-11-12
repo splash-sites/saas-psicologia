@@ -359,6 +359,24 @@ for (const [arq, nome, args, tipo] of casos) {
   const { data: depois } = await admin.from("assinaturas").select("trial_fim").eq("psicologa_id", B.pid).single();
   r2.resumo = antes.trial_fim !== depois.trial_fim ? "ESTENDEU o teste" : r2.resumo;
   registrar("ADMIN", "estenderTeste pela outra conta (B)", (x) => antes.trial_fim === depois.trial_fim && /Não encontrado/.test(x.retorno ?? ""), r2);
+
+  // Excluir cupom: B não exclui; A exclui o sem uso; o usado o banco segura.
+  const idExc = actionId(mapa, "admin/cupons/actions", "excluirCupom");
+  const { data: alvo } = await admin.from("cupons").insert({ codigo: `EXCLUIR${Date.now().toString(36).toUpperCase()}`, dias: 5 }).select("id").single();
+  // Em dev, a action só fica registrada depois que a página que a usa compila.
+  await req(`/admin/cupons/${alvo.id}`, { cookie: cA });
+  const r3 = await chamarAction(idExc, [alvo.id, vazio], { cookie: cookieB });
+  const { data: aindaLa } = await admin.from("cupons").select("id").eq("id", alvo.id).maybeSingle();
+  registrar("ADMIN", "excluirCupom pela outra conta (B)", (x) => Boolean(aindaLa) && /Não encontrado/.test(x.retorno ?? ""), r3);
+  const r4 = await chamarAction(idExc, [alvo.id, vazio], { cookie: cA });
+  const { data: sumiu } = await admin.from("cupons").select("id").eq("id", alvo.id).maybeSingle();
+  registrar("ADMIN", "excluirCupom sem uso (A)", (x) => !sumiu && x.status < 500, r4);
+  const { data: usado } = await admin.from("cupom_resgates").select("cupom_id").limit(1).maybeSingle();
+  if (usado) {
+    const r5 = await chamarAction(idExc, [usado.cupom_id, vazio], { cookie: cA });
+    const { data: ficou } = await admin.from("cupons").select("id").eq("id", usado.cupom_id).maybeSingle();
+    registrar("ADMIN", "excluirCupom já usado é recusado (A)", (x) => Boolean(ficou) && /já foi usado/.test(x.retorno ?? ""), r5);
+  }
 }
 
 // 5a. O paciente cadastrado com máscara foi gravado no formato padrão.

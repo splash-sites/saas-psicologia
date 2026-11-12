@@ -62,6 +62,24 @@ describe.skipIf(!hasLocalSupabase || !hasAdmin)("Banco: cupons", () => {
     expect(daVizinha).toEqual([]);
   });
 
+  it("cupom usado não pode ser apagado; sem uso pode; usuária não apaga nenhum", async () => {
+    const admin = adminClient();
+    const usado = await criarCupom();
+    const livre = await criarCupom();
+    const a = await contaNova("apagar");
+    expect((await a.cliente.rpc("resgatar_cupom", { p_codigo: usado })).data).toBe("ok");
+
+    await a.cliente.from("cupons").delete().eq("codigo", livre);
+    expect((await admin.from("cupons").select("id").eq("codigo", livre)).data).toHaveLength(1);
+
+    const bloqueado = await admin.from("cupons").delete().eq("codigo", usado);
+    expect(bloqueado.error?.code).toBe("23503");
+    expect((await admin.from("cupom_resgates").select("id").eq("psicologa_id", a.id)).data).toHaveLength(1);
+
+    expect((await admin.from("cupons").delete().eq("codigo", livre)).error).toBeNull();
+    expect((await admin.from("cupons").select("id").eq("codigo", livre)).data).toEqual([]);
+  });
+
   it("teste vencido: conta a partir de hoje", async () => {
     const codigo = await criarCupom({ dias: 30 });
     const a = await contaNova("vencido");
