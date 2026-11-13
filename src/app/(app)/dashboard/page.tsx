@@ -50,6 +50,8 @@ import { resumoFinanceiroMes } from "@/lib/financeiro/resumo";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { AvisoCupom } from "./AvisoCupom";
 import { AvisoSenhaFraca } from "./AvisoSenhaFraca";
+import { AvisoTermos } from "./AvisoTermos";
+import { mostrarAvisoTermos } from "@/lib/termos";
 
 export const metadata = { title: "Painel" };
 
@@ -72,6 +74,8 @@ type ConsultaPainel = {
 
 type ContextoPainel = {
   nome: string | null;
+  created_at: string;
+  termos_versao_vista: string | null;
   link_atendimento_online: string | null;
   preferencias_lembrete: { antecedencia_horas: number } | { antecedencia_horas: number }[] | null;
   google_oauth_tokens: { escopo: string | null } | { escopo: string | null }[] | null;
@@ -120,7 +124,7 @@ export default async function DashboardPage() {
     supabase
       .from("psicologas")
       .select(
-        "nome, link_atendimento_online, preferencias_lembrete(antecedencia_horas), google_oauth_tokens(escopo), cupom_avisos(codigo, status, lido_em), assinaturas(trial_fim)",
+        "nome, created_at, termos_versao_vista, link_atendimento_online, preferencias_lembrete(antecedencia_horas), google_oauth_tokens(escopo), cupom_avisos(codigo, status, lido_em), assinaturas(trial_fim)",
       )
       .eq("id", user.id)
       .maybeSingle(),
@@ -262,6 +266,10 @@ export default async function DashboardPage() {
       </div>
 
       <AvisoSenhaFraca />
+
+      {mostrarAvisoTermos(hoje, contexto?.created_at ? dataChaveBR(contexto.created_at) : null, contexto?.termos_versao_vista ?? null) && (
+        <AvisoTermos />
+      )}
 
       {avisoCupom && !avisoCupom.lido_em && (
         <AvisoCupom codigo={avisoCupom.codigo} status={avisoCupom.status} trialFim={trialFim} />

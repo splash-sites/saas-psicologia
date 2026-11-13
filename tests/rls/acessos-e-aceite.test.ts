@@ -87,3 +87,18 @@ describe.skipIf(!hasLocalSupabase)("Banco: acessos ao prontuário e aceite de le
     expect(revogado!.lembretes_aceitos_em).toBeNull();
   });
 });
+
+describe.skipIf(!hasLocalSupabase)("Banco: aviso de termos (0030)", () => {
+  it("cada conta marca só o próprio aviso como visto", async () => {
+    const a = await conta("termos-a");
+    const b = await conta("termos-b");
+    await b.cliente.from("psicologas").update({ termos_versao_vista: "2026-11-13" }).eq("id", a.id);
+    const { data: intacta } = await a.cliente.from("psicologas").select("termos_versao_vista").eq("id", a.id).single();
+    expect(intacta!.termos_versao_vista).toBeNull();
+    await a.cliente.from("psicologas").update({ termos_versao_vista: "2026-11-13" }).eq("id", a.id);
+    const { data: deA } = await a.cliente.from("psicologas").select("termos_versao_vista").eq("id", a.id).single();
+    const { data: deB } = await b.cliente.from("psicologas").select("termos_versao_vista").eq("id", b.id).single();
+    expect(deA!.termos_versao_vista).toBe("2026-11-13");
+    expect(deB!.termos_versao_vista).toBeNull();
+  });
+});

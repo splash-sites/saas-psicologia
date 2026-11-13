@@ -128,4 +128,7 @@ html[data-privado] [data-sensivel] {
   .alert-warning {
     @apply bg-amber-50 text-amber-800;
   }
+  .alert-info {
+    @apply bg-teal-50 text-teal-900;
+  }
 }
