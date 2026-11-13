@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { URL_PRIVACIDADE, URL_TERMOS } from "@/lib/legal";
 import { cookies } from "next/headers";
 import { COOKIE_LEMBRAR, lembrarDoValor } from "@/lib/supabase/lembrar";
 import { LoginButton } from "./LoginButton";
@@ -32,16 +33,16 @@ export default async function LoginPage({
             </Link>
           </p>
           {/* Links para os Termos e a Privacidade: a verificação do Google confere
-              que as páginas do app levam à política de privacidade. O aceite em
+              que as páginas do app levam à política de privacidade (na landing). O aceite em
               si fica no cadastro. */}
           <p className="text-xs text-tinta-suave">
-            <Link href="/termos" className="hover:underline">
+            <a href={URL_TERMOS} target="_blank" rel="noopener noreferrer" className="hover:underline">
               Termos de Uso
-            </Link>{" "}
+            </a>{" "}
             ·{" "}
-            <Link href="/privacidade" className="hover:underline">
+            <a href={URL_PRIVACIDADE} target="_blank" rel="noopener noreferrer" className="hover:underline">
               Privacidade
-            </Link>
+            </a>
           </p>
         </>
       }

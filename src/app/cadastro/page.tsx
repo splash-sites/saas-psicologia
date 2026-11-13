@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { URL_PRIVACIDADE, URL_TERMOS } from "@/lib/legal";
 import { LINK_AUTH, TelaAuth } from "@/components/TelaAuth";
 import { FormularioCadastro } from "./FormularioCadastro";
 
@@ -34,13 +35,13 @@ export default async function CadastroPage({
           </p>
           <p className="text-xs leading-relaxed text-tinta-suave">
             Ao criar a conta, você concorda com os{" "}
-            <Link href="/termos" className="font-medium text-tinta hover:underline">
+            <a href={URL_TERMOS} target="_blank" rel="noopener noreferrer" className="font-medium text-tinta hover:underline">
               Termos de Uso
-            </Link>{" "}
+            </a>{" "}
             e a{" "}
-            <Link href="/privacidade" className="font-medium text-tinta hover:underline">
+            <a href={URL_PRIVACIDADE} target="_blank" rel="noopener noreferrer" className="font-medium text-tinta hover:underline">
               Política de Privacidade
-            </Link>
+            </a>
             .
           </p>
         </>

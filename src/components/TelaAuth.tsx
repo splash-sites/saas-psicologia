@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { URL_PRIVACIDADE, URL_TERMOS } from "@/lib/legal";
 import { Logo } from "@/components/Logo";
 
 // Moldura das telas de entrar e criar conta (desenho de 2026-11-06, canvas
@@ -81,13 +81,13 @@ export function TelaAuth({
 export function LinksLegais() {
   return (
     <p className="text-xs text-tinta-suave">
-      <Link href="/termos" className="hover:underline">
-        Termos de Uso
-      </Link>{" "}
+      <a href={URL_TERMOS} target="_blank" rel="noopener noreferrer" className="hover:underline">
+              Termos de Uso
+            </a>{" "}
       ·{" "}
-      <Link href="/privacidade" className="hover:underline">
-        Privacidade
-      </Link>
+      <a href={URL_PRIVACIDADE} target="_blank" rel="noopener noreferrer" className="hover:underline">
+              Privacidade
+            </a>
     </p>
   );
 }

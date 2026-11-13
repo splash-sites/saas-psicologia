@@ -162,7 +162,9 @@ const A = await semear("teste-a@teste.local", "Psico A", "09:00");
 const B = await semear("teste-b@teste.local", "Psico B", "15:00");
 const cA = await cookieHeader("teste-a@teste.local");
 
-const rotasPublicas = ["/login", "/cadastro", "/privacidade", "/termos"];
+const rotasPublicas = ["/login", "/cadastro"];
+// Termos e Privacidade ficam só na landing (URLs da tela de consentimento do Google).
+const rotasLegais = { "/termos": "https://gradatim.com.br/termos", "/privacidade": "https://gradatim.com.br/privacidade" };
 const rotasPrivadas = (x) => [
   "/", "/dashboard", "/agenda", `/agenda?consulta=${x.consulta}`, "/agenda/nova",
   `/agenda/${x.consulta}`, `/agenda/${x.consulta}/editar`, "/agenda/bloqueios", "/agenda/bloqueios/novo",
@@ -179,6 +181,10 @@ for (const p of rotasPublicas) {
   const r = await req(p);
   r.resumo = resumoPagina(r);
   registrar("GET sem login", p, (x) => x.status === 200, r);
+}
+for (const [p, destino] of Object.entries(rotasLegais)) {
+  const r = await req(p);
+  registrar("GET sem login", p, (x) => x.status === 308 && x.destino === destino, r);
 }
 for (const p of rotasPrivadas(A)) {
   const r = await req(p);
