@@ -19,6 +19,8 @@ export type Paciente = {
   status: PacienteStatus;
   observacoes: string | null;
   aceita_lembretes: boolean;
+  /** Gravada pelo banco ao marcar o aceite (migration 0029); null = não aceita ou aceite anterior ao registro. */
+  lembretes_aceitos_em: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

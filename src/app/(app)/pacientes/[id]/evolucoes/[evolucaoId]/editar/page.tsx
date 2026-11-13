@@ -5,6 +5,7 @@ import type { Evolucao } from "@/lib/prontuario/types";
 import { atualizarEvolucao } from "../../actions";
 import { EvolucaoForm } from "../../EvolucaoForm";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import { registrarAcesso } from "@/lib/prontuario/acesso";
 
 export const metadata = { title: "Editar evolução" };
 
@@ -27,6 +28,7 @@ export default async function EditarEvolucaoPage({
     .maybeSingle();
 
   if (!data) notFound();
+  await registrarAcesso(supabase, "evolucao", id, evolucaoId);
   const evolucao = data as Evolucao;
 
   return (

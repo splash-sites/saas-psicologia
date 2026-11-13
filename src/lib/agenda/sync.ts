@@ -27,6 +27,21 @@ type ConsultaRow = {
 };
 
 /**
+ * Título do evento no Google Agenda: "Consulta — Maria S." (primeiro nome +
+ * inicial do último sobrenome). O Google guarda o título e o paciente
+ * convidado o vê; o nome completo fica só no Gradatim (LGPD, minimização —
+ * relatório de 2026-11-12, item 014).
+ */
+export function tituloDoEvento(nome: string | null | undefined): string {
+  const partes = (nome ?? "").trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "Consulta";
+  const primeiro = partes[0];
+  if (partes.length === 1) return `Consulta — ${primeiro}`;
+  const inicial = partes[partes.length - 1].charAt(0).toLocaleUpperCase("pt-BR");
+  return `Consulta — ${primeiro} ${inicial}.`;
+}
+
+/**
  * Quem o Google avisa. Consulta que já terminou (registrada ou mexida depois)
  * vira só registro na agenda da psicóloga: sem convidado e sem e-mail —
  * convite de uma sessão de semanas atrás confunde o paciente.
@@ -102,9 +117,9 @@ export async function sincronizarConsulta(
   const { convidadoEmail, notificar } = conviteDoPaciente(c, pac, conviteLigado);
 
   // O evento é visível ao convidado: sem observações da consulta nem nada
-  // clínico. Só nome do paciente, horário e Meet.
+  // clínico. Só primeiro nome + inicial do paciente, horário e Meet.
   const evento = {
-    titulo: `Consulta — ${pac?.nome ?? "Paciente"}`,
+    titulo: tituloDoEvento(pac?.nome),
     inicio: c.inicio,
     fim: c.fim,
     online: c.modalidade === "online",

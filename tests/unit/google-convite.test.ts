@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { corpoEvento } from "@/lib/google/calendar";
-import { conviteDoPaciente } from "@/lib/agenda/sync";
+import { conviteDoPaciente, tituloDoEvento } from "@/lib/agenda/sync";
 
 const base = {
   titulo: "Consulta — Maria",
@@ -60,5 +60,17 @@ describe("conviteDoPaciente — consulta registrada depois", () => {
     expect(conviteDoPaciente(fim, { ...pac, aceita_lembretes: false }, true, agora).convidadoEmail).toBeNull();
     expect(conviteDoPaciente(fim, { ...pac, email: null }, true, agora).convidadoEmail).toBeNull();
     expect(conviteDoPaciente(fim, pac, false, agora).convidadoEmail).toBeNull();
+  });
+});
+
+describe("tituloDoEvento — sem o nome completo no Google", () => {
+  it("primeiro nome + inicial do último sobrenome", () => {
+    expect(tituloDoEvento("Maria da Silva Souza")).toBe("Consulta — Maria S.");
+    expect(tituloDoEvento("  ana   beatriz  ")).toBe("Consulta — ana B.");
+  });
+  it("nome de uma palavra só fica inteiro; sem nome, só 'Consulta'", () => {
+    expect(tituloDoEvento("Maria")).toBe("Consulta — Maria");
+    expect(tituloDoEvento("")).toBe("Consulta");
+    expect(tituloDoEvento(null)).toBe("Consulta");
   });
 });

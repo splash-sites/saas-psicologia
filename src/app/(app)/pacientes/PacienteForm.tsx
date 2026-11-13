@@ -12,6 +12,10 @@ import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 import type { FormState } from "./actions";
 import { LIMITES } from "@/lib/limites";
 
+function dataBR(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(new Date(iso));
+}
+
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   paciente?: Paciente;
@@ -158,7 +162,7 @@ export function PacienteForm({
         <input
           type="checkbox"
           name="aceita_lembretes"
-          defaultChecked={paciente?.aceita_lembretes ?? true}
+          defaultChecked={paciente?.aceita_lembretes ?? false}
           className="mt-1"
         />
         <span>
@@ -167,7 +171,14 @@ export function PacienteForm({
             {GOOGLE_AGENDA_ATIVA
               ? "WhatsApp (enviado por você) e convite por e-mail no Google Agenda."
               : "Pelo WhatsApp, enviado por você."}{" "}
-            Desmarque se o paciente não quiser ser contatado.
+            Marque só se o paciente concordou em receber.
+            {paciente?.aceita_lembretes && (
+              <span className="block">
+                {paciente.lembretes_aceitos_em
+                  ? `Aceite registrado em ${dataBR(paciente.lembretes_aceitos_em)}.`
+                  : "Aceite anterior ao registro de data."}
+              </span>
+            )}
           </span>
         </span>
       </label>

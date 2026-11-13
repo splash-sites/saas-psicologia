@@ -9,6 +9,7 @@ import { formatarCpf, formatarTelefoneBR } from "@/lib/pacientes/formatacao";
 import { StatusBadge } from "../StatusBadge";
 import { excluirPaciente, salvarAnamnese } from "../actions";
 import { AnamneseForm } from "./AnamneseForm";
+import { registrarAcesso } from "@/lib/prontuario/acesso";
 
 function formatarData(iso: string | null): string {
   if (!iso) return "—";
@@ -36,20 +37,18 @@ export default async function PacienteDetailPage({
   if (!pacienteRow) notFound();
   const paciente = pacienteRow as Paciente;
 
-  const { data: anamneseRow } = await supabase
-    .from("anamneses")
-    .select("*")
-    .eq("paciente_id", id)
-    .maybeSingle();
-
-  const { data: evolucoesRecentes } = await supabase
-    .from("evolucoes")
-    .select("id, data_sessao")
-    .eq("paciente_id", id)
-    .is("deleted_at", null)
-    .order("data_sessao", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(3);
+  const [{ data: anamneseRow }, { data: evolucoesRecentes }] = await Promise.all([
+    supabase.from("anamneses").select("*").eq("paciente_id", id).maybeSingle(),
+    supabase
+      .from("evolucoes")
+      .select("id, data_sessao")
+      .eq("paciente_id", id)
+      .is("deleted_at", null)
+      .order("data_sessao", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(3),
+    registrarAcesso(supabase, "ficha", id),
+  ]);
 
   const wa = whatsappLink(paciente.telefone);
 

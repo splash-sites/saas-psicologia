@@ -6,6 +6,7 @@ import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Evolucao } from "@/lib/prontuario/types";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
+import { registrarAcesso } from "@/lib/prontuario/acesso";
 
 export const metadata = { title: "Evoluções" };
 
@@ -45,7 +46,7 @@ export default async function EvolucoesTimelinePage({
     .order("created_at", { ascending: false });
   q = mostrarArquivadas ? q.not("deleted_at", "is", null) : q.is("deleted_at", null);
 
-  const { data: evolucoes } = await q;
+  const [{ data: evolucoes }] = await Promise.all([q, registrarAcesso(supabase, "evolucoes", id)]);
   const lista = (evolucoes ?? []) as Pick<
     Evolucao,
     "id" | "data_sessao" | "demanda" | "deleted_at" | "deleted_motivo" | "updated_at"

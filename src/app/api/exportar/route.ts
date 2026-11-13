@@ -101,6 +101,7 @@ export async function GET() {
       { titulo: "Endereço", valor: txt("endereco") },
       { titulo: "Status", valor: txt("status") },
       { titulo: "Aceita lembretes", valor: (l) => l.aceita_lembretes as boolean },
+      { titulo: "Lembretes aceitos em", valor: dataHora("lembretes_aceitos_em") },
       { titulo: "Observações", valor: txt("observacoes") },
       { titulo: "Cadastrado em", valor: dataHora("created_at") },
       { titulo: "Arquivado em", valor: dataHora("deleted_at") },

@@ -5,6 +5,7 @@ import type { Paciente } from "@/lib/pacientes/types";
 import { atualizarPaciente } from "../../actions";
 import { PacienteForm } from "../../PacienteForm";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import { registrarAcesso } from "@/lib/prontuario/acesso";
 
 export const metadata = { title: "Editar paciente" };
 
@@ -26,6 +27,7 @@ export default async function EditarPacientePage({
     .maybeSingle();
 
   if (!paciente) notFound();
+  await registrarAcesso(supabase, "ficha", id);
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">

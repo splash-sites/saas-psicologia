@@ -6,6 +6,7 @@ import { CAMPOS_EVOLUCAO, type Evolucao } from "@/lib/prontuario/types";
 import { arquivarEvolucao } from "../actions";
 import { ArquivarForm } from "./ArquivarForm";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import { registrarAcesso } from "@/lib/prontuario/acesso";
 
 function dataBR(iso: string): string {
   const [a, m, d] = iso.split("-");
@@ -40,6 +41,7 @@ export default async function EvolucaoDetailPage({
     .maybeSingle();
 
   if (!data) notFound();
+  await registrarAcesso(supabase, "evolucao", id, evolucaoId);
   const e = data as Evolucao;
   const arquivada = Boolean(e.deleted_at);
   const editado = e.updated_at !== e.created_at;
