@@ -56,6 +56,8 @@ export type Assinatura = {
   asaas_customer_id: string | null;
   asaas_subscription_id: string | null;
   invoice_url_atual: string | null;
+  /** Valor da fatura em aberto (com cupom de desconto pode ser menor que `valor`). Migration 0031. */
+  valor_fatura_atual?: number | null;
   created_at: string;
   updated_at: string;
 };

@@ -97,6 +97,22 @@ Decisões do usuário, validadas em três rodadas de perguntas. Entregas em orde
 
 **Antes de abrir para clientes:** Privacidade dizer que o administrador vê dados de conta e de uso (não clínicos); Termos com item sobre cupons (validade, um por conta, sem valor em dinheiro) — ambos entram na revisão jurídica. `ADMIN_EMAIL` cadastrada na Vercel.
 
+## Feature nova: cupons de desconto na assinatura (decidida em 2026-11-17, em construção)
+
+**Por que assim:** o Asaas não tem cupom nem "desconto nas N primeiras cobranças" (o `discount` dele é desconto por pagar antes do vencimento — não usar). O controle fica no nosso banco e o servidor troca o valor de cada cobrança no Asaas (`PUT /payments/{id}`) **antes** de a psicóloga ver o link. Testado no sandbox em 2026-11-17: valor trocado, link da fatura igual, assinatura segue no preço cheio para as próximas; **R$ 0 é ignorado sem erro e abaixo de R$ 5 é recusado**. Trocar de gateway foi avaliado e descartado (Stripe tem cupom nativo, mas refazer a integração validada não compensa).
+
+**Decisões do usuário:**
+- Desconto em **% ou R$ a menos por mês**, por **N meses ou para sempre** (parceiros). Preço final fixo ficou de fora.
+- Vale nos **três planos**: o desconto é por mês (valor do mês = preço do plano ÷ meses, já com o desconto do trimestral/semestral) e entra nos meses do cupom que caem em cada cobrança. Ex.: 20% nos 3 primeiros meses → mensal R$ 39,92 nas 3 primeiras; trimestral R$ 107,78 na 1ª; semestral R$ 229,04 na 1ª.
+- **Um cupom de desconto por conta**, além do de dias grátis (um de cada tipo; não acumula dois de desconto).
+- Vale para quem não assinou **e para quem cancelou** e vai assinar de novo.
+- **Uso grátis por muito tempo = cupom de dias ou "Estender teste"** no admin (até 365 dias por vez, renovável quantas vezes quiser; só para quem nunca assinou). Desconto de 100% não existe (mínimo do Asaas).
+
+**Como funciona:** "Assinar" com cupom → `reservar_cupom_desconto` (trava o cupom, limite de usos) → assinatura no Asaas (para sempre: já com o valor menor; por N meses: preço cheio) → 1ª cobrança com o valor trocado antes de devolver o link; se a troca falhar, remove a assinatura do Asaas e libera o cupom. Cobranças seguintes: o webhook `PAYMENT_CREATED` (o Asaas cria a cobrança ~40 dias antes do vencimento) chama `reservar_meses_desconto` (uma vez por cobrança, `cobrancas_desconto`) e troca o valor; falhou → `devolver_meses_desconto` e 503 para o Asaas reenviar. Cálculo em `src/lib/assinatura/desconto.ts` (centavos, piso de R$ 5); aplicação em `src/lib/assinatura/aplicarDesconto.ts`. Código de desconto digitado em "Tenho um cupom" ou no cadastro devolve `cupom_de_desconto` (não mexe no teste) e a tela de Assinatura abre com ele preenchido (`?cupom=` ou `cupom_avisos`). `assinaturas.valor_fatura_atual` mostra o valor real da fatura em aberto.
+
+**Entrega 1 feita (2026-11-17):** migration `0031_cupons_desconto.sql`, cálculo, Asaas, tela de Assinatura (campo "Tenho um cupom de desconto" com prévia dos valores) e webhook; testes em `tests/unit/desconto.test.ts` e `tests/rls/cupons-desconto.test.ts`. **Aplicar 0031 no SQL Editor de produção antes do push** — sem ela, gravar `valor_fatura_atual` falha e a assinatura não é salva. **Até a entrega 2, criar cupom de desconto no SQL Editor:** `insert into public.cupons (codigo, tipo, desconto_tipo, desconto_valor, desconto_meses, valido_ate, limite_usos) values ('BLACK10', 'desconto', 'percentual', 10, 1, '2026-12-31', 100);` (`desconto_tipo` `percentual` ou `valor`; `desconto_meses` `null` = para sempre). Conferir antes que nenhum plano fique abaixo de R$ 5.
+**Próximas:** (2) admin — criar cupom de desconto (com prévia por plano e recusa abaixo de R$ 5 via `menorCobrancaPossivel`), lista/detalhe mostrando o tipo e os usos de `cupom_descontos`; (3) indicadores — receita mensal estimada descontando cupons em vigor, cadastros por cupom de desconto. Termos: regra do cupom de desconto (um por conta, sem valor em dinheiro, perde o restante se cancelar).
+
 ## Fora do escopo do MVP (backlog de Fase 2, não implementar sem validação prévia com o usuário)
 
 - Emissão de recibo/nota fiscal (NF-e/NFS-e).

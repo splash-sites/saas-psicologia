@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
-import { Check, Loader2 } from "lucide-react";
-import { configurarAssinatura, type FormState } from "./actions";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
+import { Check, Loader2, Ticket, X } from "lucide-react";
+import { configurarAssinatura, conferirCupomDesconto, type FormState } from "./actions";
 import { useValidacao } from "@/lib/form/validacao";
 import { ASSINATURA_PLANO, PLANOS, PRECO_MENSAL, type AssinaturaPlano } from "@/lib/assinatura/types";
 import { mascararCpfCnpj, validarCpfCnpj } from "@/lib/assinatura/cpfCnpj";
+import { normalizarCupom } from "@/lib/assinatura/cupom";
+import { descricaoDesconto, primeiraCobranca, resumoComCupom, type Desconto } from "@/lib/assinatura/desconto";
 
 const MSG_CPF_CNPJ_INVALIDO = "CPF ou CNPJ inválido. Confira os números.";
 
@@ -46,7 +48,15 @@ function detalhesDoPlano(id: AssinaturaPlano) {
 
 // vencimento = fim do teste grátis ainda por vir; null = o teste já acabou e a
 // primeira cobrança vence hoje (mesma regra de assinarPlano).
-export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | null }) {
+// cupomInicial: cupom de desconto vindo do link (?cupom=) ou do cadastro; já
+// entra conferido.
+export function ConfigurarAssinaturaForm({
+  vencimento,
+  cupomInicial,
+}: {
+  vencimento: string | null;
+  cupomInicial?: string | null;
+}) {
   const [state, setState] = useState<FormState>({});
   const [pending, startTransition] = useTransition();
   const [plano, setPlano] = useState<AssinaturaPlano>("mensal");
@@ -54,6 +64,44 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
   // Erro só depois de sair do campo ou tentar enviar — não enquanto digita.
   const [erroCpfCnpj, setErroCpfCnpj] = useState<string | null>(null);
   const { erros, formProps } = useValidacao();
+
+  // Cupom de desconto: "Aplicar" confere no servidor e mostra os valores; quem
+  // reserva o cupom é o envio do formulário.
+  const [cupomAberto, setCupomAberto] = useState(Boolean(cupomInicial));
+  const [cupomTexto, setCupomTexto] = useState(cupomInicial ?? "");
+  const [cupom, setCupom] = useState<{ codigo: string; desconto: Desconto } | null>(null);
+  const [erroCupom, setErroCupom] = useState<string | null>(null);
+  const [conferindo, startConferir] = useTransition();
+
+  function aplicarCupom(texto: string) {
+    setErroCupom(null);
+    startConferir(async () => {
+      const r = await conferirCupomDesconto(texto);
+      if (r.tipo === "ok") {
+        setCupom({ codigo: r.codigo, desconto: r.desconto });
+        setCupomTexto(r.codigo);
+      } else {
+        setCupom(null);
+        setErroCupom(r.texto);
+      }
+    });
+  }
+
+  function removerCupom() {
+    setCupom(null);
+    setCupomTexto("");
+    setErroCupom(null);
+  }
+
+  const conferiuInicial = useRef(false);
+  useEffect(() => {
+    if (cupomInicial && !conferiuInicial.current) {
+      conferiuInicial.current = true;
+      aplicarCupom(cupomInicial);
+    }
+    // Só na montagem: o cupom do link é conferido uma vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function conferirCpfCnpj(): boolean {
     const ok = validarCpfCnpj(cpfCnpj).valido;
@@ -63,6 +111,12 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Código digitado e não aplicado: avisar, em vez de assinar sem o desconto.
+    const digitado = normalizarCupom(cupomTexto);
+    if (digitado && digitado !== cupom?.codigo) {
+      setErroCupom("Clique em Aplicar para usar o cupom, ou apague o código.");
+      return;
+    }
     // Antes de abrir a aba: com documento inválido não há cobrança para mostrar.
     // O servidor valida de novo (configurarAssinatura).
     if (!conferirCpfCnpj()) return;
@@ -88,10 +142,12 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
 
   const atual = detalhesDoPlano(plano);
   const erroDocumento = erros.cpf_cnpj ?? erroCpfCnpj ?? state.fieldErrors?.cpf_cnpj?.[0];
+  const erroDoCupom = erroCupom ?? state.fieldErrors?.cupom?.[0];
 
   return (
     <form {...formProps} onSubmit={handleSubmit} id="assinar" className="flex scroll-mt-6 flex-col gap-6">
       {state.error && <p className="alert alert-error">{state.error}</p>}
+      <input type="hidden" name="cupom" value={cupom?.codigo ?? ""} />
 
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-3 text-lg font-semibold">1. Escolha o ciclo de pagamento</legend>
@@ -130,10 +186,77 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
                 </span>
                 <span className="text-sm text-slate-600">{d.ciclo}</span>
                 {d.economia && <span className="text-xs font-semibold text-teal-800">{d.economia}</span>}
+                {cupom && (
+                  <span className="text-xs font-semibold text-amber-900">
+                    Com o cupom: {brl(primeiraCobranca(id, cupom.desconto))} na 1ª cobrança
+                  </span>
+                )}
               </label>
             );
           })}
         </div>
+
+        {!cupomAberto ? (
+          <button
+            type="button"
+            onClick={() => setCupomAberto(true)}
+            className="inline-flex items-center gap-2 self-start text-sm font-medium text-teal-800 hover:text-teal-900"
+          >
+            <Ticket className="size-4" aria-hidden />
+            Tenho um cupom de desconto
+          </button>
+        ) : cupom ? (
+          <div className="flex items-start justify-between gap-3 rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm" role="status">
+            <p>
+              <span className="font-semibold">Cupom {cupom.codigo}:</span> {descricaoDesconto(cupom.desconto)}.
+            </p>
+            <button type="button" onClick={removerCupom} aria-label="Remover cupom" className="rounded p-1 hover:bg-black/5">
+              <X className="size-4" aria-hidden />
+            </button>
+          </div>
+        ) : (
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Cupom de desconto
+            <span className="flex flex-col gap-2 sm:flex-row">
+              <input
+                value={cupomTexto}
+                onChange={(e) => {
+                  setCupomTexto(e.target.value);
+                  if (erroCupom) setErroCupom(null);
+                }}
+                onKeyDown={(e) => {
+                  // Enter aplica o cupom, em vez de enviar a assinatura.
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (cupomTexto.trim()) aplicarCupom(cupomTexto);
+                  }
+                }}
+                maxLength={30}
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                placeholder="Ex.: BLACK10"
+                aria-invalid={Boolean(erroDoCupom)}
+                className="input uppercase sm:flex-1"
+              />
+              <button
+                type="button"
+                disabled={conferindo || !cupomTexto.trim()}
+                aria-busy={conferindo}
+                onClick={() => aplicarCupom(cupomTexto)}
+                className="btn btn-outline"
+              >
+                {conferindo && <Loader2 className="size-4 animate-spin" aria-hidden />}
+                {conferindo ? "Conferindo..." : "Aplicar"}
+              </button>
+            </span>
+            {erroDoCupom && (
+              <span className="text-xs font-normal text-red-600" role="alert">
+                {erroDoCupom}
+              </span>
+            )}
+          </label>
+        )}
       </fieldset>
 
       <section className="card flex flex-col gap-4 sm:p-6">
@@ -198,7 +321,7 @@ export function ConfigurarAssinaturaForm({ vencimento }: { vencimento: string | 
         <div className="flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1">
             <span className="font-semibold">
-              {atual.label} · {atual.resumo}
+              {atual.label} · {cupom ? resumoComCupom(plano, cupom.desconto) : atual.resumo}
             </span>
             <span className="text-sm text-slate-600">
               {vencimento

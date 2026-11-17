@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { FORMATO_CUPOM, mensagemCupom, normalizarCupom, STATUS_CUPOM } from "@/lib/assinatura/cupom";
+import {
+  FORMATO_CUPOM,
+  linkAssinarComCupom,
+  mensagemCupom,
+  mensagemCupomDesconto,
+  normalizarCupom,
+  STATUS_CUPOM,
+  STATUS_CUPOM_DESCONTO,
+} from "@/lib/assinatura/cupom";
 import { diasDoCupom, duracaoDoTeste, inicioDoTeste } from "@/lib/assinatura/tela";
 
 describe("cupom: código e mensagens", () => {
@@ -17,12 +25,25 @@ describe("cupom: código e mensagens", () => {
       tipo: "sucesso",
       texto: "Cupom PSICO30 aplicado: seu teste grátis vai até 18/12/2026.",
     });
-    for (const s of STATUS_CUPOM.filter((s) => s !== "ok")) {
+    for (const s of STATUS_CUPOM.filter((s) => s !== "ok" && s !== "cupom_de_desconto")) {
       const m = mensagemCupom(s, "PSICO30");
       expect(m.tipo).toBe("erro");
       expect(m.texto.length).toBeGreaterThan(10);
     }
+    // Cupom de desconto digitado onde vale dias grátis: não é erro, só avisa onde usar.
+    expect(mensagemCupom("cupom_de_desconto", "BLACK10")).toEqual({
+      tipo: "sucesso",
+      texto: "O cupom BLACK10 é de desconto na assinatura: ele entra quando você escolher o plano.",
+    });
     expect(mensagemCupom("qualquer-coisa", "X1Y").texto).toBe("Não encontramos o cupom X1Y. Confira o código.");
+  });
+
+  it("cupom de desconto: todo erro tem mensagem; link já preenche o cupom", () => {
+    for (const s of STATUS_CUPOM_DESCONTO.filter((s) => s !== "ok")) {
+      expect(mensagemCupomDesconto(s, "BLACK10").length).toBeGreaterThan(10);
+    }
+    expect(mensagemCupomDesconto("cupom_de_dias", "PSICO30")).toContain("Tenho um cupom");
+    expect(linkAssinarComCupom("BLACK10")).toBe("/assinatura?cupom=BLACK10#assinar");
   });
 });
 

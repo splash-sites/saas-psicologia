@@ -13,6 +13,7 @@ import {
   verificarCobranca,
 } from "@/lib/asaas/webhook";
 import { PLANOS, type AssinaturaPlano } from "@/lib/assinatura/types";
+import { aplicarDescontoNaCobranca } from "@/lib/assinatura/aplicarDesconto";
 
 const LIMITE_EVENTOS_POR_MINUTO = 120;
 
@@ -25,6 +26,7 @@ type CorpoWebhook = {
     status?: string;
     dueDate?: string;
     invoiceUrl?: string;
+    value?: number;
   };
 };
 
@@ -133,18 +135,44 @@ export async function POST(request: Request) {
     if (linkPago) {
       await admin
         .from("assinaturas")
-        .update({ invoice_url_atual: null })
+        .update({ invoice_url_atual: null, valor_fatura_atual: null })
         .eq("psicologa_id", assinatura.psicologa_id)
         .eq("invoice_url_atual", linkPago);
     }
   } else if (classe === "cobranca_em_aberto" && (modo === "mock" || statusReal === "PENDING")) {
-    // Link e vencimento vêm da API (mock: do corpo), nunca só do corpo.
+    // Link, vencimento e valor vêm da API (mock: do corpo), nunca só do corpo.
     const link = modo === "mock" ? pagamento.invoiceUrl : cobranca?.invoiceUrl;
     const vencimento = modo === "mock" ? pagamento.dueDate : cobranca?.dueDate;
+    let valorFatura = modo === "mock" ? pagamento.value : cobranca?.value;
+
+    // Cobrança nova de assinatura com cupom de desconto (migration 0031): troca
+    // o valor no Asaas antes de guardar o link. O Asaas cria a cobrança ~40
+    // dias antes do vencimento, então isso acontece muito antes de a psicóloga
+    // poder pagar. A troca gera um PAYMENT_UPDATED, que só atualiza o link.
+    if (evento === "PAYMENT_CREATED") {
+      const alvo =
+        modo === "mock"
+          ? { id: pagamento.id, billingType: "UNDEFINED", dueDate: pagamento.dueDate ?? "", value: pagamento.value }
+          : cobranca;
+      if (alvo) {
+        const resultado = await aplicarDescontoNaCobranca(admin, {
+          subscriptionId: pagamento.subscription ?? "",
+          plano: (assinatura.plano ?? "mensal") as AssinaturaPlano,
+          cobranca: alvo,
+        }).catch(() => ({ tipo: "falhou" as const }));
+        if (resultado.tipo === "falhou") {
+          // Libera a chave e pede reenvio: o Asaas tenta de novo depois.
+          await admin.from("assinatura_eventos").delete().eq("chave_idempotencia", chave);
+          return NextResponse.json({ error: "não foi possível aplicar o desconto" }, { status: 503 });
+        }
+        if (resultado.tipo === "aplicado") valorFatura = resultado.valor;
+      }
+    }
+
     if (link && vencimento) {
       await admin
         .from("assinaturas")
-        .update({ invoice_url_atual: link, proximo_vencimento: vencimento })
+        .update({ invoice_url_atual: link, proximo_vencimento: vencimento, valor_fatura_atual: valorFatura ?? null })
         .eq("psicologa_id", assinatura.psicologa_id);
     }
   } else if (classe === "estorno") {
@@ -176,7 +204,11 @@ export async function POST(request: Request) {
   } else if (classe === "atraso" && (modo === "mock" || statusReal === "OVERDUE")) {
     await admin
       .from("assinaturas")
-      .update({ status: "atrasada", invoice_url_atual: pagamento.invoiceUrl ?? null })
+      .update({
+        status: "atrasada",
+        invoice_url_atual: pagamento.invoiceUrl ?? null,
+        valor_fatura_atual: (modo === "mock" ? pagamento.value : cobranca?.value) ?? null,
+      })
       .eq("psicologa_id", assinatura.psicologa_id);
   }
 

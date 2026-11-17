@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -11,10 +12,20 @@ import {
   criarAssinaturaAsaas,
   cancelarAssinaturaAsaas,
   primeiraCobrancaDaAssinatura,
+  buscarCobranca,
   asaasModo,
+  type CobrancaAsaas,
 } from "@/lib/asaas/client";
 import { PLANOS, ASSINATURA_PLANO, type AssinaturaPlano } from "@/lib/assinatura/types";
-import { FORMATO_CUPOM, mensagemCupom, normalizarCupom } from "@/lib/assinatura/cupom";
+import {
+  FORMATO_CUPOM,
+  linkAssinarComCupom,
+  mensagemCupom,
+  mensagemCupomDesconto,
+  normalizarCupom,
+} from "@/lib/assinatura/cupom";
+import { descontoDaLinha, primeiraCobranca, type Desconto } from "@/lib/assinatura/desconto";
+import { aplicarDescontoNaCobranca } from "@/lib/assinatura/aplicarDesconto";
 
 export type FormState = {
   error?: string;
@@ -28,21 +39,47 @@ function esperar(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Busca o link da primeira cobrança, tentando de novo se o Asaas ainda não
- * tiver indexado o pagamento (instantes depois de criar a assinatura). */
-async function buscarUrlComRetentativa(
+/** Busca a primeira cobrança, tentando de novo se o Asaas ainda não tiver
+ * indexado o pagamento (instantes depois de criar a assinatura). */
+async function primeiraCobrancaComRetentativa(
   subscriptionId: string,
   tentativas = 4,
   esperaMs = 800,
-): Promise<string | null> {
+): Promise<CobrancaAsaas | null> {
   // Simulado não tem cobrança real: esperar ~2,4s pelas retentativas é só atraso.
   if (asaasModo() === "mock") return null;
   for (let i = 0; i < tentativas; i++) {
     const cobranca = await primeiraCobrancaDaAssinatura(subscriptionId);
-    if (cobranca?.invoiceUrl) return cobranca.invoiceUrl;
+    if (cobranca?.invoiceUrl) return cobranca;
     if (i < tentativas - 1) await esperar(esperaMs);
   }
   return null;
+}
+
+type ReservaCupom = { id: string; desconto: Desconto };
+
+/** Reserva o cupom de desconto digitado. Devolve a reserva ou o erro do campo. */
+async function reservarCupom(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  codigo: string,
+): Promise<{ reserva: ReservaCupom } | { erro: string }> {
+  if (!FORMATO_CUPOM.test(codigo)) return { erro: mensagemCupomDesconto("invalido", codigo) };
+  const { data, error } = await supabase.rpc("reservar_cupom_desconto", { p_codigo: codigo });
+  if (error) return { erro: "Não foi possível conferir o cupom agora. Tente de novo em instantes." };
+  const r = data as { status: string; reserva_id?: string; desconto_tipo?: string; desconto_valor?: number; desconto_meses?: number | null };
+  if (r.status !== "ok" || !r.reserva_id || !r.desconto_tipo) {
+    return { erro: mensagemCupomDesconto(r.status, codigo) };
+  }
+  return {
+    reserva: {
+      id: r.reserva_id,
+      desconto: descontoDaLinha({
+        desconto_tipo: r.desconto_tipo,
+        desconto_valor: r.desconto_valor ?? 0,
+        desconto_meses: r.desconto_meses ?? null,
+      }),
+    },
+  };
 }
 
 async function requirePsicologa() {
@@ -94,7 +131,23 @@ export async function configurarAssinatura(
   const hoje = new Date().toISOString().slice(0, 10);
   const primeiroVencimento = atual.trial_fim > hoje ? atual.trial_fim : hoje;
 
+  // Cupom de desconto (migration 0031): reservado antes de criar a cobrança,
+  // para o limite de usos valer; desfeito se algo falhar adiante.
+  const codigoCupom = normalizarCupom(String(formData.get("cupom") ?? ""));
+  let reserva: ReservaCupom | null = null;
+  if (codigoCupom) {
+    const r = await reservarCupom(supabase, codigoCupom);
+    if ("erro" in r) return { fieldErrors: { cupom: [r.erro] } };
+    reserva = r.reserva;
+  }
+  // Para sempre: a assinatura já nasce no Asaas com o valor menor. Por N
+  // meses: nasce no preço cheio e cada cobrança com desconto é ajustada.
+  const permanente = reserva !== null && reserva.desconto.meses === null;
+  const valorAssinatura = permanente ? primeiraCobranca(planoEscolhido, reserva!.desconto) : plano.valor;
+
+  const admin = createAdminClient();
   let urlDaCobranca: string | null = null;
+  let assinaturaId: string | null = null;
 
   try {
     const cliente = await criarClienteAsaas({
@@ -104,16 +157,51 @@ export async function configurarAssinatura(
     });
     const assinatura = await criarAssinaturaAsaas({
       customerId: cliente.id,
-      valor: plano.valor,
+      valor: valorAssinatura,
       primeiroVencimento,
       ciclo: plano.cicloAsaas,
     });
+    assinaturaId = assinatura.id;
+
+    if (reserva) {
+      const { error } = await admin
+        .from("cupom_descontos")
+        .update({ asaas_subscription_id: assinatura.id })
+        .eq("id", reserva.id);
+      if (error) throw new Error("não ligou o cupom à assinatura");
+    }
+
     // O Asaas leva um instante pra indexar a primeira cobrança depois de criar
     // a assinatura — sem isso, às vezes vem vazia na primeira consulta e a
     // psicóloga fica sem link nenhum pra pagar. Tenta mais algumas vezes.
-    urlDaCobranca = await buscarUrlComRetentativa(assinatura.id);
+    let cobranca = await primeiraCobrancaComRetentativa(assinatura.id, reserva ? 8 : 4);
+    let valorFatura = cobranca?.value ?? valorAssinatura;
 
-    const admin = createAdminClient();
+    if (reserva && !permanente) {
+      // O desconto entra antes de o link chegar à psicóloga: ela nunca vê a
+      // fatura no preço cheio. Sem a cobrança (ou com o Asaas recusando a
+      // troca), desfaz tudo — melhor pedir para tentar de novo do que cobrar
+      // sem o desconto prometido.
+      const alvo = cobranca ?? (asaasModo() === "mock"
+        ? { id: `mock_pay_${randomUUID()}`, billingType: "UNDEFINED", dueDate: primeiroVencimento }
+        : null);
+      if (!alvo) throw new Error("primeira cobrança não apareceu");
+      const r = await aplicarDescontoNaCobranca(admin, {
+        subscriptionId: assinatura.id,
+        plano: planoEscolhido,
+        cobranca: { ...alvo, value: cobranca?.value ?? plano.valor },
+      });
+      if (r.tipo === "falhou") throw new Error("Asaas recusou o desconto");
+      if (r.tipo === "aplicado") {
+        valorFatura = r.valor;
+      } else if (r.jaAplicado && cobranca) {
+        // O webhook chegou antes e já aplicou: lê o valor atualizado.
+        cobranca = (await buscarCobranca(cobranca.id)) ?? cobranca;
+        valorFatura = cobranca.value;
+      }
+    }
+    urlDaCobranca = cobranca?.invoiceUrl ?? null;
+
     await admin
       .from("assinaturas")
       .update({
@@ -121,12 +209,19 @@ export async function configurarAssinatura(
         asaas_customer_id: cliente.id,
         asaas_subscription_id: assinatura.id,
         invoice_url_atual: urlDaCobranca,
+        valor_fatura_atual: urlDaCobranca || asaasModo() === "mock" ? valorFatura : null,
         status: "trial",
         plano: planoEscolhido,
-        valor: plano.valor,
+        valor: valorAssinatura,
       })
       .eq("psicologa_id", user.id);
   } catch {
+    if (reserva) {
+      // Sem assinatura pela metade: remove a do Asaas (se chegou a nascer) e
+      // libera o cupom para a próxima tentativa.
+      if (assinaturaId) await cancelarAssinaturaAsaas(assinaturaId).catch(() => {});
+      await admin.from("cupom_descontos").delete().eq("id", reserva.id);
+    }
     return {
       error: "Não foi possível configurar a cobrança agora. Tente novamente em instantes.",
     };
@@ -210,7 +305,7 @@ export async function verificarPagamentoAgora(): Promise<{
     if (cobranca.invoiceUrl && adminDisponivel()) {
       await createAdminClient()
         .from("assinaturas")
-        .update({ invoice_url_atual: cobranca.invoiceUrl })
+        .update({ invoice_url_atual: cobranca.invoiceUrl, valor_fatura_atual: cobranca.value })
         .eq("psicologa_id", user.id);
       revalidatePath("/assinatura");
     }
@@ -283,6 +378,8 @@ export async function usarCupom(_prev: CupomState, formData: FormData): Promise<
   const supabase = await createClient();
   const { data: status, error } = await supabase.rpc("resgatar_cupom", { p_codigo: codigo });
   if (error) return { tipo: "erro", texto: "Não foi possível usar o cupom agora. Tente de novo em instantes." };
+  // Cupom de desconto: vale na escolha do plano, que abre com ele preenchido.
+  if (status === "cupom_de_desconto") redirect(linkAssinarComCupom(codigo));
 
   let trialFim: string | null = null;
   if (status === "ok") {
@@ -291,6 +388,39 @@ export async function usarCupom(_prev: CupomState, formData: FormData): Promise<
     revalidatePath("/", "layout");
   }
   return mensagemCupom(String(status), codigo, trialFim);
+}
+
+export type PreviaCupomDesconto =
+  | { tipo: "ok"; codigo: string; desconto: Desconto }
+  | { tipo: "erro"; texto: string };
+
+/**
+ * Prévia do cupom de desconto na escolha do plano: mostra o desconto e os
+ * valores, sem reservar. Quem reserva é configurarAssinatura, no clique em
+ * Assinar. Código errado conta no limite de 10 por hora (consultar_cupom_desconto).
+ */
+export async function conferirCupomDesconto(codigoDigitado: string): Promise<PreviaCupomDesconto> {
+  const user = await usuarioAtual();
+  if (!user) return { tipo: "erro", texto: mensagemCupomDesconto("sem_sessao", "") };
+
+  const codigo = normalizarCupom(String(codigoDigitado ?? ""));
+  if (!codigo) return { tipo: "erro", texto: "Digite o código do cupom." };
+  if (!FORMATO_CUPOM.test(codigo)) return { tipo: "erro", texto: mensagemCupomDesconto("invalido", codigo) };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("consultar_cupom_desconto", { p_codigo: codigo });
+  if (error) return { tipo: "erro", texto: "Não foi possível conferir o cupom agora. Tente de novo em instantes." };
+  const r = data as { status: string; desconto_tipo?: string; desconto_valor?: number; desconto_meses?: number | null };
+  if (r.status !== "ok" || !r.desconto_tipo) return { tipo: "erro", texto: mensagemCupomDesconto(r.status, codigo) };
+  return {
+    tipo: "ok",
+    codigo,
+    desconto: descontoDaLinha({
+      desconto_tipo: r.desconto_tipo,
+      desconto_valor: r.desconto_valor ?? 0,
+      desconto_meses: r.desconto_meses ?? null,
+    }),
+  };
 }
 
 /** Fecha o aviso do cupom digitado no cadastro (mostrado uma vez no Painel). */

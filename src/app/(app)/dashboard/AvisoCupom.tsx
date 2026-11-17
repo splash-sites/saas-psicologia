@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { X } from "lucide-react";
-import { mensagemCupom } from "@/lib/assinatura/cupom";
+import { linkAssinarComCupom, mensagemCupom } from "@/lib/assinatura/cupom";
 import { marcarAvisoCupomLido } from "@/app/(app)/assinatura/actions";
 
 // Resultado do cupom digitado no cadastro (cupom_avisos, migration 0027): a
@@ -23,6 +23,14 @@ export function AvisoCupom({
     >
       <p>
         {texto}
+        {status === "cupom_de_desconto" && (
+          <>
+            {" "}
+            <Link href={linkAssinarComCupom(codigo)} className="font-medium underline">
+              Ver os planos com o desconto
+            </Link>
+          </>
+        )}
         {tipo === "erro" && status !== "ja_assinou" && status !== "ja_usou" && (
           <>
             {" "}

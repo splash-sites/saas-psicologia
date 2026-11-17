@@ -10,6 +10,8 @@ export const STATUS_CUPOM = [
   "ja_assinou",
   "muitas_tentativas",
   "sem_sessao",
+  // Cupom de desconto (migration 0031) digitado onde vale dias grátis.
+  "cupom_de_desconto",
 ] as const;
 export type StatusCupom = (typeof STATUS_CUPOM)[number];
 
@@ -51,7 +53,56 @@ export function mensagemCupom(
       return { tipo: "erro", texto: "Muitas tentativas com códigos errados. Tente de novo daqui a uma hora." };
     case "sem_sessao":
       return { tipo: "erro", texto: "Sua sessão terminou. Entre de novo e tente outra vez." };
+    case "cupom_de_desconto":
+      return {
+        tipo: "sucesso",
+        texto: `O cupom ${codigo} é de desconto na assinatura: ele entra quando você escolher o plano.`,
+      };
     default:
       return { tipo: "erro", texto: `Não encontramos o cupom ${codigo}. Confira o código.` };
+  }
+}
+
+/** Link da tela de Assinatura com o cupom de desconto já preenchido. */
+export function linkAssinarComCupom(codigo: string): string {
+  return `/assinatura?cupom=${encodeURIComponent(codigo)}#assinar`;
+}
+
+// Cupom de desconto (migration 0031): reservar_cupom_desconto /
+// consultar_cupom_desconto devolvem um destes.
+export const STATUS_CUPOM_DESCONTO = [
+  "ok",
+  "invalido",
+  "expirado",
+  "esgotado",
+  "ja_usou",
+  "ja_assinou",
+  "cupom_de_dias",
+  "em_andamento",
+  "muitas_tentativas",
+  "sem_sessao",
+] as const;
+
+/** Texto do erro do cupom de desconto (o "ok" a tela mostra com o desconto). */
+export function mensagemCupomDesconto(status: string, codigo: string): string {
+  switch (status) {
+    case "expirado":
+      return `O cupom ${codigo} venceu.`;
+    case "esgotado":
+      return `O cupom ${codigo} já atingiu o limite de usos.`;
+    case "ja_usou":
+      return "Sua conta já usou um cupom de desconto. Cada conta pode usar um só.";
+    case "ja_assinou":
+      return "Você já tem uma assinatura em andamento.";
+    case "cupom_de_dias":
+      return `O cupom ${codigo} dá dias grátis de teste, não desconto. Ele vale antes de assinar, em "Tenho um cupom".`;
+    case "em_andamento":
+      return "Sua assinatura está sendo preparada. Aguarde alguns instantes e atualize a página.";
+    case "muitas_tentativas":
+      return "Muitas tentativas com códigos errados. Tente de novo daqui a uma hora.";
+    case "sem_sessao":
+      return "Sua sessão terminou. Entre de novo e tente outra vez.";
+    default:
+      return `Não encontramos o cupom ${codigo}. Confira o código.`;
   }
 }

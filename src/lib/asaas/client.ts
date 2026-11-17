@@ -117,9 +117,26 @@ export type CobrancaAsaas = {
   subscription: string | null;
   invoiceUrl: string | null;
   dueDate: string; // YYYY-MM-DD
+  billingType: string;
 };
 
-/** Primeira cobrança gerada para a assinatura — dá o link de pagamento. */
+/**
+ * Troca o valor de uma cobrança em aberto (cupom de desconto, migration 0031).
+ * O Asaas exige billingType e dueDate junto; o link da fatura não muda.
+ * Recusa abaixo de R$ 5 (testado no sandbox em 2026-11-17).
+ */
+export async function atualizarValorCobranca(
+  cobranca: Pick<CobrancaAsaas, "id" | "billingType" | "dueDate">,
+  valor: number,
+): Promise<CobrancaAsaas | null> {
+  if (asaasModo() === "mock") return null;
+  return chamar<CobrancaAsaas>(`/payments/${encodeURIComponent(cobranca.id)}`, {
+    method: "PUT",
+    body: JSON.stringify({ billingType: cobranca.billingType, value: valor, dueDate: cobranca.dueDate }),
+  });
+}
+
+/** Primeira cobrança gerada para a assinatura: dá o link de pagamento. */
 export async function primeiraCobrancaDaAssinatura(
   subscriptionId: string,
 ): Promise<CobrancaAsaas | null> {

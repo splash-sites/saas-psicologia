@@ -28,6 +28,8 @@ import { VerificarPagamentoButton } from "./VerificarPagamentoButton";
 import { AtualizarAoPagar } from "./AtualizarAoPagar";
 import { cancelarAssinatura, simularPagamentoConfirmado } from "./actions";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import { FORMATO_CUPOM, normalizarCupom } from "@/lib/assinatura/cupom";
+import { descontoDaLinha, descricaoDesconto, type Desconto } from "@/lib/assinatura/desconto";
 
 export const metadata = { title: "Assinatura" };
 
@@ -50,9 +52,14 @@ const CHIP: Record<EstadoTela, { texto: string; tom: string }> = {
   leitura: { texto: "Somente leitura", tom: "bg-slate-200 text-slate-700" },
 };
 
-export default async function AssinaturaPage() {
+export default async function AssinaturaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cupom?: string }>;
+}) {
   const user = await usuarioAtual();
   if (!user) redirect("/login");
+  const { cupom: cupomDoLink } = await searchParams;
 
   const { assinatura, enforcementAtivo, somenteLeitura } = await buscarStatusAssinatura(user.id);
   if (!assinatura) {
@@ -82,6 +89,36 @@ export default async function AssinaturaPage() {
       .select("codigo, created_at, trial_fim_antes, trial_fim_depois")
       .maybeSingle();
     resgate = data as ResgateCupom | null;
+  }
+
+  // Cupom de desconto: o do link (?cupom=) ou o digitado no cadastro, que o
+  // banco guardou no aviso (cupom_avisos.status = cupom_de_desconto).
+  let cupomInicial: string | null = null;
+  if (mostraFormulario(estado)) {
+    const doLink = normalizarCupom(String(cupomDoLink ?? ""));
+    if (doLink && FORMATO_CUPOM.test(doLink)) {
+      cupomInicial = doLink;
+    } else {
+      const supabase = await createClient();
+      const { data } = await supabase
+        .from("cupom_avisos")
+        .select("codigo")
+        .eq("status", "cupom_de_desconto")
+        .maybeSingle();
+      cupomInicial = data?.codigo ?? null;
+    }
+  }
+
+  // Cupom de desconto da assinatura atual (depois de assinar).
+  let desconto: { codigo: string; desconto: Desconto; usados: number } | null = null;
+  if (!antes && assinatura.asaas_subscription_id) {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("cupom_descontos")
+      .select("codigo, desconto_tipo, desconto_valor, meses_total, meses_usados")
+      .eq("asaas_subscription_id", assinatura.asaas_subscription_id)
+      .maybeSingle();
+    if (data) desconto = { codigo: data.codigo, desconto: descontoDaLinha(data), usados: data.meses_usados };
   }
 
   return (
@@ -118,12 +155,15 @@ export default async function AssinaturaPage() {
           somenteLeitura={somenteLeitura}
           configurada={configurada}
           hoje={hoje}
+          desconto={desconto}
         />
       )}
 
       {mostraFormulario(estado) && (
         <ConfigurarAssinaturaForm
+          key={cupomInicial ?? ""}
           vencimento={assinatura.trial_fim > hoje ? dataBR(assinatura.trial_fim) : null}
+          cupomInicial={cupomInicial}
         />
       )}
 
@@ -252,12 +292,14 @@ function PainelStatus({
   somenteLeitura,
   configurada,
   hoje,
+  desconto,
 }: {
   assinatura: Assinatura;
   estado: EstadoTela;
   somenteLeitura: boolean;
   configurada: boolean;
   hoje: string;
+  desconto: { codigo: string; desconto: Desconto; usados: number } | null;
 }) {
   const plano = PLANOS[assinatura.plano];
   const acessoAte = acessoAteCancelada(assinatura);
@@ -378,6 +420,16 @@ function PainelStatus({
         </div>
       </section>
 
+      {desconto && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <span className="font-semibold">Cupom {desconto.codigo}:</span> {descricaoDesconto(desconto.desconto)}.
+          {desconto.desconto.meses !== null &&
+            (desconto.usados >= desconto.desconto.meses
+              ? " Os meses com desconto já foram usados."
+              : ` ${desconto.usados} de ${desconto.desconto.meses} ${desconto.desconto.meses === 1 ? "mês" : "meses"} já cobrados com desconto.`)}
+        </p>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Resumo rotulo="Plano" valor={plano.label} sub={plano.meses === 1 ? `${brl(assinatura.valor)} por mês` : `${brl(assinatura.valor)} a cada ${plano.meses} meses`} />
         <Resumo rotulo={proxima.rotulo} valor={proxima.valor} sub={proxima.sub} />
@@ -395,7 +447,7 @@ function PainelStatus({
             <div className="flex flex-col gap-3 rounded-lg bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-0.5">
                 <span className="font-semibold">
-                  Plano {plano.label.toLowerCase()} · {brl(assinatura.valor)}
+                  Plano {plano.label.toLowerCase()} · {brl(Number(assinatura.valor_fatura_atual ?? assinatura.valor))}
                 </span>
                 <span className="text-sm text-slate-600">
                   {estado === "atrasada"
