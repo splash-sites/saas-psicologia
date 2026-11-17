@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
-import { Check, Loader2, Ticket, X } from "lucide-react";
+import { Check, Loader2, Ticket } from "lucide-react";
 import { configurarAssinatura, conferirCupomDesconto, type FormState } from "./actions";
 import { useValidacao } from "@/lib/form/validacao";
 import { ASSINATURA_PLANO, PLANOS, PRECO_MENSAL, type AssinaturaPlano } from "@/lib/assinatura/types";
 import { mascararCpfCnpj, validarCpfCnpj } from "@/lib/assinatura/cpfCnpj";
 import { normalizarCupom } from "@/lib/assinatura/cupom";
-import { descricaoDesconto, primeiraCobranca, resumoComCupom, type Desconto } from "@/lib/assinatura/desconto";
+import { descricaoDesconto, ofertaComCupom, resumoComCupom, type Desconto } from "@/lib/assinatura/desconto";
 
 const MSG_CPF_CNPJ_INVALIDO = "CPF ou CNPJ inválido. Confira os números.";
 
@@ -41,7 +41,7 @@ function detalhesDoPlano(id: AssinaturaPlano) {
     tag: desconto > 0 ? `${desconto}% off` : null,
     economia:
       economia > 0.004
-        ? `Você economiza ${brl(economia)} no ${p.meses === 3 ? "trimestre" : "semestre"}`
+        ? `Economia de ${brl(economia)} no ${p.meses === 3 ? "trimestre" : "semestre"}`
         : null,
   };
 }
@@ -151,19 +151,20 @@ export function ConfigurarAssinaturaForm({
 
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-3 text-lg font-semibold">1. Escolha o ciclo de pagamento</legend>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {ASSINATURA_PLANO.map((id) => {
             const d = detalhesDoPlano(id);
             const selecionado = plano === id;
+            const oferta = cupom ? ofertaComCupom(id, cupom.desconto) : null;
             return (
               <label
                 key={id}
-                className={`flex cursor-pointer flex-col gap-1.5 rounded-xl border-2 bg-white p-4 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-teal-600 ${
+                className={`flex cursor-pointer flex-col gap-4 rounded-xl border-2 bg-white p-5 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-teal-600 ${
                   selecionado ? "border-teal-700 bg-teal-50/60" : "border-slate-200 hover:border-slate-300"
                 }`}
               >
                 <span className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 font-semibold">
+                  <span className="flex items-center gap-2 text-base font-semibold">
                     <input
                       type="radio"
                       name="plano"
@@ -175,22 +176,43 @@ export function ConfigurarAssinaturaForm({
                     {d.label}
                   </span>
                   {d.tag && (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                    <span className="flex-none whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
                       {d.tag}
                     </span>
                   )}
                 </span>
-                <span className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold tracking-tight">{d.porMes}</span>
-                  <span className="text-sm text-slate-600">/mês</span>
-                </span>
-                <span className="text-sm text-slate-600">{d.ciclo}</span>
-                {d.economia && <span className="text-xs font-semibold text-teal-800">{d.economia}</span>}
-                {cupom && (
-                  <span className="text-xs font-semibold text-amber-900">
-                    Com o cupom: {brl(primeiraCobranca(id, cupom.desconto))} na 1ª cobrança
+
+                {oferta ? (
+                  // Com cupom: o que paga agora em destaque, o preço cheio riscado.
+                  <span className="flex flex-col gap-1">
+                    <span className="text-sm text-slate-500 line-through" aria-label={`Sem o cupom: ${brl(oferta.antes)}`}>
+                      {brl(oferta.antes)}
+                    </span>
+                    <span className="text-3xl font-bold tracking-tight text-teal-800">{brl(oferta.agora)}</span>
+                    <span className="text-sm font-medium text-teal-800">{oferta.legenda}</span>
+                  </span>
+                ) : (
+                  <span className="flex flex-col gap-1">
+                    <span className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold tracking-tight">{d.porMes}</span>
+                      <span className="text-sm text-slate-600">/mês</span>
+                    </span>
+                    <span className="text-sm text-slate-600">{d.ciclo}</span>
                   </span>
                 )}
+
+                <span className="mt-auto flex flex-col gap-1 border-t border-slate-200/80 pt-3 text-sm">
+                  {oferta ? (
+                    <>
+                      {oferta.seguintes && <span className="font-medium text-teal-800">{oferta.seguintes}</span>}
+                      <span className="text-slate-600">{oferta.depois ?? "Sem prazo para acabar"}</span>
+                    </>
+                  ) : (
+                    <span className={d.economia ? "font-medium text-teal-800" : "text-slate-500"}>
+                      {d.economia ?? "Cancele quando quiser"}
+                    </span>
+                  )}
+                </span>
               </label>
             );
           })}
@@ -206,12 +228,21 @@ export function ConfigurarAssinaturaForm({
             Tenho um cupom de desconto
           </button>
         ) : cupom ? (
-          <div className="flex items-start justify-between gap-3 rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm" role="status">
-            <p>
-              <span className="font-semibold">Cupom {cupom.codigo}:</span> {descricaoDesconto(cupom.desconto)}.
-            </p>
-            <button type="button" onClick={removerCupom} aria-label="Remover cupom" className="rounded p-1 hover:bg-black/5">
-              <X className="size-4" aria-hidden />
+          <div
+            className="flex flex-col gap-3 rounded-xl border-2 border-teal-700 bg-teal-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            role="status"
+          >
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 flex-none items-center justify-center rounded-full bg-teal-700 text-white">
+                <Ticket className="size-5" aria-hidden />
+              </span>
+              <p className="flex flex-col">
+                <span className="font-semibold text-teal-900">Cupom {cupom.codigo} aplicado</span>
+                <span className="text-sm text-teal-900">{descricaoDesconto(cupom.desconto)}. Os valores acima já estão com o desconto.</span>
+              </p>
+            </div>
+            <button type="button" onClick={removerCupom} className="btn btn-outline btn-sm self-start sm:self-auto">
+              Remover
             </button>
           </div>
         ) : (

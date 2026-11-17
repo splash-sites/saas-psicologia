@@ -64,7 +64,7 @@ export default async function AssinaturaPage({
   const { assinatura, enforcementAtivo, somenteLeitura } = await buscarStatusAssinatura(user.id);
   if (!assinatura) {
     return (
-      <div className="flex w-full max-w-2xl flex-col gap-6">
+      <div className="flex w-full max-w-4xl flex-col gap-6">
         <CabecalhoPagina titulo="Assinatura" />
         <p className="alert alert-error">
           Não encontramos a assinatura da sua conta. Fale com o suporte.
@@ -122,7 +122,7 @@ export default async function AssinaturaPage({
   }
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-6">
+    <div className="flex w-full max-w-4xl flex-col gap-6">
       <CabecalhoPagina
         titulo="Assinatura"
         junto={<span className={`rounded-full px-3 py-1 text-sm font-medium ${chip.tom}`}>{chip.texto}</span>}

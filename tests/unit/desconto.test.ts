@@ -5,6 +5,7 @@ import {
   descontoDaLinha,
   menorCobrancaPossivel,
   mesesNaPrimeiraCobranca,
+  ofertaComCupom,
   primeiraCobranca,
   resumoComCupom,
   valorComDesconto,
@@ -66,6 +67,40 @@ describe("cupom de desconto: valor de cada cobrança", () => {
 
   it("zero meses = preço cheio", () => {
     expect(valorComDesconto("semestral", vinte3, 0)).toBe(254.49);
+  });
+});
+
+describe("cupom de desconto: card do plano", () => {
+  const cinquenta3 = { tipo: "percentual" as const, valor: 50, meses: 3 };
+  it("mensal: o valor de agora por mês, o cheio riscado e o depois", () => {
+    expect(ofertaComCupom("mensal", cinquenta3)).toEqual({
+      agora: 24.95,
+      antes: 49.9,
+      legenda: "por mês nos 3 primeiros meses",
+      seguintes: null,
+      depois: "Depois, R$ 49,90 por mês",
+    });
+    expect(ofertaComCupom("mensal", { ...cinquenta3, meses: 1 }).legenda).toBe("no primeiro mês");
+  });
+
+  it("trimestral e semestral: a 1ª cobrança; cupom mais longo mostra as seguintes", () => {
+    expect(ofertaComCupom("semestral", cinquenta3)).toMatchObject({
+      agora: 190.87,
+      antes: 254.49,
+      legenda: "na 1ª cobrança (6 meses)",
+      depois: "Depois, R$ 254,49 a cada 6 meses",
+    });
+    expect(ofertaComCupom("trimestral", { tipo: "percentual", valor: 20, meses: 5 }).seguintes).toBe("2ª cobrança: R$ 116,77");
+  });
+
+  it("para sempre: sem 'depois'", () => {
+    expect(ofertaComCupom("trimestral", { tipo: "percentual", valor: 10, meses: null })).toEqual({
+      agora: 121.26,
+      antes: 134.73,
+      legenda: "a cada 3 meses, sempre",
+      seguintes: null,
+      depois: null,
+    });
   });
 });
 

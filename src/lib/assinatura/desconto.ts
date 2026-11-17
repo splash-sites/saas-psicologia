@@ -113,6 +113,46 @@ export function resumoComCupom(plano: AssinaturaPlano, desconto: Desconto): stri
   return `${valores.map((v, i) => `${i + 1}ª cobrança ${brl(v)}`).join(", ")}, ${depois}`;
 }
 
+export type OfertaComCupom = {
+  /** O que paga agora (1ª cobrança com o cupom). */
+  agora: number;
+  /** A mesma cobrança sem o cupom, para mostrar riscado. */
+  antes: number;
+  /** Logo abaixo do preço: "por mês nos 3 primeiros meses", "na 1ª cobrança (6 meses)". */
+  legenda: string;
+  /** Cobranças seguintes ainda com desconto (cupom mais longo que o ciclo). */
+  seguintes: string | null;
+  /** "Depois, R$ 49,90 por mês"; null quando é para sempre. */
+  depois: string | null;
+};
+
+/** Como o card do plano mostra o cupom: o valor de agora em destaque. */
+export function ofertaComCupom(plano: AssinaturaPlano, desconto: Desconto): OfertaComCupom {
+  const p = PLANOS[plano];
+  const valores = cobrancasComDesconto(plano, desconto);
+  const mensal = p.meses === 1;
+  const ciclo = mensal ? "por mês" : `a cada ${p.meses} meses`;
+
+  if (desconto.meses === null) {
+    return { agora: valores[0], antes: p.valor, legenda: `${ciclo}, sempre`, seguintes: null, depois: null };
+  }
+
+  let legenda: string;
+  let seguintes: string | null = null;
+  if (mensal) {
+    legenda = valores.length === 1 ? "no primeiro mês" : `por mês nos ${valores.length} primeiros meses`;
+  } else {
+    legenda = `na 1ª cobrança (${p.meses} meses)`;
+    if (valores.length > 1) {
+      seguintes = valores
+        .slice(1)
+        .map((v, i) => `${i + 2}ª cobrança: ${brl(v)}`)
+        .join(" · ");
+    }
+  }
+  return { agora: valores[0], antes: p.valor, legenda, seguintes, depois: `Depois, ${brl(p.valor)} ${ciclo}` };
+}
+
 function brl(valor: number): string {
   return `R$ ${valor.toFixed(2).replace(".", ",")}`;
 }
