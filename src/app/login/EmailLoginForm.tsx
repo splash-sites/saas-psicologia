@@ -11,7 +11,6 @@ import { EVENTO_CAMPO_VALIDO, useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
 import { BOTAO_AUTH, LINK_AUTH } from "@/components/TelaAuth";
 import { marcarSenhaFraca, SENHA_MINIMA } from "@/lib/auth/senha";
-import { normalizarCupom } from "@/lib/assinatura/cupom";
 
 // Formulário de e-mail e senha das telas /login (modo "entrar") e /cadastro
 // (modo "criar") — separadas desde 2026-11-06; antes era uma tela só com troca
@@ -61,11 +60,11 @@ export function EmailLoginForm({
   /** Última escolha de "Lembrar de mim" (a página lê o cookie no servidor). */
   lembrarInicial?: boolean;
   /**
-   * Cupom de dias grátis (só no cadastro). O valor fica no pai porque o botão
-   * do Google também precisa dele. Vai nos metadados do signUp e o banco
-   * aplica ao criar a conta (handle_new_user, migration 0027).
+   * Cupom do link de divulgação (só no cadastro, já normalizado). Vai nos
+   * metadados do signUp e o banco aplica ao criar a conta (handle_new_user,
+   * migration 0027); cupom de desconto fica guardado para a Assinatura.
    */
-  cupom?: { valor: string; mudar: (v: string) => void };
+  cupom?: string;
 }) {
   const router = useRouter();
   const criando = modo === "criar";
@@ -85,8 +84,6 @@ export function EmailLoginForm({
   const [aguardandoConfirmacao, setAguardandoConfirmacao] = useState(false);
   const [reenviando, setReenviando] = useState(false);
   const { erros, formProps } = useValidacao();
-  // Veio pelo link com ?cupom=: já aberto e preenchido.
-  const [cupomAberto, setCupomAberto] = useState(Boolean(cupom?.valor));
 
   // Criar conta volta ao padrão (lembrar): a tela de cadastro não tem a caixa.
   useEffect(() => {
@@ -131,7 +128,7 @@ export function EmailLoginForm({
     const supabase = createClient();
 
     if (criando) {
-      const codigoCupom = cupom ? normalizarCupom(cupom.valor) : "";
+      const codigoCupom = cupom ?? "";
       const { data, error } = await supabase.auth.signUp({
         email,
         password: senha,
@@ -263,36 +260,14 @@ export function EmailLoginForm({
         </label>
       )}
 
-      {criando && cupom && (cupomAberto ? (
-        <label className={rotulo}>
-          Cupom
-          <input
-            type="text"
-            data-campo="cupom"
-            minLength={3}
-            maxLength={30}
-            pattern="[A-Za-z0-9][A-Za-z0-9_\-]{2,29}"
-            title="Só letras, números, hífen e sublinhado."
-            value={cupom.valor}
-            onChange={(e) => cupom.mudar(e.target.value)}
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            placeholder="Ex.: PSICO30"
-            className="input min-h-12 font-normal uppercase"
-          />
-          <ErroCampo nome="cupom" cliente={erros} />
-        </label>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setCupomAberto(true)}
-          className={`inline-flex items-center gap-2 self-start text-sm ${LINK_AUTH}`}
-        >
-          <Ticket className="size-4" aria-hidden />
-          Tenho um cupom
-        </button>
-      ))}
+      {criando && cupom && (
+        <p className="flex items-center gap-2 rounded-lg bg-nevoa px-3 py-2.5 text-sm text-tinta" role="status">
+          <Ticket className="size-4 flex-none" aria-hidden />
+          <span>
+            Cupom <strong>{cupom}</strong> será aplicado à sua conta.
+          </span>
+        </p>
+      )}
 
       {!criando && (
         <div className="flex flex-wrap items-center justify-between gap-x-3">
