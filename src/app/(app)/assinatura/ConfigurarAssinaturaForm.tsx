@@ -356,7 +356,7 @@ export function ConfigurarAssinaturaForm({
             </span>
             <span className="text-sm text-slate-600">
               {vencimento
-                ? `Nada é cobrado hoje. Primeira cobrança em ${vencimento}.`
+                ? `Pagando agora, você continua com o teste grátis até ${vencimento}: o plano só começa a contar depois.`
                 : "A primeira cobrança vence hoje."}{" "}
               O pagamento abre numa nova aba do Asaas.
             </span>
