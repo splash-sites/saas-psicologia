@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import {
+  cuponsDaConta,
   SITUACAO_CONTA_LABEL,
   SITUACAO_CONTA_TOM,
   SITUACOES_CONTA,
@@ -134,7 +135,7 @@ export function ListaUsuarios({
                     <td className="px-4 py-2 text-right tabular-nums">{u.pacientes}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{u.consultas}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{u.evolucoes}</td>
-                    <td className="px-4 py-2 text-slate-600">{u.cupom ?? "—"}</td>
+                    <td className="px-4 py-2 text-slate-600">{cuponsDaConta(u) ?? "—"}</td>
                   </tr>
                 );
               })}

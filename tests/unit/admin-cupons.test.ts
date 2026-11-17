@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ehAdmin } from "@/lib/admin/acesso";
+import { cuponsDaConta } from "@/lib/admin/usuarios";
 import {
   beneficioDoCupom,
   edicaoCupomSchema,
@@ -100,6 +101,12 @@ describe("formulários do cupom", () => {
     ).toBe("20% de desconto nos 3 primeiros meses");
     expect(tabelaDeUsos("dias")).toBe("cupom_resgates");
     expect(tabelaDeUsos("desconto")).toBe("cupom_descontos");
+  });
+
+  it("coluna Cupom da lista de usuários mostra os dois tipos", () => {
+    expect(cuponsDaConta({ cupom: "PSICO30", cupom_desconto: "BLACK10" })).toBe("PSICO30 · BLACK10");
+    expect(cuponsDaConta({ cupom: null, cupom_desconto: "BLACK10" })).toBe("BLACK10");
+    expect(cuponsDaConta({ cupom: null, cupom_desconto: null })).toBeNull();
   });
 
   it("novo: recusa código fora do formato e dias fora da faixa", () => {

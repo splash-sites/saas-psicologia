@@ -39,11 +39,19 @@ export default async function VisaoGeral() {
       <CabecalhoPagina titulo="Visão geral" descricao={`${ind.total} contas no total.`} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Numero rotulo="Pagando" valor={String(n("pagando"))} sub="assinatura em dia" />
+        <Numero
+          rotulo="Pagando"
+          valor={String(n("pagando"))}
+          sub={
+            ind.com_desconto_pagando
+              ? `assinatura em dia · ${ind.com_desconto_pagando} com cupom de desconto`
+              : "assinatura em dia"
+          }
+        />
         <Numero
           rotulo="Receita mensal estimada"
           valor={formatarBRL(Number(ind.receita_mensal))}
-          sub="trimestral ÷ 3, semestral ÷ 6"
+          sub="já com os descontos de cupom · trimestral ÷ 3, semestral ÷ 6"
         />
         <Numero
           rotulo="Conversão do teste"
@@ -73,8 +81,18 @@ export default async function VisaoGeral() {
         </div>
       </section>
 
+      {(ind.com_desconto ?? 0) > 0 && (
+        <p className="text-sm text-slate-600">
+          <Link href="/admin/cupons" className="font-medium text-teal-800 hover:underline">
+            {ind.com_desconto} {ind.com_desconto === 1 ? "assinatura veio" : "assinaturas vieram"} com cupom de desconto
+          </Link>
+          {" "}({ind.com_desconto_pagando ?? 0} pagando hoje).
+        </p>
+      )}
+
       <section className="card flex flex-col gap-3 sm:p-6">
         <h2 className="text-lg font-semibold">Novos cadastros por semana</h2>
+        <p className="-mt-2 text-xs text-slate-500">&quot;Com cupom&quot; conta os cupons de dias grátis, usados no cadastro.</p>
         <ul className="flex flex-col gap-2 text-sm">
           {ind.cadastros_semana.map((s) => (
             <li key={s.inicio} className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-3">

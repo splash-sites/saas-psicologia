@@ -11,6 +11,7 @@ import {
   type UsuarioAdmin,
 } from "@/lib/admin/usuarios";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import { descontoDaLinha, descricaoDesconto } from "@/lib/assinatura/desconto";
 import { EstenderTesteForm } from "./EstenderTesteForm";
 
 export const metadata = { title: "Conta" };
@@ -27,7 +28,7 @@ export default async function UsuarioDetalhe({ params }: { params: Promise<{ id:
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const admin = createAdminClient();
-  const [{ data: contaRaw }, { data: extensoes }, { data: resgate }] = await Promise.all([
+  const [{ data: contaRaw }, { data: extensoes }, { data: resgate }, { data: desconto }] = await Promise.all([
     admin.rpc("admin_usuarios", { p_id: id }).maybeSingle(),
     admin
       .from("extensoes_teste")
@@ -39,6 +40,12 @@ export default async function UsuarioDetalhe({ params }: { params: Promise<{ id:
       .select("codigo, trial_fim_depois, created_at")
       .eq("psicologa_id", id)
       .maybeSingle(),
+    admin
+      .from("cupom_descontos")
+      .select("codigo, desconto_tipo, desconto_valor, meses_total, meses_usados, asaas_subscription_id, created_at")
+      .eq("psicologa_id", id)
+      .not("asaas_subscription_id", "is", null)
+      .maybeSingle(),
   ]);
   const u = contaRaw as UsuarioAdmin | null;
   if (!u) notFound();
@@ -48,6 +55,16 @@ export default async function UsuarioDetalhe({ params }: { params: Promise<{ id:
     { quando: u.cadastro, texto: "Conta criada" },
     ...(resgate
       ? [{ quando: resgate.created_at, texto: `Cupom ${resgate.codigo}: teste até ${dataBR(resgate.trial_fim_depois)}` }]
+      : []),
+    ...(desconto
+      ? [
+          {
+            quando: desconto.created_at,
+            texto: `Assinou com o cupom ${desconto.codigo}: ${descricaoDesconto(descontoDaLinha(desconto))}${
+              desconto.meses_total === null ? "" : ` (${desconto.meses_usados} de ${desconto.meses_total} meses já cobrados)`
+            }`,
+          },
+        ]
       : []),
     ...(extensoes ?? []).map((e) => ({
       quando: e.created_at,
@@ -75,7 +92,8 @@ export default async function UsuarioDetalhe({ params }: { params: Promise<{ id:
         <Item rotulo="Próximo vencimento" valor={dataBR(u.proximo_vencimento)} />
         <Item rotulo="Plano" valor={plano ? `${plano.label} · ${formatarBRL(Number(u.valor))}` : "—"} />
         <Item rotulo="Já pagou alguma vez" valor={u.pagou ? "Sim" : "Não"} />
-        <Item rotulo="Cupom" valor={u.cupom ?? "—"} />
+        <Item rotulo="Cupom de dias grátis" valor={u.cupom ?? "—"} />
+        <Item rotulo="Cupom de desconto" valor={u.cupom_desconto ?? "—"} />
         <Item
           rotulo="Usou nos últimos 30 dias"
           valor={`${usouRecentemente(u.ultima_atividade) ? "Sim" : "Não"} (última ${dataBR(u.ultima_atividade)})`}

@@ -10,6 +10,7 @@ import {
   type CupomAdmin,
 } from "@/lib/admin/cupons";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import { formatarBRL } from "@/lib/financeiro/types";
 import { alternarCupom } from "../actions";
 import { EditarCupomForm } from "./EditarCupomForm";
 import { ExcluirCupom } from "./ExcluirCupom";
@@ -59,6 +60,11 @@ export default async function CupomDetalhe({ params }: { params: Promise<{ id: s
         .order("created_at", { ascending: false })
         .limit(MAX_USOS);
 
+  // Quanto o cupom já descontou nas cobranças (cupom por N meses).
+  const totalDescontado = desconto && cupom.desconto_meses !== null
+    ? Number((await admin.rpc("admin_desconto_do_cupom", { p_cupom_id: id })).data ?? 0)
+    : null;
+
   const lista = (usosRaw ?? []) as Uso[];
   const usos = count ?? lista.length;
   const situacao = situacaoCupom(cupom, usos, hojeBR());
@@ -79,6 +85,7 @@ export default async function CupomDetalhe({ params }: { params: Promise<{ id: s
           <>
             {beneficioDoCupom(cupom)} · {usos} {usos === 1 ? "uso" : "usos"}
             {cupom.limite_usos !== null && ` de ${cupom.limite_usos}`} · criado em {dataBR(cupom.created_at)}
+            {totalDescontado !== null && totalDescontado > 0 && ` · ${formatarBRL(totalDescontado)} já descontados`}
           </>
         }
         acoes={

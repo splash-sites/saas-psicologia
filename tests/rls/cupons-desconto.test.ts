@@ -185,6 +185,49 @@ describe.skipIf(!hasLocalSupabase || !hasAdmin)("Banco: cupons de desconto", () 
     expect(await meses("sub_sem_cupom", "x_1", 1)).toEqual({ status: "sem_desconto" });
   });
 
+  it("admin (0032): cupom na lista, valor mensal com desconto e total descontado", async () => {
+    const admin = adminClient();
+    const codigo = await criarDesconto({ desconto_meses: 1 });
+    const cupomId = (await admin.from("cupons").select("id").eq("codigo", codigo).single()).data!.id;
+    const a = await contaNova("admin");
+
+    // Usuária não executa as funções do painel.
+    expect((await a.cliente.rpc("admin_valor_mensal", { p_psicologa_id: a.id })).error).not.toBeNull();
+    expect((await a.cliente.rpc("admin_desconto_do_cupom", { p_cupom_id: cupomId })).error).not.toBeNull();
+
+    const sub = await assinarCom(a, codigo);
+    await admin.from("assinaturas").update({ status: "ativa", plano: "mensal", valor: 49.9 }).eq("psicologa_id", a.id);
+    const linha = (await admin.rpc("admin_usuarios", { p_id: a.id }).single()).data as { cupom_desconto: string };
+    expect(linha.cupom_desconto).toBe(codigo);
+
+    // 1ª cobrança com 20%: a receita conta R$ 39,92, não o preço cheio.
+    expect(await meses(sub, "adm_1", 1)).toMatchObject({ status: "ok" });
+    await admin
+      .from("cobrancas_desconto")
+      .update({ valor_original: 49.9, valor_cobrado: 39.92 })
+      .eq("asaas_payment_id", `${sufixo}_adm_1`);
+    const valor = async () => Number((await admin.rpc("admin_valor_mensal", { p_psicologa_id: a.id })).data);
+    expect(await valor()).toBe(39.92);
+    expect(Number((await admin.rpc("admin_desconto_do_cupom", { p_cupom_id: cupomId })).data)).toBe(9.98);
+
+    // Período da cobrança com desconto já passou: volta ao preço cheio.
+    await admin
+      .from("cobrancas_desconto")
+      .update({ created_at: new Date(Date.now() - 100 * 86_400_000).toISOString() })
+      .eq("asaas_payment_id", `${sufixo}_adm_1`);
+    expect(await valor()).toBe(49.9);
+
+    // Trimestral sem desconto: valor ÷ 3.
+    const b = await contaNova("admin-trim");
+    await admin.from("assinaturas").update({ status: "ativa", plano: "trimestral", valor: 134.73 }).eq("psicologa_id", b.id);
+    expect(Number((await admin.rpc("admin_valor_mensal", { p_psicologa_id: b.id })).data)).toBeCloseTo(44.91, 2);
+
+    // Indicadores trazem as contagens novas.
+    const ind = (await admin.rpc("admin_indicadores")).data as { com_desconto: number; com_desconto_pagando: number };
+    expect(ind.com_desconto).toBeGreaterThanOrEqual(1);
+    expect(ind.com_desconto_pagando).toBeGreaterThanOrEqual(1);
+  });
+
   it("cupom usado não pode ser apagado", async () => {
     const codigo = await criarDesconto();
     const a = await contaNova("apagar");

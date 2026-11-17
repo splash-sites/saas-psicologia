@@ -46,7 +46,10 @@ export type UsuarioAdmin = {
   trial_fim: string;
   proximo_vencimento: string | null;
   pagou: boolean;
+  /** Cupom de dias grátis usado. */
   cupom: string | null;
+  /** Cupom de desconto da assinatura (migration 0032). */
+  cupom_desconto?: string | null;
   pacientes: number;
   consultas: number;
   evolucoes: number;
@@ -60,6 +63,9 @@ export type Indicadores = {
   ativas_30_dias: number;
   teste_acabou: number;
   converteram: number;
+  /** Assinaturas que vieram com cupom de desconto (migration 0032). */
+  com_desconto?: number;
+  com_desconto_pagando?: number;
   cadastros_semana: { inicio: string; cadastros: number; com_cupom: number }[];
 };
 
@@ -74,6 +80,12 @@ export function usouRecentemente(ultimaAtividade: string | null, agora = new Dat
 /** Pode estender o teste? Mesma regra do cupom: só quem não assinou. */
 export function podeEstenderTeste(situacao: SituacaoConta): boolean {
   return situacao === "teste" || situacao === "teste_encerrado";
+}
+
+/** Coluna "Cupom": os dois tipos, "PSICO30 · BLACK10". */
+export function cuponsDaConta(u: Pick<UsuarioAdmin, "cupom" | "cupom_desconto">): string | null {
+  const cupons = [u.cupom, u.cupom_desconto].filter(Boolean);
+  return cupons.length ? cupons.join(" · ") : null;
 }
 
 export function porcentagem(parte: number, todo: number): string {
