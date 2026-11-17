@@ -71,11 +71,15 @@ export function primeiraCobranca(plano: AssinaturaPlano, desconto: Desconto): nu
  * a psicóloga pagaria mais do que o cupom promete).
  */
 export function menorCobrancaPossivel(desconto: Desconto): number {
-  return Math.min(
-    ...ASSINATURA_PLANO.map(
-      (plano) => centavosComDesconto(plano, desconto, mesesNaPrimeiraCobranca(plano, desconto)) / 100,
-    ),
-  );
+  return cobrancaMinima(desconto).valor;
+}
+
+/** Igual a menorCobrancaPossivel, dizendo em qual plano (para a mensagem do admin). */
+export function cobrancaMinima(desconto: Desconto): { plano: AssinaturaPlano; valor: number } {
+  return ASSINATURA_PLANO.map((plano) => ({
+    plano,
+    valor: centavosComDesconto(plano, desconto, mesesNaPrimeiraCobranca(plano, desconto)) / 100,
+  })).reduce((menor, atual) => (atual.valor < menor.valor ? atual : menor));
 }
 
 /** Valores das cobranças com desconto, em ordem (cupom por N meses). */

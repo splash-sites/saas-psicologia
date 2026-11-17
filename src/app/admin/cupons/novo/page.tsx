@@ -11,7 +11,7 @@ export default async function NovoCupom() {
       <CabecalhoPagina
         titulo="Novo cupom"
         voltar={{ href: "/admin/cupons", rotulo: "Cupons" }}
-        descricao="Depois de criado, o código e os dias não mudam (quem já usou recebeu esses dias). Validade e limite podem ser editados."
+        descricao="Depois de criado, o código e o benefício não mudam (quem já usou recebeu esse benefício). Validade e limite podem ser editados."
       />
       <NovoCupomForm />
     </div>

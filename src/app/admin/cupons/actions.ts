@@ -20,16 +20,19 @@ export async function criarCupom(_prev: FormState, formData: FormData): Promise<
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
   const v = parsed.data;
 
-  const { data, error } = await createAdminClient()
-    .from("cupons")
-    .insert({
-      codigo: v.codigo,
-      dias: v.dias,
-      valido_ate: v.valido_ate ?? null,
-      limite_usos: v.limite_usos ?? null,
-    })
-    .select("id")
-    .single();
+  const comum = { codigo: v.codigo, valido_ate: v.valido_ate ?? null, limite_usos: v.limite_usos ?? null };
+  const linha: Record<string, unknown> =
+    v.tipo === "desconto"
+      ? {
+          ...comum,
+          tipo: "desconto",
+          desconto_tipo: v.desconto_tipo,
+          desconto_valor: v.desconto_valor,
+          desconto_meses: v.desconto_meses,
+        }
+      : { ...comum, tipo: "dias", dias: v.dias };
+
+  const { data, error } = await createAdminClient().from("cupons").insert(linha).select("id").single();
   if (error) {
     if (error.code === "23505") return { fieldErrors: { codigo: ["Já existe um cupom com esse código"] } };
     return { error: "Não foi possível criar o cupom. Tente de novo." };
@@ -46,11 +49,8 @@ export async function editarCupom(id: string, _prev: FormState, formData: FormDa
 
   const admin = createAdminClient();
   if (v.limite_usos !== undefined) {
-    const { count } = await admin
-      .from("cupom_resgates")
-      .select("id", { count: "exact", head: true })
-      .eq("cupom_id", id);
-    if ((count ?? 0) > v.limite_usos) {
+    const count = await usosDoCupom(admin, id);
+    if (count > v.limite_usos) {
       return { fieldErrors: { limite_usos: [`O cupom já foi usado ${count} vezes: o limite não pode ser menor.`] } };
     }
   }
@@ -81,11 +81,7 @@ export async function alternarCupom(id: string, ativo: boolean): Promise<void> {
 export async function excluirCupom(id: string, _prev: FormState): Promise<FormState> {
   if (!(await adminAtual())) return NAO_ENCONTRADO;
   const admin = createAdminClient();
-  const { count } = await admin
-    .from("cupom_resgates")
-    .select("id", { count: "exact", head: true })
-    .eq("cupom_id", id);
-  if ((count ?? 0) > 0) return { error: MSG_CUPOM_USADO };
+  if ((await usosDoCupom(admin, id)) > 0) return { error: MSG_CUPOM_USADO };
 
   const { error } = await admin.from("cupons").delete().eq("id", id);
   if (error) {
@@ -96,4 +92,14 @@ export async function excluirCupom(id: string, _prev: FormState): Promise<FormSt
   redirect("/admin/cupons");
 }
 
-const MSG_CUPOM_USADO = "Este cupom já foi usado e não pode ser excluído: o histórico de quem usou fica. Pause o cupom.";
+/** Usos de um cupom de qualquer tipo (dias em cupom_resgates, desconto em cupom_descontos). */
+async function usosDoCupom(admin: ReturnType<typeof createAdminClient>, id: string): Promise<number> {
+  const [dias, desconto] = await Promise.all(
+    (["cupom_resgates", "cupom_descontos"] as const).map((tabela) =>
+      admin.from(tabela).select("id", { count: "exact", head: true }).eq("cupom_id", id),
+    ),
+  );
+  return (dias.count ?? 0) + (desconto.count ?? 0);
+}
+
+const MSG_CUPOM_USADO ="Este cupom já foi usado e não pode ser excluído: o histórico de quem usou fica. Pause o cupom.";

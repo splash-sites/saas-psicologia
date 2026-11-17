@@ -3,7 +3,14 @@ import { Plus, Ticket } from "lucide-react";
 import { exigirAdmin } from "@/lib/admin/acesso";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hojeBR } from "@/lib/agenda/datas";
-import { situacaoCupom, SITUACAO_CUPOM_LABEL, TOM_SITUACAO, type CupomAdmin } from "@/lib/admin/cupons";
+import {
+  beneficioDoCupom,
+  situacaoCupom,
+  SITUACAO_CUPOM_LABEL,
+  tabelaDeUsos,
+  TOM_SITUACAO,
+  type CupomAdmin,
+} from "@/lib/admin/cupons";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 
@@ -23,7 +30,7 @@ export default async function CuponsAdmin() {
   const usos = await Promise.all(
     cupons.map(async (c) => {
       const { count } = await admin
-        .from("cupom_resgates")
+        .from(tabelaDeUsos(c.tipo))
         .select("id", { count: "exact", head: true })
         .eq("cupom_id", c.id);
       return count ?? 0;
@@ -35,7 +42,7 @@ export default async function CuponsAdmin() {
     <div className="flex flex-col gap-6">
       <CabecalhoPagina
         titulo="Cupons"
-        descricao="Cupons de dias grátis: estendem o teste de quem ainda não assinou. Um por conta."
+        descricao="Dias grátis estendem o teste de quem ainda não assinou. Desconto vale na assinatura, inclusive para quem cancelou e volta. Cada conta usa um de cada tipo."
         acoes={
           <Link href="/admin/cupons/novo" className="btn btn-primary">
             <Plus className="size-4" aria-hidden />
@@ -57,7 +64,7 @@ export default async function CuponsAdmin() {
             <thead className="bg-slate-50 text-left text-xs text-slate-500">
               <tr>
                 <th className="px-4 py-2">Código</th>
-                <th className="px-4 py-2">Dias grátis</th>
+                <th className="px-4 py-2">Benefício</th>
                 <th className="px-4 py-2">Usos</th>
                 <th className="px-4 py-2">Validade</th>
                 <th className="px-4 py-2">Situação</th>
@@ -74,7 +81,7 @@ export default async function CuponsAdmin() {
                         {c.codigo}
                       </Link>
                     </td>
-                    <td className="px-4 py-2">{c.dias}</td>
+                    <td className="px-4 py-2">{beneficioDoCupom(c)}</td>
                     <td className="px-4 py-2">
                       {usos[i]}
                       {c.limite_usos !== null && <span className="text-slate-500"> de {c.limite_usos}</span>}
