@@ -136,6 +136,19 @@ export async function atualizarValorCobranca(
   });
 }
 
+/**
+ * Troca o valor da assinatura só para as próximas cobranças: a que já está
+ * em aberto fica como está (`updatePendingPayments: false`; testado no sandbox
+ * em 2026-11-17 — valor e link da cobrança pendente não mudam).
+ */
+export async function atualizarValorAssinatura(subscriptionId: string, valor: number): Promise<void> {
+  if (asaasModo() === "mock") return;
+  await chamar(`/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: "PUT",
+    body: JSON.stringify({ value: valor, updatePendingPayments: false }),
+  });
+}
+
 /** Primeira cobrança gerada para a assinatura: dá o link de pagamento. */
 export async function primeiraCobrancaDaAssinatura(
   subscriptionId: string,

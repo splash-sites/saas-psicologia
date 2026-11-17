@@ -424,9 +424,12 @@ function PainelStatus({
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <span className="font-semibold">Cupom {desconto.codigo}:</span> {descricaoDesconto(desconto.desconto)}.
           {desconto.desconto.meses !== null &&
+            // Os meses contam quando a cobrança é criada (não quando é paga).
             (desconto.usados >= desconto.desconto.meses
-              ? " Os meses com desconto já foram usados."
-              : ` ${desconto.usados} de ${desconto.desconto.meses} ${desconto.desconto.meses === 1 ? "mês" : "meses"} já cobrados com desconto.`)}
+              ? desconto.desconto.meses === 1
+                ? " O desconto entrou na 1ª cobrança."
+                : ` Os ${desconto.desconto.meses} meses com desconto já entraram nas cobranças.`
+              : ` ${desconto.usados} de ${desconto.desconto.meses} meses com desconto já entraram nas cobranças.`)}
         </p>
       )}
 

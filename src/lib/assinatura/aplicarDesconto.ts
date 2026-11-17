@@ -53,16 +53,23 @@ export async function aplicarDescontoNaCobranca(
     reserva.meses,
   );
 
-  try {
-    await atualizarValorCobranca(dados.cobranca, valor);
-  } catch {
-    await admin.rpc("devolver_meses_desconto", { p_payment_id: dados.cobranca.id });
-    return { tipo: "falhou" };
+  // A 1ª cobrança já nasce com o desconto (a assinatura é criada com o valor
+  // dela): trocar de novo só registraria o boleto outra vez.
+  const jaComDesconto = dados.cobranca.value !== undefined && Math.abs(dados.cobranca.value - valor) < 0.005;
+  if (!jaComDesconto) {
+    try {
+      await atualizarValorCobranca(dados.cobranca, valor);
+    } catch {
+      await admin.rpc("devolver_meses_desconto", { p_payment_id: dados.cobranca.id });
+      return { tipo: "falhou" };
+    }
   }
 
+  const original =
+    dados.cobranca.value !== undefined && dados.cobranca.value > valor ? dados.cobranca.value : PLANOS[dados.plano].valor;
   await admin
     .from("cobrancas_desconto")
-    .update({ valor_original: dados.cobranca.value ?? PLANOS[dados.plano].valor, valor_cobrado: valor })
+    .update({ valor_original: original, valor_cobrado: valor })
     .eq("asaas_payment_id", dados.cobranca.id);
 
   return { tipo: "aplicado", valor };

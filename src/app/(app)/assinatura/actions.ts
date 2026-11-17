@@ -11,6 +11,7 @@ import {
   criarClienteAsaas,
   criarAssinaturaAsaas,
   cancelarAssinaturaAsaas,
+  atualizarValorAssinatura,
   primeiraCobrancaDaAssinatura,
   buscarCobranca,
   asaasModo,
@@ -140,10 +141,13 @@ export async function configurarAssinatura(
     if ("erro" in r) return { fieldErrors: { cupom: [r.erro] } };
     reserva = r.reserva;
   }
-  // Para sempre: a assinatura já nasce no Asaas com o valor menor. Por N
-  // meses: nasce no preço cheio e cada cobrança com desconto é ajustada.
+  // Com cupom, a assinatura nasce no Asaas com o valor da 1ª cobrança já com
+  // o desconto: o boleto é registrado (e aparece no DDA do banco) com o valor
+  // certo. Para sempre: fica assim. Por N meses: volta ao preço cheio logo
+  // depois, só para as próximas; cada cobrança com desconto é ajustada.
   const permanente = reserva !== null && reserva.desconto.meses === null;
-  const valorAssinatura = permanente ? primeiraCobranca(planoEscolhido, reserva!.desconto) : plano.valor;
+  const valorInicial = reserva ? primeiraCobranca(planoEscolhido, reserva.desconto) : plano.valor;
+  const valorAssinatura = permanente ? valorInicial : plano.valor;
 
   const admin = createAdminClient();
   let urlDaCobranca: string | null = null;
@@ -157,7 +161,7 @@ export async function configurarAssinatura(
     });
     const assinatura = await criarAssinaturaAsaas({
       customerId: cliente.id,
-      valor: valorAssinatura,
+      valor: valorInicial,
       primeiroVencimento,
       ciclo: plano.cicloAsaas,
     });
@@ -175,13 +179,13 @@ export async function configurarAssinatura(
     // a assinatura — sem isso, às vezes vem vazia na primeira consulta e a
     // psicóloga fica sem link nenhum pra pagar. Tenta mais algumas vezes.
     let cobranca = await primeiraCobrancaComRetentativa(assinatura.id, reserva ? 8 : 4);
-    let valorFatura = cobranca?.value ?? valorAssinatura;
+    let valorFatura = cobranca?.value ?? valorInicial;
 
     if (reserva && !permanente) {
-      // O desconto entra antes de o link chegar à psicóloga: ela nunca vê a
-      // fatura no preço cheio. Sem a cobrança (ou com o Asaas recusando a
-      // troca), desfaz tudo — melhor pedir para tentar de novo do que cobrar
-      // sem o desconto prometido.
+      // A 1ª cobrança já veio com o desconto; aqui o banco conta os meses dela
+      // (e o valor é conferido). Sem a cobrança (ou com o Asaas recusando),
+      // desfaz tudo — melhor pedir para tentar de novo do que cobrar sem o
+      // desconto prometido ou deixar a assinatura com o valor menor.
       const alvo = cobranca ?? (asaasModo() === "mock"
         ? { id: `mock_pay_${randomUUID()}`, billingType: "UNDEFINED", dueDate: primeiroVencimento }
         : null);
@@ -189,7 +193,7 @@ export async function configurarAssinatura(
       const r = await aplicarDescontoNaCobranca(admin, {
         subscriptionId: assinatura.id,
         plano: planoEscolhido,
-        cobranca: { ...alvo, value: cobranca?.value ?? plano.valor },
+        cobranca: { ...alvo, value: cobranca?.value ?? valorInicial },
       });
       if (r.tipo === "falhou") throw new Error("Asaas recusou o desconto");
       if (r.tipo === "aplicado") {
@@ -199,6 +203,8 @@ export async function configurarAssinatura(
         cobranca = (await buscarCobranca(cobranca.id)) ?? cobranca;
         valorFatura = cobranca.value;
       }
+      // Próximas cobranças no preço cheio (a em aberto não muda).
+      await atualizarValorAssinatura(assinatura.id, plano.valor);
     }
     urlDaCobranca = cobranca?.invoiceUrl ?? null;
 
