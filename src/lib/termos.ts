@@ -1,7 +1,7 @@
 // Versão dos Termos e da Privacidade (as páginas ficam na landing, ver
 // src/lib/legal.ts). Ao publicar texto novo lá, trocar a data aqui: o Painel
 // avisa quem já tinha conta (migration 0030).
-export const TERMOS_ATUALIZADOS_EM = "2026-11-13";
+export const TERMOS_ATUALIZADOS_EM = "2026-11-18";
 
 /** Por quantos dias depois da atualização o aviso aparece, se ninguém fechar. */
 export const DIAS_AVISO_TERMOS = 30;
