@@ -22,7 +22,7 @@ export function TelaDeErro({ error, retry }: { error: unknown; retry: () => void
         <h1 className="text-lg font-semibold text-slate-900">Algo deu errado</h1>
         <p className="text-sm text-slate-600">
           Não conseguimos carregar esta página. Tente de novo; se continuar,
-          escreva para contato@splashsistemas.com.br.
+          escreva para contato@gradatim.com.br.
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-2">

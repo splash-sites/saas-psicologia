@@ -481,8 +481,8 @@ function PainelStatus({
             <p className="text-sm text-slate-700">
               Não há fatura em aberto para pagar por aqui. Se o pagamento foi
               estornado ou contestado, escreva para{" "}
-              <a href="mailto:contato@splashsistemas.com.br" className="font-medium text-teal-700 hover:text-teal-800">
-                contato@splashsistemas.com.br
+              <a href="mailto:contato@gradatim.com.br" className="font-medium text-teal-700 hover:text-teal-800">
+                contato@gradatim.com.br
               </a>{" "}
               para regularizar.
             </p>
