@@ -102,16 +102,36 @@ describe.skipIf(!hasLocalSupabase)("RLS: evolucoes", () => {
     expect(aindaLa).toHaveLength(1);
   });
 
-  it("os quatro campos da evolução são exigidos pelo banco (campo vazio recusado)", async () => {
+  it("banco exige pelo menos um campo; vazio vira NULL; notas privadas contam", async () => {
     const s = Date.now();
     const a = await signUpPsicologa(`ev-a5-${s}@teste.local`);
     const ca = userClient(a.accessToken);
     const pa = await pacienteDe(ca, a.id);
+    const vazios = { demanda: "  ", procedimentos: "", resultados: null, encaminhamentos: " ", notas_privadas: "" };
 
-    const { error } = await ca
-      .from("evolucoes")
-      .insert({ ...base(a.id, pa), procedimentos: "   " })
-      .select();
+    // Nenhum campo: recusado pela CHECK evolucoes_algum_campo (0033).
+    const { error } = await ca.from("evolucoes").insert({ ...base(a.id, pa), ...vazios }).select();
     expect(error?.code).toBe("23514"); // check_violation
+
+    // Só um campo: aceito, e os vazios viram NULL.
+    const { data: um, error: e1 } = await ca
+      .from("evolucoes")
+      .insert({ ...base(a.id, pa), ...vazios, procedimentos: " psicoeducação " })
+      .select("demanda, procedimentos, resultados, encaminhamentos")
+      .single();
+    expect(e1).toBeNull();
+    expect(um).toEqual({ demanda: null, procedimentos: "psicoeducação", resultados: null, encaminhamentos: null });
+
+    // Só notas privadas: aceito.
+    const { error: e2 } = await ca
+      .from("evolucoes")
+      .insert({ ...base(a.id, pa), ...vazios, notas_privadas: "hipótese" })
+      .select();
+    expect(e2).toBeNull();
+
+    // Editar apagando o único campo: recusado.
+    const { data: ev } = await ca.from("evolucoes").insert({ ...base(a.id, pa), ...vazios, resultados: "r" }).select("id").single();
+    const { error: e3 } = await ca.from("evolucoes").update({ resultados: "" }).eq("id", ev!.id).select();
+    expect(e3?.code).toBe("23514");
   });
 });

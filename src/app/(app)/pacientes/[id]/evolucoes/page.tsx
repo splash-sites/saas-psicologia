@@ -3,7 +3,7 @@ import { Plus, FileText } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import type { Evolucao } from "@/lib/prontuario/types";
+import { previaEvolucao, type Evolucao } from "@/lib/prontuario/types";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { registrarAcesso } from "@/lib/prontuario/acesso";
@@ -40,7 +40,7 @@ export default async function EvolucoesTimelinePage({
 
   let q = supabase
     .from("evolucoes")
-    .select("id, data_sessao, demanda, deleted_at, deleted_motivo, updated_at")
+    .select("id, data_sessao, demanda, procedimentos, resultados, encaminhamentos, notas_privadas, deleted_at, deleted_motivo, updated_at")
     .eq("paciente_id", id)
     .order("data_sessao", { ascending: false })
     .order("created_at", { ascending: false });
@@ -49,7 +49,8 @@ export default async function EvolucoesTimelinePage({
   const [{ data: evolucoes }] = await Promise.all([q, registrarAcesso(supabase, "evolucoes", id)]);
   const lista = (evolucoes ?? []) as Pick<
     Evolucao,
-    "id" | "data_sessao" | "demanda" | "deleted_at" | "deleted_motivo" | "updated_at"
+    | "id" | "data_sessao" | "demanda" | "procedimentos" | "resultados" | "encaminhamentos" | "notas_privadas"
+    | "deleted_at" | "deleted_motivo" | "updated_at"
   >[];
 
   return (
@@ -113,7 +114,7 @@ export default async function EvolucoesTimelinePage({
                   )}
                 </div>
                 <p className="mt-1 line-clamp-2 text-sm text-slate-600">
-                  {e.demanda}
+                  {previaEvolucao(e)}
                 </p>
                 {e.deleted_at && e.deleted_motivo && (
                   <p className="mt-1 text-xs text-slate-400">

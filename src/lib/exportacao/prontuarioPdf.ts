@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { PACIENTE_STATUS_LABEL, type Anamnese, type Paciente } from "@/lib/pacientes/types";
-import { CAMPOS_EVOLUCAO, type Evolucao } from "@/lib/prontuario/types";
+import { camposPreenchidos, type Evolucao } from "@/lib/prontuario/types";
 import { formatarCpf, formatarTelefoneBR } from "@/lib/pacientes/formatacao";
 import { dataBRCompleta, dataHoraBR } from "./datas";
 
@@ -166,7 +166,8 @@ export async function gerarProntuarioPdf(d: DadosProntuario): Promise<Uint8Array
     garantirEspaco(110);
     separador(10);
     escrever(`Sessão de ${dataBRCompleta(e.data_sessao)}`, { fonte: negrito, tamanho: 11, antes: 4 });
-    for (const c of CAMPOS_EVOLUCAO) campo(c.rotulo, e[c.nome]);
+    // Só os campos preenchidos (nenhum é obrigatório).
+    for (const c of camposPreenchidos(e)) campo(c.rotulo, e[c.nome]);
     if (e.notas_privadas) campo("Notas privadas", e.notas_privadas);
     escrever(
       `Registrada em ${dataHoraBR(e.created_at)}${e.updated_at !== e.created_at ? ` · última edição em ${dataHoraBR(e.updated_at)}` : ""}`,

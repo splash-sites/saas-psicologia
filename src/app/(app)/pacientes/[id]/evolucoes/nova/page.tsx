@@ -34,7 +34,7 @@ export default async function NovaEvolucaoPage({
       <CabecalhoPagina
         titulo="Nova evolução"
         voltar={{ href: `/pacientes/${id}`, rotulo: <span data-sensivel>{paciente.nome}</span> }}
-        descricao="Os quatro campos são obrigatórios. Junto com a ficha e a anamnese do paciente, a evolução compõe o registro documental (Resolução CFP nº 01/2009)."
+        descricao="Junto com a ficha e a anamnese do paciente, a evolução compõe o registro documental (Resolução CFP nº 01/2009)."
       />
       <EvolucaoForm
         action={criarEvolucao.bind(null, id)}

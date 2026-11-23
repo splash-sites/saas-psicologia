@@ -49,10 +49,10 @@ export async function criarEvolucao(
       paciente_id: pacienteId,
       consulta_id: v.consulta_id ?? null,
       data_sessao: v.data_sessao,
-      demanda: v.demanda,
-      procedimentos: v.procedimentos,
-      resultados: v.resultados,
-      encaminhamentos: v.encaminhamentos,
+      demanda: v.demanda ?? null,
+      procedimentos: v.procedimentos ?? null,
+      resultados: v.resultados ?? null,
+      encaminhamentos: v.encaminhamentos ?? null,
       notas_privadas: v.notas_privadas ?? null,
     })
     .select("id")
@@ -85,10 +85,10 @@ export async function atualizarEvolucao(
     .update({
       consulta_id: v.consulta_id ?? null,
       data_sessao: v.data_sessao,
-      demanda: v.demanda,
-      procedimentos: v.procedimentos,
-      resultados: v.resultados,
-      encaminhamentos: v.encaminhamentos,
+      demanda: v.demanda ?? null,
+      procedimentos: v.procedimentos ?? null,
+      resultados: v.resultados ?? null,
+      encaminhamentos: v.encaminhamentos ?? null,
       notas_privadas: v.notas_privadas ?? null,
     })
     .eq("id", evolucaoId)

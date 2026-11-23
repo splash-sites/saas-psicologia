@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import { CAMPOS_EVOLUCAO, type Evolucao } from "@/lib/prontuario/types";
+import { camposPreenchidos, type Evolucao } from "@/lib/prontuario/types";
 import { arquivarEvolucao } from "../actions";
 import { ArquivarForm } from "./ArquivarForm";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
@@ -74,7 +74,7 @@ export default async function EvolucaoDetailPage({
       )}
 
       <div className="flex flex-col gap-5">
-        {CAMPOS_EVOLUCAO.map((campo) => (
+        {camposPreenchidos(e).map((campo) => (
           <section key={campo.nome} className="flex flex-col gap-1">
             <h2 className="text-sm font-medium">{campo.rotulo}</h2>
             <p className="whitespace-pre-wrap text-sm text-slate-700">

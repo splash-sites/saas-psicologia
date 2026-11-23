@@ -106,7 +106,7 @@ describe.skipIf(!hasLocalSupabase)("Banco: validação e padronização", () => 
     expect(ok).toBeNull();
   });
 
-  it("recusa evolução gigante, mas tira só as pontas dos campos obrigatórios", async () => {
+  it("recusa evolução gigante e tira as pontas dos campos", async () => {
     const { a, c, paciente } = await setup();
     const base = {
       psicologa_id: a.id, paciente_id: paciente, data_sessao: "2026-03-09",

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { evolucaoSchema, arquivarSchema } from "@/lib/prontuario/schema";
+import { evolucaoSchema, arquivarSchema, MSG_EVOLUCAO_VAZIA } from "@/lib/prontuario/schema";
+import { camposPreenchidos, previaEvolucao } from "@/lib/prontuario/types";
 
 const valido = {
   data_sessao: "2026-03-09",
@@ -15,16 +16,36 @@ describe("evolucaoSchema", () => {
     expect(r.success).toBe(true);
   });
 
-  it("rejeita quando qualquer campo obrigatório está vazio", () => {
-    for (const campo of [
-      "demanda",
-      "procedimentos",
-      "resultados",
-      "encaminhamentos",
-    ]) {
-      const r = evolucaoSchema.safeParse({ ...valido, [campo]: "   " });
-      expect(r.success, `${campo} vazio deveria falhar`).toBe(false);
+  it("nenhum campo é obrigatório: basta um preenchido (vazio vira undefined)", () => {
+    for (const campo of ["demanda", "procedimentos", "resultados", "encaminhamentos", "notas_privadas"]) {
+      const r = evolucaoSchema.safeParse({
+        data_sessao: "2026-03-09",
+        demanda: "",
+        procedimentos: "  ",
+        resultados: "",
+        encaminhamentos: "",
+        notas_privadas: "",
+        [campo]: " só este ",
+      });
+      expect(r.success, `só ${campo} deveria passar`).toBe(true);
+      if (r.success) {
+        expect(r.data[campo as "demanda"]).toBe("só este");
+        expect(r.data.procedimentos === undefined || campo === "procedimentos").toBe(true);
+      }
     }
+  });
+
+  it("recusa evolução sem nenhum campo, com a mensagem no primeiro campo", () => {
+    const r = evolucaoSchema.safeParse({
+      data_sessao: "2026-03-09",
+      demanda: " ",
+      procedimentos: "",
+      resultados: "",
+      encaminhamentos: "",
+      notas_privadas: "  ",
+    });
+    expect(r.success).toBe(false);
+    expect(r.error!.flatten().fieldErrors.demanda?.[0]).toBe(MSG_EVOLUCAO_VAZIA);
   });
 
   it("rejeita data de sessão fora do formato ISO", () => {
@@ -59,5 +80,19 @@ describe("arquivarSchema", () => {
   it("exige motivo com pelo menos 3 caracteres", () => {
     expect(arquivarSchema.safeParse({ motivo: "ok" }).success).toBe(false);
     expect(arquivarSchema.safeParse({ motivo: "duplicada" }).success).toBe(true);
+  });
+});
+
+describe("campos preenchidos da evolução", () => {
+  const vazia = { demanda: null, procedimentos: null, resultados: null, encaminhamentos: null, notas_privadas: null };
+
+  it("tela e PDF mostram só os campos preenchidos, na ordem dos 4 campos", () => {
+    const e = { ...vazia, encaminhamentos: "manter semanal", procedimentos: "psicoeducação" };
+    expect(camposPreenchidos(e).map((c) => c.nome)).toEqual(["procedimentos", "encaminhamentos"]);
+  });
+
+  it("prévia da lista: primeiro campo preenchido; só notas privadas não mostra o texto delas", () => {
+    expect(previaEvolucao({ ...vazia, resultados: "reduziu tensão" })).toBe("reduziu tensão");
+    expect(previaEvolucao({ ...vazia, notas_privadas: "hipótese diagnóstica" })).toBe("Só notas técnicas privadas.");
   });
 });
