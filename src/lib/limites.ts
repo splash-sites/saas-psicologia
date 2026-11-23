@@ -12,6 +12,10 @@ export const LIMITES = {
     email: 254,
     endereco: 300,
     observacoes: 5000,
+    /** Relação do contato de emergência / responsável com o paciente (0034). */
+    relacao: 60,
+    /** Valor da sessão, igual ao máximo do lançamento. */
+    valorSessaoMax: 100000,
   },
   /** Anamnese e os 4 campos da evolução + notas privadas. */
   textoClinico: 20000,

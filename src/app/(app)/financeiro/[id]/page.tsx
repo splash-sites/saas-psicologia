@@ -7,8 +7,14 @@ import { StatusBadge } from "../StatusBadge";
 import { MarcarPagoForm } from "../MarcarPagoForm";
 import { marcarComoPago, desmarcarComoPago, arquivarPagamento } from "../actions";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
+import type { Paciente } from "@/lib/pacientes/types";
+import { formatarCpf } from "@/lib/pacientes/formatacao";
 
-type Row = Pagamento & { pacientes: { id: string; nome: string } | null };
+type PacienteDoLancamento = Pick<
+  Paciente,
+  "id" | "nome" | "cpf" | "responsavel_nome" | "responsavel_cpf" | "responsavel_relacao"
+>;
+type Row = Pagamento & { pacientes: PacienteDoLancamento | null };
 
 function dataBR(iso: string | null): string {
   if (!iso) return "—";
@@ -27,7 +33,7 @@ export default async function PagamentoDetailPage({
 
   const { data } = await supabase
     .from("pagamentos")
-    .select("*, pacientes(id, nome)")
+    .select("*, pacientes(id, nome, cpf, responsavel_nome, responsavel_cpf, responsavel_relacao)")
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle();
@@ -62,6 +68,8 @@ export default async function PagamentoDetailPage({
         <Item rotulo="Data do pagamento" valor={dataBR(p.data_pagamento)} />
         <Item rotulo="Forma de pagamento" valor={rotuloFormaPagamento(p.forma_pagamento) ?? "—"} />
       </dl>
+
+      {p.pacientes && <PagoPor paciente={p.pacientes} />}
 
       {p.observacoes && (
         <section className="flex flex-col gap-1 text-sm">
@@ -111,5 +119,30 @@ function Item({ rotulo, valor }: { rotulo: string; valor: string }) {
       <dt className="text-xs text-slate-500">{rotulo}</dt>
       <dd>{valor}</dd>
     </div>
+  );
+}
+
+/** Quem pagou, com os CPFs que o recibo do Receita Saúde pede (pagador e paciente). */
+function PagoPor({ paciente: pac }: { paciente: PacienteDoLancamento }) {
+  const cpf = (v: string | null) => (v ? `CPF ${formatarCpf(v)}` : "sem CPF cadastrado");
+  return (
+    <section className="flex flex-col gap-1 rounded-lg bg-slate-50 px-4 py-3 text-sm">
+      <span className="text-xs text-slate-500">Dados para o recibo</span>
+      {pac.responsavel_nome ? (
+        <>
+          <span data-sensivel>
+            Pago por: <span className="font-medium">{pac.responsavel_nome}</span>
+            {pac.responsavel_relacao && ` (${pac.responsavel_relacao})`} · {cpf(pac.responsavel_cpf)}
+          </span>
+          <span data-sensivel>
+            Paciente: {pac.nome} · {cpf(pac.cpf)}
+          </span>
+        </>
+      ) : (
+        <span data-sensivel>
+          Pago pelo próprio paciente: <span className="font-medium">{pac.nome}</span> · {cpf(pac.cpf)}
+        </span>
+      )}
+    </section>
   );
 }

@@ -153,6 +153,24 @@ export async function gerarProntuarioPdf(d: DadosProntuario): Promise<Uint8Array
   campo("E-mail", p.email);
   campo("Endereço", p.endereco);
   campo("Início do acompanhamento", dataBRCompleta(p.created_at));
+  campo(
+    "Contato de emergência",
+    p.emergencia_nome && p.emergencia_telefone
+      ? `${p.emergencia_nome}${p.emergencia_relacao ? ` (${p.emergencia_relacao})` : ""} · ${formatarTelefoneBR(p.emergencia_telefone)}`
+      : null,
+  );
+  if (p.responsavel_nome) {
+    campo(
+      "Responsável financeiro",
+      [
+        `${p.responsavel_nome}${p.responsavel_relacao ? ` (${p.responsavel_relacao})` : ""}`,
+        p.responsavel_cpf && `CPF ${formatarCpf(p.responsavel_cpf)}`,
+        p.responsavel_telefone && formatarTelefoneBR(p.responsavel_telefone),
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    );
+  }
 
   titulo("Avaliação inicial (anamnese)");
   campo("Demanda / queixa inicial", anamnese?.demanda);

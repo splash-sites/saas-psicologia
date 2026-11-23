@@ -33,6 +33,22 @@ describe.skipIf(!hasLocalSupabase)("Banco: limites e regras iguais aos do códig
     }
   });
 
+  it("paciente (0034): relação, valor da sessão e dia de cobrança nos mesmos limites", async () => {
+    const { a, c } = await setup();
+    const L = LIMITES.paciente;
+    const base = { psicologa_id: a.id, nome: "P", emergencia_nome: "Ana", emergencia_telefone: "51999998888" };
+    const ins = (extra: Record<string, unknown>) => c.from("pacientes").insert({ ...base, ...extra });
+    expect((await ins({ emergencia_relacao: "a".repeat(L.relacao) })).error).toBeNull();
+    expect((await ins({ emergencia_relacao: "a".repeat(L.relacao + 1) })).error).not.toBeNull();
+    expect((await ins({ responsavel_nome: "Rui", responsavel_relacao: "a".repeat(L.relacao + 1) })).error).not.toBeNull();
+    expect((await ins({ valor_sessao: L.valorSessaoMax })).error).toBeNull();
+    expect((await ins({ valor_sessao: L.valorSessaoMax + 1 })).error).not.toBeNull();
+    expect((await ins({ valor_sessao: 0 })).error).not.toBeNull();
+    expect((await ins({ cobranca_dia: 31 })).error).toBeNull();
+    expect((await ins({ cobranca_dia: 32 })).error).not.toBeNull();
+    expect((await ins({ cobranca: "anual" })).error).not.toBeNull();
+  });
+
   it("evolução e pagamento seguem os mesmos limites", async () => {
     const { a, c, paciente } = await setup();
     const evo = (demanda: string) => ({

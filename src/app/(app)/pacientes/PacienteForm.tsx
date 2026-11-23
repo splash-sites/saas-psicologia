@@ -5,8 +5,14 @@ import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import { useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
 import Link from "next/link";
-import { PACIENTE_STATUS, PACIENTE_STATUS_LABEL } from "@/lib/pacientes/types";
-import type { Paciente } from "@/lib/pacientes/types";
+import {
+  DIA_COBRANCA_PADRAO,
+  PACIENTE_STATUS,
+  PACIENTE_STATUS_LABEL,
+  SUGESTOES_RELACAO,
+  type FormaCobranca,
+  type Paciente,
+} from "@/lib/pacientes/types";
 import { capitalizarNome, formatarTelefoneBR, formatarCpf } from "@/lib/pacientes/formatacao";
 import { GOOGLE_AGENDA_ATIVA } from "@/lib/google/flag";
 import type { FormState } from "./actions";
@@ -43,6 +49,19 @@ export function PacienteForm({
   const [nome, setNome] = useState(paciente?.nome ?? "");
   const [telefone, setTelefone] = useState(formatarTelefoneBR(paciente?.telefone ?? ""));
   const [cpf, setCpf] = useState(formatarCpf(paciente?.cpf ?? ""));
+  const [emergencia, setEmergencia] = useState({
+    nome: paciente?.emergencia_nome ?? "",
+    telefone: formatarTelefoneBR(paciente?.emergencia_telefone ?? ""),
+    relacao: paciente?.emergencia_relacao ?? "",
+  });
+  const [outraPessoa, setOutraPessoa] = useState(Boolean(paciente?.responsavel_nome));
+  const [responsavel, setResponsavel] = useState({
+    nome: paciente?.responsavel_nome ?? "",
+    cpf: formatarCpf(paciente?.responsavel_cpf ?? ""),
+    telefone: formatarTelefoneBR(paciente?.responsavel_telefone ?? ""),
+    relacao: paciente?.responsavel_relacao ?? "",
+  });
+  const [cobranca, setCobranca] = useState<FormaCobranca>(paciente?.cobranca ?? "sessao");
 
   return (
     <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
@@ -130,6 +149,206 @@ export function PacienteForm({
         />
         <ErroCampo nome="endereco" cliente={erros} servidor={fe.endereco} />
       </label>
+
+      <datalist id="sugestoes-relacao">
+        {SUGESTOES_RELACAO.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
+
+      <fieldset className="flex flex-col gap-3 rounded-lg border p-4">
+        <legend className="px-1 text-sm font-medium">Contato de emergência</legend>
+        <p className="-mt-1 text-xs text-slate-500">
+          Alguém próximo do paciente para avisar numa emergência. Opcional.
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <label className="flex flex-col gap-1 text-sm sm:col-span-1">
+            Nome
+            <input
+              name="emergencia_nome"
+              maxLength={LIMITES.paciente.nome}
+              value={emergencia.nome}
+              onChange={(e) => setEmergencia((a) => ({ ...a, nome: e.target.value }))}
+              onBlur={() => setEmergencia((a) => ({ ...a, nome: capitalizarNome(a.nome) }))}
+              required={emergencia.telefone !== "" || emergencia.relacao !== ""}
+              data-obrigatorio="Informe o nome do contato."
+              className="input"
+            />
+            <ErroCampo nome="emergencia_nome" cliente={erros} servidor={fe.emergencia_nome} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Telefone
+            <input
+              name="emergencia_telefone"
+              value={emergencia.telefone}
+              onChange={(e) => setEmergencia((a) => ({ ...a, telefone: formatarTelefoneBR(e.target.value) }))}
+              placeholder="(51) 99999-9999"
+              inputMode="numeric"
+              maxLength={15}
+              required={emergencia.nome.trim() !== ""}
+              data-obrigatorio="Informe o telefone do contato."
+              className="input"
+            />
+            <ErroCampo nome="emergencia_telefone" cliente={erros} servidor={fe.emergencia_telefone} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Relação com o paciente
+            <input
+              name="emergencia_relacao"
+              list="sugestoes-relacao"
+              maxLength={LIMITES.paciente.relacao}
+              value={emergencia.relacao}
+              onChange={(e) => setEmergencia((a) => ({ ...a, relacao: e.target.value }))}
+              placeholder="Ex.: mãe, irmã, amigo"
+              className="input"
+            />
+            <ErroCampo nome="emergencia_relacao" cliente={erros} servidor={fe.emergencia_relacao} />
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-3 rounded-lg border p-4">
+        <legend className="px-1 text-sm font-medium">Cobrança</legend>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <label className="flex flex-col gap-1 text-sm">
+            Valor da sessão (R$)
+            <input
+              name="valor_sessao"
+              type="number"
+              step="0.01"
+              min="0.01"
+              max={LIMITES.paciente.valorSessaoMax}
+              data-faixa="O valor mínimo é R$ 0,01."
+              data-passo="Use no máximo 2 casas decimais (ex.: 150,50)."
+              defaultValue={paciente?.valor_sessao ?? ""}
+              placeholder="Ex.: 200"
+              className="input"
+            />
+            <span className="text-xs text-slate-500">Vem preenchido ao marcar consulta. Em branco: atendimento sem cobrança.</span>
+            <ErroCampo nome="valor_sessao" cliente={erros} servidor={fe.valor_sessao} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Forma de cobrança
+            <select
+              name="cobranca"
+              value={cobranca}
+              onChange={(e) => setCobranca(e.target.value as FormaCobranca)}
+              className="input"
+            >
+              <option value="sessao">Por sessão</option>
+              <option value="mensal">Mensal</option>
+            </select>
+            <span className="text-xs text-slate-500">
+              {cobranca === "mensal"
+                ? "As sessões do mês vencem juntas no mês seguinte."
+                : "Cada sessão vence no dia em que acontece."}
+            </span>
+          </label>
+          {/* Sempre no formulário (escondido em "Por sessão") para não perder o dia escolhido. */}
+          <label className={`flex flex-col gap-1 text-sm ${cobranca === "mensal" ? "" : "hidden"}`}>
+            Dia do vencimento
+            <select name="cobranca_dia" defaultValue={paciente?.cobranca_dia ?? DIA_COBRANCA_PADRAO} className="input">
+              {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>
+                  Dia {d} do mês seguinte
+                </option>
+              ))}
+            </select>
+            <ErroCampo nome="cobranca_dia" cliente={erros} servidor={fe.cobranca_dia} />
+          </label>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="responsavel_outra_pessoa"
+            checked={outraPessoa}
+            onChange={(e) => setOutraPessoa(e.target.checked)}
+          />
+          Quem paga as sessões é outra pessoa
+        </label>
+
+        {outraPessoa && (
+          <div className="flex flex-col gap-3 rounded-md bg-slate-50 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs text-slate-500">
+                Dados para o recibo (no Receita Saúde, o CPF de quem pagou).
+              </span>
+              {emergencia.nome.trim() !== "" && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setResponsavel((a) => ({
+                      ...a,
+                      nome: capitalizarNome(emergencia.nome),
+                      telefone: emergencia.telefone,
+                      relacao: emergencia.relacao,
+                    }))
+                  }
+                  className="btn btn-outline btn-sm"
+                >
+                  Usar o contato de emergência
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-sm">
+                Nome *
+                <input
+                  name="responsavel_nome"
+                  maxLength={LIMITES.paciente.nome}
+                  value={responsavel.nome}
+                  onChange={(e) => setResponsavel((a) => ({ ...a, nome: e.target.value }))}
+                  onBlur={() => setResponsavel((a) => ({ ...a, nome: capitalizarNome(a.nome) }))}
+                  required
+                  data-obrigatorio="Informe o nome de quem paga."
+                  className="input"
+                />
+                <ErroCampo nome="responsavel_nome" cliente={erros} servidor={fe.responsavel_nome} />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                CPF
+                <input
+                  name="responsavel_cpf"
+                  value={responsavel.cpf}
+                  onChange={(e) => setResponsavel((a) => ({ ...a, cpf: formatarCpf(e.target.value) }))}
+                  placeholder="000.000.000-00"
+                  inputMode="numeric"
+                  maxLength={14}
+                  className="input"
+                />
+                <ErroCampo nome="responsavel_cpf" cliente={erros} servidor={fe.responsavel_cpf} />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                Telefone
+                <input
+                  name="responsavel_telefone"
+                  value={responsavel.telefone}
+                  onChange={(e) => setResponsavel((a) => ({ ...a, telefone: formatarTelefoneBR(e.target.value) }))}
+                  placeholder="(51) 99999-9999"
+                  inputMode="numeric"
+                  maxLength={15}
+                  className="input"
+                />
+                <ErroCampo nome="responsavel_telefone" cliente={erros} servidor={fe.responsavel_telefone} />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                Relação com o paciente
+                <input
+                  name="responsavel_relacao"
+                  list="sugestoes-relacao"
+                  maxLength={LIMITES.paciente.relacao}
+                  value={responsavel.relacao}
+                  onChange={(e) => setResponsavel((a) => ({ ...a, relacao: e.target.value }))}
+                  placeholder="Ex.: mãe, pai"
+                  className="input"
+                />
+                <ErroCampo nome="responsavel_relacao" cliente={erros} servidor={fe.responsavel_relacao} />
+              </label>
+            </div>
+          </div>
+        )}
+      </fieldset>
 
       <label className="flex flex-col gap-1 text-sm">
         Status

@@ -8,6 +8,9 @@ const paciente: Paciente = {
   id: "p1", psicologa_id: "u1", nome: "Maria da Silva", email: "maria@exemplo.com",
   telefone: "51987654321", data_nascimento: "1990-05-20", cpf: "52998224725",
   endereco: "Rua X, 10", status: "ativo", observacoes: null, aceita_lembretes: true, lembretes_aceitos_em: null,
+  emergencia_nome: "Ana da Silva", emergencia_telefone: "51999998888", emergencia_relacao: "Irmã",
+  responsavel_nome: "João da Silva", responsavel_cpf: "11144477735", responsavel_telefone: null, responsavel_relacao: "Pai",
+  valor_sessao: 200, cobranca: "mensal", cobranca_dia: 10,
   created_at: "2026-01-10T12:00:00Z", updated_at: "2026-01-10T12:00:00Z", deleted_at: null,
 };
 
@@ -56,7 +59,8 @@ describe("gerarProntuarioPdf", () => {
     });
     expect(Buffer.from(bytes.subarray(0, 5)).toString()).toBe("%PDF-");
     const doc = await PDFDocument.load(bytes);
-    expect(doc.getPageCount()).toBe(1);
+    // Identificação (com emergência e responsável) + 1 evolução completa.
+    expect(doc.getPageCount()).toBeLessThanOrEqual(2);
     expect(doc.getTitle()).toBe("Prontuário psicológico");
   });
 

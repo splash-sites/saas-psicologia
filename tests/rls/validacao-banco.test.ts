@@ -119,3 +119,57 @@ describe.skipIf(!hasLocalSupabase)("Banco: validação e padronização", () => 
     expect(data!.demanda).toBe("d");
   });
 });
+
+describe.skipIf(!hasLocalSupabase)("Banco: contato de emergência, responsável e cobrança (0034)", () => {
+  it("padroniza: telefone e CPF só dígitos, vazio vira NULL, cobrança por sessão no dia 10", async () => {
+    const { a, c } = await setup();
+    const { data, error } = await c
+      .from("pacientes")
+      .insert({
+        psicologa_id: a.id,
+        nome: "Paciente",
+        emergencia_nome: "  Ana   Souza ",
+        emergencia_telefone: "+55 (51) 99999-8888",
+        emergencia_relacao: "   ",
+        responsavel_nome: "Rui Souza",
+        responsavel_cpf: "529.982.247-25",
+        responsavel_telefone: "(51) 3333-4444",
+        responsavel_relacao: " Pai ",
+      })
+      .select("emergencia_nome, emergencia_telefone, emergencia_relacao, responsavel_cpf, responsavel_telefone, responsavel_relacao, cobranca, cobranca_dia, valor_sessao")
+      .single();
+    expect(error).toBeNull();
+    expect(data).toEqual({
+      emergencia_nome: "Ana Souza",
+      emergencia_telefone: "51999998888",
+      emergencia_relacao: null,
+      responsavel_cpf: "52998224725",
+      responsavel_telefone: "5133334444",
+      responsavel_relacao: "Pai",
+      cobranca: "sessao",
+      cobranca_dia: 10,
+      valor_sessao: null,
+    });
+  });
+
+  it("recusa contato de emergência sem telefone, responsável sem nome e CPF do responsável inválido", async () => {
+    const { a, c } = await setup();
+    const ins = (extra: Record<string, unknown>) => c.from("pacientes").insert({ psicologa_id: a.id, nome: "P", ...extra });
+    expect((await ins({ emergencia_nome: "Ana" })).error?.code).toBe("23514");
+    expect((await ins({ emergencia_telefone: "51999998888" })).error?.code).toBe("23514");
+    expect((await ins({ responsavel_cpf: "52998224725" })).error?.code).toBe("23514");
+    expect((await ins({ responsavel_nome: "Rui", responsavel_cpf: "11111111111" })).error?.code).toBe("23514");
+    expect((await ins({ responsavel_nome: "Rui", responsavel_cpf: "52998224726" })).error?.code).toBe("23514");
+  });
+
+  it("CPF do responsável só é conferido quando muda (paciente antigo pode ser editado)", async () => {
+    const { a, c } = await setup();
+    const { data: p } = await c
+      .from("pacientes")
+      .insert({ psicologa_id: a.id, nome: "P", responsavel_nome: "Rui", responsavel_cpf: "52998224725", valor_sessao: 150 })
+      .select("id")
+      .single();
+    const { error } = await c.from("pacientes").update({ valor_sessao: 180, cobranca: "mensal", cobranca_dia: 5 }).eq("id", p!.id);
+    expect(error).toBeNull();
+  });
+});

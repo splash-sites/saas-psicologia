@@ -3,7 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
-import type { Anamnese, Paciente } from "@/lib/pacientes/types";
+import { Phone, TriangleAlert } from "lucide-react";
+import { descricaoCobranca, type Anamnese, type Paciente } from "@/lib/pacientes/types";
+import { formatarBRL } from "@/lib/financeiro/types";
 import { whatsappLink } from "@/lib/pacientes/whatsapp";
 import { formatarCpf, formatarTelefoneBR } from "@/lib/pacientes/formatacao";
 import { StatusBadge } from "../StatusBadge";
@@ -101,6 +103,29 @@ export default async function PacienteDetailPage({
         <Dado rotulo="Endereço" valor={paciente.endereco} />
       </section>
 
+      <ContatoEmergencia paciente={paciente} />
+
+      <section className="grid grid-cols-1 gap-x-6 gap-y-3 card text-sm sm:grid-cols-2">
+        <h2 className="font-medium sm:col-span-2">Cobrança</h2>
+        <Dado
+          rotulo="Valor da sessão"
+          valor={paciente.valor_sessao !== null ? formatarBRL(Number(paciente.valor_sessao)) : "Sem valor (atendimento sem cobrança)"}
+          sensivel
+        />
+        <Dado rotulo="Forma de cobrança" valor={descricaoCobranca(paciente)} />
+        {paciente.responsavel_nome && (
+          <div className="flex flex-col gap-1 sm:col-span-2">
+            <span className="text-xs text-slate-500">Quem paga as sessões</span>
+            <span data-sensivel>
+              {paciente.responsavel_nome}
+              {paciente.responsavel_relacao && ` (${paciente.responsavel_relacao})`}
+              {paciente.responsavel_cpf && ` · CPF ${formatarCpf(paciente.responsavel_cpf)}`}
+              {paciente.responsavel_telefone && ` · ${formatarTelefoneBR(paciente.responsavel_telefone)}`}
+            </span>
+          </div>
+        )}
+      </section>
+
       {paciente.observacoes && (
         <section className="flex flex-col gap-1 text-sm">
           <h2 className="font-medium">Observações</h2>
@@ -172,11 +197,49 @@ export default async function PacienteDetailPage({
   );
 }
 
-function Dado({ rotulo, valor }: { rotulo: string; valor: string | null }) {
+function Dado({ rotulo, valor, sensivel }: { rotulo: string; valor: string | null; sensivel?: boolean }) {
   return (
     <div className="flex flex-col">
       <span className="text-xs text-slate-500">{rotulo}</span>
-      <span>{valor && valor !== "" ? valor : "—"}</span>
+      <span data-sensivel={sensivel || undefined}>{valor && valor !== "" ? valor : "—"}</span>
     </div>
+  );
+}
+
+function ContatoEmergencia({ paciente: p }: { paciente: Paciente }) {
+  if (!p.emergencia_nome || !p.emergencia_telefone) {
+    return (
+      <Link
+        href={`/pacientes/${p.id}/editar`}
+        className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 hover:border-amber-300"
+      >
+        <TriangleAlert className="size-4 shrink-0" aria-hidden />
+        <span>
+          <span className="font-medium">Sem contato de emergência.</span> Cadastre alguém próximo do paciente para avisar numa emergência.
+        </span>
+      </Link>
+    );
+  }
+  const wa = whatsappLink(p.emergencia_telefone);
+  return (
+    <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50/50 px-4 py-3 text-sm">
+      <div className="flex flex-col">
+        <span className="text-xs font-medium text-red-800">Contato de emergência</span>
+        <span data-sensivel>
+          <span className="font-medium">{p.emergencia_nome}</span>
+          {p.emergencia_relacao && ` (${p.emergencia_relacao})`} · {formatarTelefoneBR(p.emergencia_telefone)}
+        </span>
+      </div>
+      <div className="flex gap-2">
+        <a href={`tel:+55${p.emergencia_telefone}`} className="btn btn-outline btn-sm">
+          <Phone className="size-4" aria-hidden /> Ligar
+        </a>
+        {wa && (
+          <a href={wa} target="_blank" rel="noopener noreferrer" className="btn btn-success-outline btn-sm">
+            WhatsApp
+          </a>
+        )}
+      </div>
+    </section>
   );
 }
