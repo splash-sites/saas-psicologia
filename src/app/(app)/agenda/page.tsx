@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -45,6 +46,8 @@ type ConsultaRow = Pick<
   | "serie_id"
   | "confirmada_em"
   | "meet_link"
+  | "valor"
+  | "cobrar"
 > & { pacientes: { id: string; nome: string } | { id: string; nome: string }[] | null };
 
 const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -104,6 +107,9 @@ export default async function AgendaPage({
     ocultarCanceladas: sp.canceladas === "0",
   };
 
+  // Lançamentos "a receber" das sessões que já passaram (0035), antes de ler.
+  await gerarLancamentosDasSessoes(supabase);
+
   const inicioSemana = new Date(`${segunda}T00:00:00${BR_OFFSET}`).toISOString();
   const fimSemana = new Date(`${addDias(segunda, 7)}T00:00:00${BR_OFFSET}`).toISOString();
 
@@ -116,7 +122,7 @@ export default async function AgendaPage({
       supabase
         .from("consultas")
         .select(
-          "id, inicio, fim, modalidade, status, recorrencia, serie_id, confirmada_em, meet_link, pacientes(id, nome)",
+          "id, inicio, fim, modalidade, status, recorrencia, serie_id, confirmada_em, meet_link, valor, cobrar, pacientes(id, nome)",
         )
         .is("deleted_at", null)
         .gte("inicio", inicioSemana)
@@ -203,6 +209,8 @@ export default async function AgendaPage({
       confirmada_em: r.confirmada_em,
       meet_link: linkDaConsulta(r, psicologa?.link_atendimento_online),
       paciente,
+      valor: r.valor === null ? null : Number(r.valor),
+      cobrar: r.cobrar,
       estado: estadoVisual(r, agora),
       evolucaoId,
       evolucaoPendente: !evolucaoId && exigeEvolucao(r, agora),

@@ -165,3 +165,83 @@ export async function arquivarPagamento(
   revalidatePath("/financeiro");
   redirect("/financeiro");
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * "Em aberto por paciente": dá baixa em vários lançamentos de uma vez, com a
+ * mesma data e forma. Cada sessão continua separada no histórico. Só mexe nos
+ * pendentes da própria conta (RLS) e do paciente da tela.
+ */
+export async function marcarVariosComoPagos(
+  pacienteId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { supabase } = await requirePsicologa();
+
+  const ids = formData.getAll("ids").map(String).filter((id) => UUID_RE.test(id));
+  if (ids.length === 0) return { error: "Escolha pelo menos uma sessão." };
+  if (ids.length > 500) return { error: "Escolha no máximo 500 sessões de uma vez." };
+
+  const parsed = marcarPagoSchema.safeParse({
+    data_pagamento: formData.get("data_pagamento") ?? undefined,
+    forma_pagamento: formData.get("forma_pagamento") ?? undefined,
+  });
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+  const v = parsed.data;
+
+  const { data: alterados, error } = await supabase
+    .from("pagamentos")
+    .update({
+      status: "pago",
+      data_pagamento: v.data_pagamento,
+      forma_pagamento: v.forma_pagamento ?? null,
+    })
+    .in("id", ids)
+    .eq("paciente_id", pacienteId)
+    .eq("status", "pendente")
+    .is("deleted_at", null)
+    .select("id");
+
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível confirmar os pagamentos.") };
+  if (!alterados?.length) return { error: "Nenhum lançamento em aberto foi encontrado." };
+
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/em-aberto");
+  redirect(`/financeiro/em-aberto/${pacienteId}?baixa=${alterados.length}`);
+}
+
+// Para onde voltar depois de devolver (painel da agenda ou o lançamento).
+function voltarSeguro(voltar: string): string {
+  return /^\/(agenda|financeiro)(\/|\?|$)/.test(voltar) && !voltar.includes("//") ? voltar : "/financeiro";
+}
+
+/**
+ * Consulta cancelada que já tinha sido paga: a psicóloga devolveu o dinheiro.
+ * O lançamento sai do Financeiro (arquivado, nunca apagado) com a anotação.
+ */
+export async function devolverPagamento(
+  id: string,
+  voltar: string,
+  _formData: FormData,
+): Promise<void> {
+  const { supabase } = await requirePsicologa();
+
+  const { data: atual } = await supabase.from("pagamentos").select("observacoes").eq("id", id).maybeSingle();
+  const hoje = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const nota = `Devolvido ao paciente em ${hoje} (sessão cancelada).`;
+  const observacoes = atual?.observacoes ? `${atual.observacoes}\n${nota}` : nota;
+
+  await supabase
+    .from("pagamentos")
+    .update({ deleted_at: new Date().toISOString(), observacoes: observacoes.slice(0, 2000) })
+    .eq("id", id)
+    .is("deleted_at", null);
+
+  revalidatePath("/financeiro");
+  revalidatePath("/agenda");
+  redirect(voltarSeguro(voltar));
+}

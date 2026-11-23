@@ -59,6 +59,8 @@ export async function atualizarPaciente(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
+  const { data: antes } = await supabase.from("pacientes").select("valor_sessao").eq("id", id).maybeSingle();
+
   // O RLS não dá erro em update de linha alheia/arquivada: só não afeta nada.
   const { data: alterados, error } = await supabase
     .from("pacientes")
@@ -69,6 +71,26 @@ export async function atualizarPaciente(
 
   if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível atualizar o paciente.") };
   if (!alterados?.length) return { error: "Paciente não encontrado." };
+
+  // Valor da sessão mudou e ela marcou "aplicar às consultas futuras": vale
+  // para as futuras que já tinham valor (as sem valor, de antes do recurso,
+  // ficam como estão; as que já aconteceram nunca mudam).
+  const novoValor = parsed.data.valor_sessao ?? null;
+  const valorAntes = antes?.valor_sessao == null ? null : Number(antes.valor_sessao);
+  if (formData.get("aplicar_valor_futuras") === "on" && novoValor !== valorAntes) {
+    const { error: erroFuturas } = await supabase
+      .from("consultas")
+      .update({ valor: novoValor })
+      .eq("paciente_id", id)
+      .eq("status", "agendada")
+      .is("deleted_at", null)
+      .not("valor", "is", null)
+      .gt("inicio", new Date().toISOString());
+    if (erroFuturas) {
+      return { error: "O paciente foi salvo, mas não foi possível atualizar o valor das consultas futuras. Tente salvar de novo." };
+    }
+    revalidatePath("/agenda");
+  }
 
   revalidatePath("/pacientes");
   revalidatePath(`/pacientes/${id}`);

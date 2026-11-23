@@ -69,6 +69,10 @@ export type Consulta = {
   sync_status: SyncStatus;
   sync_erro: string | null;
   sync_em: string | null;
+  /** Valor da sessão (migration 0035); null = sem cobrança. */
+  valor: number | null;
+  /** Na falta: cobrar a sessão mesmo assim? */
+  cobrar: boolean;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

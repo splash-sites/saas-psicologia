@@ -27,7 +27,18 @@ export default async function EditarPacientePage({
     .maybeSingle();
 
   if (!paciente) notFound();
-  await registrarAcesso(supabase, "ficha", id);
+  // Consultas futuras que já têm valor: mudar o valor da sessão pode valer para elas.
+  const [{ count: futurasComValor }] = await Promise.all([
+    supabase
+      .from("consultas")
+      .select("id", { count: "exact", head: true })
+      .eq("paciente_id", id)
+      .eq("status", "agendada")
+      .is("deleted_at", null)
+      .not("valor", "is", null)
+      .gt("inicio", new Date().toISOString()),
+    registrarAcesso(supabase, "ficha", id),
+  ]);
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
@@ -35,6 +46,7 @@ export default async function EditarPacientePage({
       <PacienteForm
         action={atualizarPaciente.bind(null, id)}
         paciente={paciente as Paciente}
+        consultasFuturasComValor={futurasComValor ?? 0}
         submitLabel="Salvar alterações"
         cancelHref={`/pacientes/${id}`}
       />

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { CampoValorConsulta } from "./CampoValorConsulta";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import { useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
@@ -23,6 +24,8 @@ type Props = {
     modalidade: string;
     status: string;
     observacoes: string | null;
+    valor: number | null;
+    cobrar: boolean;
   };
   cancelHref: string;
 };
@@ -35,6 +38,8 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
   );
   const fe = state.fieldErrors ?? {};
   const { erros, formProps } = useValidacao();
+  const [valor, setValor] = useState(defaults.valor != null ? String(defaults.valor) : "");
+  const [status, setStatus] = useState(defaults.status);
 
   return (
     <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
@@ -105,7 +110,8 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
           Status
           <select
             name="status"
-            defaultValue={defaults.status}
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
             className="input"
           >
             {CONSULTA_STATUS.map((s) => (
@@ -115,6 +121,16 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
             ))}
           </select>
         </label>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <CampoValorConsulta valor={valor} onChange={setValor} erros={erros} servidor={fe.valor} />
+        {status === "falta" && valor !== "" && (
+          <label className="flex items-center gap-2 self-center text-sm">
+            <input type="checkbox" name="cobrar" defaultChecked={defaults.status === "falta" && defaults.cobrar} />
+            Cobrar esta falta
+          </label>
+        )}
       </div>
 
       <label className="flex flex-col gap-1 text-sm">

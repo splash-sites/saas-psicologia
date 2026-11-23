@@ -52,6 +52,11 @@ export default async function EvolucoesPendentesPage() {
     .limit(MAX_LISTADAS);
   const pendentes = (data ?? []) as Pendente[];
   const total = count ?? pendentes.length;
+  // Valor das sessões (0035): com valor, a falta pergunta se cobra.
+  const { data: valoresRaw } = pendentes.length
+    ? await supabase.from("consultas").select("id, valor").in("id", pendentes.map((c) => c.id))
+    : { data: [] as { id: string; valor: number | null }[] };
+  const comValor = new Set((valoresRaw ?? []).filter((v) => v.valor !== null).map((v) => v.id as string));
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
@@ -97,12 +102,27 @@ export default async function EvolucoesPendentesPage() {
                       </span>
                     </span>
                     <span className="flex flex-wrap items-center gap-2">
-                      <form action={marcarSessaoNaoRealizada.bind(null, c.id, "falta")}>
-                        <button type="submit" className="btn btn-outline btn-sm">
-                          Falta
-                        </button>
-                      </form>
-                      <form action={marcarSessaoNaoRealizada.bind(null, c.id, "cancelada")}>
+                      {comValor.has(c.id) ? (
+                        <>
+                          <form action={marcarSessaoNaoRealizada.bind(null, c.id, "falta", true)}>
+                            <button type="submit" className="btn btn-outline btn-sm">
+                              Falta · cobrar
+                            </button>
+                          </form>
+                          <form action={marcarSessaoNaoRealizada.bind(null, c.id, "falta", false)}>
+                            <button type="submit" className="btn btn-outline btn-sm">
+                              Falta · não cobrar
+                            </button>
+                          </form>
+                        </>
+                      ) : (
+                        <form action={marcarSessaoNaoRealizada.bind(null, c.id, "falta", false)}>
+                          <button type="submit" className="btn btn-outline btn-sm">
+                            Falta
+                          </button>
+                        </form>
+                      )}
+                      <form action={marcarSessaoNaoRealizada.bind(null, c.id, "cancelada", false)}>
                         <button type="submit" className="btn btn-outline btn-sm">
                           Cancelada
                         </button>

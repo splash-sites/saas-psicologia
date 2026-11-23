@@ -25,6 +25,8 @@ function dataBR(iso: string): string {
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   paciente?: Paciente;
+  /** Na edição: consultas futuras já marcadas com valor (para aplicar o valor novo). */
+  consultasFuturasComValor?: number;
   submitLabel: string;
   cancelHref: string;
 };
@@ -33,6 +35,7 @@ type Props = {
 export function PacienteForm({
   action,
   paciente,
+  consultasFuturasComValor = 0,
   submitLabel,
   cancelHref,
 }: Props) {
@@ -62,6 +65,9 @@ export function PacienteForm({
     relacao: paciente?.responsavel_relacao ?? "",
   });
   const [cobranca, setCobranca] = useState<FormaCobranca>(paciente?.cobranca ?? "sessao");
+  const valorInicial = paciente?.valor_sessao != null ? String(Number(paciente.valor_sessao)) : "";
+  const [valorSessao, setValorSessao] = useState(valorInicial);
+  const valorMudou = paciente !== undefined && Number(valorSessao || 0) !== Number(valorInicial || 0);
 
   return (
     <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
@@ -220,7 +226,8 @@ export function PacienteForm({
               max={LIMITES.paciente.valorSessaoMax}
               data-faixa="O valor mínimo é R$ 0,01."
               data-passo="Use no máximo 2 casas decimais (ex.: 150,50)."
-              defaultValue={paciente?.valor_sessao ?? ""}
+              value={valorSessao}
+              onChange={(e) => setValorSessao(e.target.value)}
               placeholder="Ex.: 200"
               className="input"
             />
@@ -257,6 +264,19 @@ export function PacienteForm({
             <ErroCampo nome="cobranca_dia" cliente={erros} servidor={fe.cobranca_dia} />
           </label>
         </div>
+
+        {valorMudou && consultasFuturasComValor > 0 && (
+          <label className="flex items-start gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-950">
+            <input type="checkbox" name="aplicar_valor_futuras" defaultChecked className="mt-1" />
+            <span>
+              Aplicar {valorSessao ? `o valor novo (R$ ${valorSessao.replace(".", ",")})` : "“sem cobrança”"} também{" "}
+              {consultasFuturasComValor === 1
+                ? "à consulta futura já marcada"
+                : `às ${consultasFuturasComValor} consultas futuras já marcadas`}
+              <span className="block text-xs text-amber-900">As sessões que já aconteceram não mudam.</span>
+            </span>
+          </label>
+        )}
 
         <label className="flex items-center gap-2 text-sm">
           <input

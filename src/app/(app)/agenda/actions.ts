@@ -122,6 +122,7 @@ export async function criarConsulta(
     recorrencia: v.recorrencia,
     serie_id: serieId,
     observacoes: v.observacoes ?? null,
+    valor: v.valor ?? null,
   }));
 
   const { data: inseridas, error } = await supabase
@@ -186,6 +187,8 @@ export async function atualizarConsulta(
       modalidade: v.modalidade,
       status: v.status,
       observacoes: v.observacoes ?? null,
+      valor: v.valor ?? null,
+      cobrar: v.status === "falta" ? v.cobrar : true,
       ...(remarcou ? { confirmada_em: null } : {}),
     })
     .eq("id", id)
@@ -255,19 +258,26 @@ function destinoSeguro(voltar: string): string {
     : "/agenda";
 }
 
-/** Marca uma sessão como realizada, falta ou de volta para agendada. */
+/**
+ * Marca uma sessão como realizada, falta ou de volta para agendada. Na falta,
+ * `cobrar` diz se a sessão é cobrada mesmo assim (o lançamento automático
+ * segue a consulta: falta sem cobrança o arquiva, migration 0035).
+ */
 export async function definirStatusConsulta(
   id: string,
   status: "realizada" | "falta" | "agendada",
   voltar: string,
-  _formData: FormData,
+  cobrarOuForm: boolean | FormData,
+  _formData?: FormData,
 ): Promise<void> {
   const { supabase } = await requirePsicologa();
   if (!["realizada", "falta", "agendada"].includes(status)) redirect("/agenda");
+  // Falta sem a escolha explícita não é cobrada.
+  const cobrar = status === "falta" ? cobrarOuForm === true : true;
 
   await supabase
     .from("consultas")
-    .update({ status })
+    .update({ status, cobrar })
     .eq("id", id)
     .neq("status", "cancelada")
     .is("deleted_at", null);
@@ -287,14 +297,16 @@ export async function definirStatusConsulta(
 export async function marcarSessaoNaoRealizada(
   id: string,
   status: "falta" | "cancelada",
-  _formData: FormData,
+  cobrarOuForm: boolean | FormData,
+  _formData?: FormData,
 ): Promise<void> {
   const { supabase } = await requirePsicologa();
   if (status !== "falta" && status !== "cancelada") redirect("/evolucoes/pendentes");
+  const cobrar = status === "falta" && cobrarOuForm === true;
 
   await supabase
     .from("consultas")
-    .update({ status })
+    .update({ status, cobrar })
     .eq("id", id)
     .in("status", ["agendada", "realizada"])
     .lte("fim", new Date().toISOString())

@@ -12,12 +12,13 @@ import {
   RECORRENCIA_LABEL,
 } from "@/lib/agenda/types";
 import { PacienteSelect } from "@/components/PacienteSelect";
+import { CampoValorConsulta } from "./CampoValorConsulta";
 import type { FormState } from "./actions";
 import { LIMITES } from "@/lib/limites";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
-  pacientes: { id: string; nome: string }[];
+  pacientes: { id: string; nome: string; valor_sessao: number | null }[];
   /** Vindos do clique num horário vazio da agenda. */
   dataPadrao?: string;
   horaPadrao?: string;
@@ -30,6 +31,8 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
     {},
   );
   const [recorrente, setRecorrente] = useState(false);
+  // Preenchido com o valor da sessão do paciente escolhido; editável.
+  const [valor, setValor] = useState("");
   const fe = state.fieldErrors ?? {};
   const { erros, formProps } = useValidacao();
 
@@ -42,7 +45,13 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
       )}
 
       <div>
-        <PacienteSelect pacientes={pacientes} />
+        <PacienteSelect
+          pacientes={pacientes}
+          onChange={(id) => {
+            const p = pacientes.find((x) => x.id === id);
+            setValor(p?.valor_sessao != null ? String(p.valor_sessao) : "");
+          }}
+        />
         <ErroCampo nome="paciente_id" cliente={erros} servidor={fe.paciente_id} />
       </div>
 
@@ -88,17 +97,20 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
         </label>
       </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Modalidade *
-        <select name="modalidade" required className="input">
-          {MODALIDADES.map((m) => (
-            <option key={m} value={m}>
-              {MODALIDADE_LABEL[m]}
-            </option>
-          ))}
-        </select>
-        <ErroCampo nome="modalidade" cliente={erros} servidor={fe.modalidade} />
-      </label>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-sm">
+          Modalidade *
+          <select name="modalidade" required className="input">
+            {MODALIDADES.map((m) => (
+              <option key={m} value={m}>
+                {MODALIDADE_LABEL[m]}
+              </option>
+            ))}
+          </select>
+          <ErroCampo nome="modalidade" cliente={erros} servidor={fe.modalidade} />
+        </label>
+        <CampoValorConsulta valor={valor} onChange={setValor} erros={erros} servidor={fe.valor} />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
 import { redirect } from "next/navigation";
 import {
   CalendarCheck,
@@ -107,6 +108,9 @@ export default async function DashboardPage() {
   const desdePendencias = new Date(
     agora.getTime() - DIAS_PENDENCIA * 86_400_000,
   ).toISOString();
+
+  // Lançamentos "a receber" das sessões que já passaram (0035), antes de ler.
+  await gerarLancamentosDasSessoes(supabase);
 
   // Tudo numa rodada só, em paralelo (antes: 15 consultas em 3 rodadas).
   // - consultas: uma janela de DIAS_PENDENCIA dias atrás até DIAS_PROXIMOS à

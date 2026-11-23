@@ -21,6 +21,8 @@ type Props = {
   pacienteIdPadrao?: string;
   consultaIdPadrao?: string;
   dataPadrao?: string;
+  /** Valor da consulta ou da sessão do paciente (0035). */
+  valorPadrao?: number | null;
   submitLabel: string;
   cancelHref: string;
 };
@@ -34,6 +36,7 @@ export function PagamentoForm({
   pacienteIdPadrao,
   consultaIdPadrao,
   dataPadrao,
+  valorPadrao,
   submitLabel,
   cancelHref,
 }: Props) {
@@ -112,7 +115,7 @@ export function PagamentoForm({
             data-faixa="O valor mínimo é R$ 0,01."
             data-passo="Use no máximo 2 casas decimais (ex.: 150,50)."
             required
-            defaultValue={pagamento?.valor ?? ""}
+            defaultValue={pagamento?.valor ?? valorPadrao ?? ""}
             className="input"
           />
           <ErroCampo nome="valor" cliente={erros} servidor={fe.valor} />

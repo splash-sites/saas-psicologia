@@ -45,6 +45,8 @@ export default async function EditarConsultaPage({
           modalidade: c.modalidade,
           status: c.status,
           observacoes: c.observacoes,
+          valor: c.valor,
+          cobrar: c.cobrar,
         }}
       />
     </div>

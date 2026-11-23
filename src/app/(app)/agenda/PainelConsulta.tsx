@@ -37,6 +37,7 @@ import {
   definirConfirmacao,
   definirStatusConsulta,
 } from "./actions";
+import { devolverPagamento } from "../financeiro/actions";
 import { EstadoBadge } from "./estilos";
 import { FecharComEsc } from "./FecharComEsc";
 import type { ItemConsulta } from "./tipos";
@@ -210,13 +211,29 @@ export function PainelConsulta({
                   </button>
                 </form>
               )}
-              {c.status === "agendada" && (
-                <form action={definirStatusConsulta.bind(null, c.id, "falta", aquiHref)}>
+              {c.status === "agendada" && c.valor === null && (
+                <form action={definirStatusConsulta.bind(null, c.id, "falta", aquiHref, false)}>
                   <button className="btn btn-outline btn-sm">
                     <UserX className="size-4" aria-hidden />
                     Marcar falta
                   </button>
                 </form>
+              )}
+              {c.status === "agendada" && c.valor !== null && (
+                <>
+                  <form action={definirStatusConsulta.bind(null, c.id, "falta", aquiHref, true)}>
+                    <button className="btn btn-outline btn-sm">
+                      <UserX className="size-4" aria-hidden />
+                      Falta · cobrar
+                    </button>
+                  </form>
+                  <form action={definirStatusConsulta.bind(null, c.id, "falta", aquiHref, false)}>
+                    <button className="btn btn-outline btn-sm">
+                      <UserX className="size-4" aria-hidden />
+                      Falta · não cobrar
+                    </button>
+                  </form>
+                </>
               )}
               {(c.status === "realizada" || c.status === "falta") && (
                 <form action={definirStatusConsulta.bind(null, c.id, "agendada", aquiHref)}>
@@ -235,12 +252,29 @@ export function PainelConsulta({
         <dl className="flex flex-col">
           <Linha icone={CircleDollarSign} rotulo="Pagamento">
             {pagamento && statusPag ? (
-              <Link href={`/financeiro/${pagamento.id}`} className="hover:opacity-80">
-                <span data-sensivel>{formatarBRL(pagamento.valor)}</span> ·{" "}
-                {STATUS_EXIBICAO_LABEL[statusPag]}
-              </Link>
+              <>
+                <Link href={`/financeiro/${pagamento.id}`} className="hover:opacity-80">
+                  <span data-sensivel>{formatarBRL(pagamento.valor)}</span> ·{" "}
+                  {STATUS_EXIBICAO_LABEL[statusPag]}
+                </Link>
+                {c.status === "cancelada" && pagamento.status === "pago" && (
+                  <span className="mt-2 flex flex-col gap-2 rounded-md bg-amber-50 p-2 text-xs font-normal text-amber-900">
+                    Esta sessão já foi paga.
+                    <form action={devolverPagamento.bind(null, pagamento.id, aquiHref)}>
+                      <button className="btn btn-outline btn-sm">Cancelar pagamento (devolvido ao paciente)</button>
+                    </form>
+                  </span>
+                )}
+              </>
             ) : c.status === "cancelada" ? (
               "Sem lançamento"
+            ) : c.status === "falta" && !c.cobrar ? (
+              "Falta sem cobrança"
+            ) : c.valor !== null ? (
+              <span>
+                <span data-sensivel>{formatarBRL(c.valor)}</span>
+                <span className="font-normal text-slate-500"> · entra como a receber depois da sessão</span>
+              </span>
             ) : pac ? (
               <Link
                 href={`/financeiro/novo?paciente=${pac.id}&consulta=${c.id}&data=${dataChaveBR(c.inicio)}`}

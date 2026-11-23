@@ -14,6 +14,9 @@ import {
 } from "@/lib/financeiro/types";
 import { mesAtual, mesAnterior, mesSeguinte, primeiroDia, ultimoDia, rotuloMes } from "@/lib/financeiro/mes";
 import { ListaLancamentos } from "./ListaLancamentos";
+import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
+
+type EmAberto = { paciente_id: string; nome: string; quantidade: number; total: number; mais_antigo: string; atrasados: number };
 
 export const metadata = { title: "Financeiro" };
 
@@ -43,7 +46,10 @@ export default async function FinanceiroPage({
   const fim = ultimoDia(mes);
   const hoje = hojeBR();
 
-  const [{ data: doMes }, { data: recebidosNoMes }] = await Promise.all([
+  await gerarLancamentosDasSessoes(supabase);
+  const mesCorrenteOuFuturo = mes >= mesAtual();
+
+  const [{ data: doMes }, { data: recebidosNoMes }, { data: resumo }, { data: abertos }] = await Promise.all([
     supabase
       .from("pagamentos")
       .select(
@@ -61,7 +67,13 @@ export default async function FinanceiroPage({
       .eq("status", "pago")
       .gte("data_pagamento", inicio)
       .lte("data_pagamento", fim),
+    mesCorrenteOuFuturo
+      ? supabase.rpc("resumo_sessoes_mes", { p_inicio: inicio, p_fim: fim, p_agora: new Date().toISOString() })
+      : Promise.resolve({ data: null }),
+    supabase.rpc("em_aberto_por_paciente", { p_hoje: hoje }),
   ]);
+  const previsto = (resumo as { previsto: number; sessoes_previstas: number }[] | null)?.[0] ?? null;
+  const emAberto = (abertos ?? []) as EmAberto[];
 
   const lista = (doMes ?? []) as unknown as Linha[];
   const recebidoNoMes = (recebidosNoMes ?? []).reduce(
@@ -100,16 +112,49 @@ export default async function FinanceiroPage({
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className={`grid grid-cols-2 gap-3 ${previsto ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
         <Tile rotulo="Recebido no mês" valor={formatarBRL(recebidoNoMes)} tom="green" />
-        <Tile rotulo="A receber (lançado no mês)" valor={formatarBRL(aReceber)} tom="amber" />
+        <Tile rotulo="A receber no mês" valor={formatarBRL(aReceber)} tom="amber" />
+        {previsto && (
+          <Tile
+            rotulo={`Previsto até o fim do mês (${previsto.sessoes_previstas} ${previsto.sessoes_previstas === 1 ? "sessão" : "sessões"})`}
+            valor={formatarBRL(Number(previsto.previsto))}
+            tom="slate"
+          />
+        )}
         <Tile
           rotulo="Atrasados"
           valor={String(atrasados)}
           tom="red"
-          className="col-span-2 sm:col-span-1"
+          className={previsto ? "" : "col-span-2 sm:col-span-1"}
         />
       </div>
+
+      {emAberto.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-slate-700">Em aberto por paciente</h2>
+          <ul className="divide-y rounded-lg border bg-white text-sm">
+            {emAberto.map((a) => (
+              <li key={a.paciente_id}>
+                <Link
+                  href={`/financeiro/em-aberto/${a.paciente_id}`}
+                  className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-slate-50"
+                >
+                  <span className="font-medium" data-sensivel>{a.nome}</span>
+                  <span className="flex items-center gap-3 text-slate-600">
+                    <span>
+                      {a.quantidade} {a.quantidade === 1 ? "lançamento" : "lançamentos"}
+                      {a.atrasados > 0 && <span className="text-red-700"> · {a.atrasados} atrasado{a.atrasados > 1 ? "s" : ""}</span>}
+                    </span>
+                    <span className="font-semibold text-slate-900" data-sensivel>{formatarBRL(Number(a.total))}</span>
+                    <span className="text-teal-800">Ver e dar baixa</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {lista.length === 0 ? (
         <EstadoVazio icon={Wallet} titulo="Nenhum lançamento neste mês">
@@ -142,13 +187,14 @@ function Tile({
 }: {
   rotulo: string;
   valor: string;
-  tom: "green" | "amber" | "red";
+  tom: "green" | "amber" | "red" | "slate";
   className?: string;
 }) {
   const cores = {
     green: "border-green-200 bg-green-50 text-green-800",
     amber: "border-amber-200 bg-amber-50 text-amber-800",
     red: "border-red-200 bg-red-50 text-red-800",
+    slate: "border-slate-200 bg-white text-slate-700",
   }[tom];
   return (
     <div className={`card ${cores} ${className}`}>

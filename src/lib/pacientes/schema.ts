@@ -3,6 +3,7 @@ import { DIA_COBRANCA_PADRAO, FORMAS_COBRANCA, PACIENTE_STATUS } from "./types";
 import { capitalizarNome } from "./formatacao";
 import { validarCpfCnpj } from "@/lib/assinatura/cpfCnpj";
 import { LIMITES } from "@/lib/limites";
+import { valorOpcional } from "@/lib/dinheiro";
 
 const L = LIMITES.paciente;
 
@@ -86,16 +87,9 @@ export const pacienteSchema = z
     responsavel_relacao: relacaoOpcional,
 
     // Vazio = atendimento social (nada vem preenchido na consulta).
-    valor_sessao: optionalText
-      .transform((v) => (v === undefined ? undefined : Number(v.replace(",", "."))))
-      .pipe(
-        z
-          .number({ error: "Valor inválido" })
-          .positive("Informe um valor maior que zero, ou deixe em branco")
-          .max(L.valorSessaoMax, "Valor acima do limite (R$ 100.000)")
-          .multipleOf(0.01, "Use no máximo 2 casas decimais")
-          .optional(),
-      ),
+    valor_sessao: valorOpcional(),
+    // Ao mudar o valor: aplicar também às consultas futuras que já têm valor.
+    aplicar_valor_futuras: checkbox,
     cobranca: z.enum(FORMAS_COBRANCA, { error: "Escolha a forma de cobrança" }).default("sessao"),
     cobranca_dia: optionalText
       .transform((v) => (v === undefined ? DIA_COBRANCA_PADRAO : Number(v)))
@@ -112,7 +106,9 @@ export const pacienteSchema = z
       ctx.addIssue({ code: "custom", path: ["responsavel_nome"], message: "Informe o nome de quem paga" });
     }
   })
-  .transform(({ responsavel_outra_pessoa, ...v }) =>
+  // aplicar_valor_futuras não é coluna: a action lê do formulário direto.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  .transform(({ responsavel_outra_pessoa, aplicar_valor_futuras, ...v }) =>
     responsavel_outra_pessoa
       ? v
       : {

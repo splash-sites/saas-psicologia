@@ -10,6 +10,8 @@ const PUBLIC_PATHS = [
   "/privacidade",
   "/termos",
   "/api/asaas/webhook",
+  // Cron da Vercel: chega sem sessão e se autentica pelo CRON_SECRET.
+  "/api/cron/lancamentos",
   // Login com Google: chega sem sessão (é ele que cria a sessão).
   "/api/google/login",
 ];

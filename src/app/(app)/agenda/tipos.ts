@@ -16,6 +16,9 @@ export type ItemConsulta = {
   confirmada_em: string | null;
   meet_link: string | null;
   paciente: { id: string; nome: string } | null;
+  /** Valor da sessão (0035); null = sem cobrança. */
+  valor: number | null;
+  cobrar: boolean;
   estado: EstadoVisual;
   evolucaoId?: string;
   evolucaoPendente: boolean;

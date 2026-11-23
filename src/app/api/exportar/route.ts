@@ -132,6 +132,8 @@ export async function GET() {
       { titulo: "Modalidade", valor: txt("modalidade") },
       { titulo: "Status", valor: txt("status") },
       { titulo: "Recorrência", valor: txt("recorrencia") },
+      { titulo: "Valor (R$)", valor: (l) => (l.valor == null ? null : Number(l.valor)) },
+      { titulo: "Cobrar a falta", valor: (l) => (l.status === "falta" ? (l.cobrar as boolean) : null) },
       { titulo: "Paciente confirmou em", valor: dataHora("confirmada_em") },
       { titulo: "Link do Meet", valor: txt("meet_link") },
       { titulo: "Observações", valor: txt("observacoes") },
@@ -163,6 +165,7 @@ export async function GET() {
       { titulo: "Pago em", valor: data("data_pagamento") },
       { titulo: "Forma de pagamento", valor: (l) => rotuloFormaPagamento(l.forma_pagamento as string | null) },
       { titulo: "Observações", valor: txt("observacoes") },
+      { titulo: "Origem", valor: (l) => (l.origem === "sessao" ? "Sessão (automático)" : "Lançado à mão") },
       { titulo: "Arquivado em", valor: dataHora("deleted_at") },
     ],
     bloqueios: [

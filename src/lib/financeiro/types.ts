@@ -53,6 +53,9 @@ export type Pagamento = {
   data_pagamento: string | null;
   forma_pagamento: FormaPagamento | null;
   observacoes: string | null;
+  /** manual = lançado à mão; sessao = criado sozinho pela consulta (0035). */
+  origem: "manual" | "sessao";
+  arquivado_pela_consulta: boolean;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

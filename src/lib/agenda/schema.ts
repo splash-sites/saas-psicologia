@@ -1,10 +1,12 @@
 import { z } from "@/lib/zod";
 import { CONSULTA_STATUS, MODALIDADES, RECORRENCIAS } from "./types";
 import { LIMITES } from "@/lib/limites";
+import { valorOpcional } from "@/lib/dinheiro";
 
 const C = LIMITES.consulta;
 const MSG_DURACAO = `A duração vai de ${C.duracaoMin} a ${C.duracaoMax} minutos`;
-const MSG_OCORRENCIAS = `Escolha de 2 a ${C.ocorrenciasMax} ocorrências`;
+const MSG_VALOR = "Informe um valor maior que zero, ou deixe em branco (sem cobrança)";
+const MSG_OCORRENCIAS =`Escolha de 2 a ${C.ocorrenciasMax} ocorrências`;
 
 const duracao = z.coerce
   .number({ error: "Informe a duração em minutos" })
@@ -23,6 +25,8 @@ export const consultaSchema = z
     hora: horaStr,
     duracao_min: duracao,
     modalidade,
+    // Vem do valor da sessão do paciente; vazio = sem cobrança.
+    valor: valorOpcional(MSG_VALOR),
     recorrencia: z.enum(RECORRENCIAS, { error: "Escolha uma recorrência da lista" }).default("nenhuma"),
     ocorrencias: z.coerce
       .number({ error: "Informe o número de ocorrências" })
@@ -50,6 +54,9 @@ export const consultaEdicaoSchema = z.object({
   hora: horaStr,
   duracao_min: duracao,
   modalidade,
+  valor: valorOpcional(MSG_VALOR),
+  // Só vale na falta ("Cobrar esta falta"); desmarcado não envia nada.
+  cobrar: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
   status: z.enum(CONSULTA_STATUS, { error: "Escolha um status da lista" }),
   observacoes: z
     .string()

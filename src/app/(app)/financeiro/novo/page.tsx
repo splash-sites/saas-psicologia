@@ -26,6 +26,18 @@ export default async function NovoPagamentoPage({
 
   const lista = (pacientes ?? []) as { id: string; nome: string }[];
 
+  // Valor sugerido: o da consulta, ou o valor da sessão do paciente.
+  const uuid = /^[0-9a-f-]{36}$/i;
+  let valorPadrao: number | null = null;
+  if (consulta && uuid.test(consulta)) {
+    const { data: c } = await supabase.from("consultas").select("valor").eq("id", consulta).maybeSingle();
+    valorPadrao = c?.valor == null ? null : Number(c.valor);
+  }
+  if (valorPadrao === null && paciente && uuid.test(paciente)) {
+    const { data: p } = await supabase.from("pacientes").select("valor_sessao").eq("id", paciente).maybeSingle();
+    valorPadrao = p?.valor_sessao == null ? null : Number(p.valor_sessao);
+  }
+
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
       <CabecalhoPagina titulo="Novo lançamento" voltar={{ href: "/financeiro", rotulo: "Financeiro" }} />
@@ -44,6 +56,7 @@ export default async function NovoPagamentoPage({
           pacienteIdPadrao={paciente}
           consultaIdPadrao={consulta}
           dataPadrao={data && /^\d{4}-\d{2}-\d{2}$/.test(data) ? data : undefined}
+          valorPadrao={valorPadrao}
           submitLabel="Lançar"
           cancelHref="/financeiro"
         />

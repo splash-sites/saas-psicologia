@@ -20,12 +20,12 @@ export default async function NovaConsultaPage({
 
   const { data: pacientes } = await supabase
     .from("pacientes")
-    .select("id, nome")
+    .select("id, nome, valor_sessao")
     .is("deleted_at", null)
     .neq("status", "alta")
     .order("nome");
 
-  const lista = (pacientes ?? []) as { id: string; nome: string }[];
+  const lista = (pacientes ?? []) as { id: string; nome: string; valor_sessao: number | null }[];
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
