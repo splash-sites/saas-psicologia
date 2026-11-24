@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
+import { diasDoBloqueio } from "@/lib/agenda/bloqueios";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -130,9 +131,10 @@ export default async function AgendaPage({
         .order("inicio"),
       supabase
         .from("bloqueios")
-        .select("id, inicio, fim, motivo")
-        .gte("inicio", inicioSemana)
+        .select("id, inicio, fim, motivo, dia_inteiro")
+        // Por sobreposição: férias que começaram na semana anterior também entram.
         .lt("inicio", fimSemana)
+        .gt("fim", inicioSemana)
         .order("inicio"),
       supabase
         .from("evolucoes")
@@ -221,10 +223,18 @@ export default async function AgendaPage({
   const visiveis = params.ocultarCanceladas
     ? todas.filter((c) => c.status !== "cancelada" || c.id === consultaSel)
     : todas;
-  const bloqueios = (bloqueiosRaw ?? []) as Pick<
+  const todosBloqueios = (bloqueiosRaw ?? []) as Pick<
     Bloqueio,
-    "id" | "inicio" | "fim" | "motivo"
+    "id" | "inicio" | "fim" | "motivo" | "dia_inteiro"
   >[] as ItemBloqueio[];
+  // Dia inteiro vira faixa no topo do dia (não estica a grade de horários).
+  const bloqueios = todosBloqueios.filter((b) => !b.dia_inteiro);
+  const diasBloqueados = new Map<string, string>();
+  for (const b of todosBloqueios.filter((x) => x.dia_inteiro)) {
+    for (const d of diasDoBloqueio(b)) {
+      if (semana.includes(d)) diasBloqueados.set(d, b.motivo || "Bloqueado");
+    }
+  }
 
   const consultasPorDia = agrupar(visiveis, (c) => dataChaveBR(c.inicio));
   const bloqueiosPorDia = agrupar(bloqueios, (b) => dataChaveBR(b.inicio));
@@ -232,7 +242,7 @@ export default async function AgendaPage({
   // Domingo só aparece na grade se houver algo nele.
   const domingo = semana[6];
   const diasGrade =
-    consultasPorDia.has(domingo) || bloqueiosPorDia.has(domingo)
+    consultasPorDia.has(domingo) || bloqueiosPorDia.has(domingo) || diasBloqueados.has(domingo)
       ? semana
       : semana.slice(0, 6);
   const faixa = faixaDeHoras([...visiveis, ...bloqueios]);
@@ -323,6 +333,7 @@ export default async function AgendaPage({
           agoraISO={agoraISO}
           consultasPorDia={consultasPorDia}
           bloqueiosPorDia={bloqueiosPorDia}
+          diasBloqueados={diasBloqueados}
           faixa={faixa}
           params={params}
         />
@@ -335,6 +346,7 @@ export default async function AgendaPage({
           agoraISO={agoraISO}
           consultasPorDia={consultasPorDia}
           bloqueiosPorDia={bloqueiosPorDia}
+          diasBloqueados={diasBloqueados}
           params={params}
         />
       </div>

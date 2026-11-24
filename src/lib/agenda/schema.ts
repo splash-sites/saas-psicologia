@@ -2,6 +2,8 @@ import { z } from "@/lib/zod";
 import { CONSULTA_STATUS, MODALIDADES, RECORRENCIAS } from "./types";
 import { LIMITES } from "@/lib/limites";
 import { valorOpcional } from "@/lib/dinheiro";
+import { addDias } from "./datas";
+import { MAX_DIAS_BLOQUEIO } from "./bloqueios";
 
 const C = LIMITES.consulta;
 const MSG_DURACAO = `A duração vai de ${C.duracaoMin} a ${C.duracaoMax} minutos`;
@@ -68,21 +70,56 @@ export const consultaEdicaoSchema = z.object({
 
 export type ConsultaEdicaoInput = z.infer<typeof consultaEdicaoSchema>;
 
+const vazioIndefinido = (v: unknown) => (v === "" || v === null ? undefined : v);
+const marcado = z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean());
+
+/**
+ * Bloqueio (entrega D, migration 0036): horário de um dia, dia inteiro (um ou
+ * vários dias seguidos) ou recorrente até uma data (no máximo 1 ano). Motivo
+ * obrigatório.
+ */
 export const bloqueioSchema = z
   .object({
+    dia_inteiro: marcado,
     data: dataStr,
-    hora_inicio: horaStr,
-    hora_fim: horaStr,
+    data_fim: z.preprocess(vazioIndefinido, dataStr.optional()),
+    hora_inicio: z.preprocess(vazioIndefinido, horaStr.optional()),
+    hora_fim: z.preprocess(vazioIndefinido, horaStr.optional()),
     motivo: z
-      .string()
+      .string({ error: "Informe o motivo do bloqueio" })
       .trim()
-      .max(LIMITES.bloqueio.motivo, `Máximo de ${LIMITES.bloqueio.motivo} caracteres`)
-      .transform((v) => (v === "" ? undefined : v))
-      .optional(),
+      .min(1, "Informe o motivo do bloqueio")
+      .max(LIMITES.bloqueio.motivo, `Máximo de ${LIMITES.bloqueio.motivo} caracteres`),
+    recorrencia: z.enum(RECORRENCIAS, { error: "Escolha uma recorrência da lista" }).default("nenhuma"),
+    repetir_ate: z.preprocess(vazioIndefinido, dataStr.optional()),
+    // Segunda chamada, depois de ver a lista: cancelar as consultas do período.
+    cancelar_consultas: marcado,
   })
-  .refine((v) => v.hora_fim > v.hora_inicio, {
-    message: "O fim deve ser depois do início",
-    path: ["hora_fim"],
+  .superRefine((v, ctx) => {
+    const limite = addDias(v.data, MAX_DIAS_BLOQUEIO);
+    if (!v.dia_inteiro) {
+      if (!v.hora_inicio) ctx.addIssue({ code: "custom", path: ["hora_inicio"], message: "Informe o horário" });
+      if (!v.hora_fim) ctx.addIssue({ code: "custom", path: ["hora_fim"], message: "Informe o horário" });
+      if (v.hora_inicio && v.hora_fim && v.hora_fim <= v.hora_inicio) {
+        ctx.addIssue({ code: "custom", path: ["hora_fim"], message: "O fim deve ser depois do início" });
+      }
+    }
+    if (v.dia_inteiro && v.recorrencia === "nenhuma" && v.data_fim) {
+      if (v.data_fim < v.data) {
+        ctx.addIssue({ code: "custom", path: ["data_fim"], message: "O último dia deve ser depois do primeiro" });
+      } else if (v.data_fim > limite) {
+        ctx.addIssue({ code: "custom", path: ["data_fim"], message: "No máximo 1 ano num bloqueio só" });
+      }
+    }
+    if (v.recorrencia !== "nenhuma") {
+      if (!v.repetir_ate) {
+        ctx.addIssue({ code: "custom", path: ["repetir_ate"], message: "Até quando repete?" });
+      } else if (v.repetir_ate < v.data) {
+        ctx.addIssue({ code: "custom", path: ["repetir_ate"], message: "Deve ser depois do primeiro dia" });
+      } else if (v.repetir_ate > limite) {
+        ctx.addIssue({ code: "custom", path: ["repetir_ate"], message: "No máximo 1 ano à frente" });
+      }
+    }
   });
 
 export type BloqueioInput = z.infer<typeof bloqueioSchema>;

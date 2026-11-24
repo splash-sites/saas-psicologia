@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createAdminClient, adminDisponivel } from "@/lib/supabase/admin";
 import { decrypt, cryptoDisponivel } from "@/lib/crypto";
 import { GOOGLE_AGENDA_ATIVA } from "./flag";
+import { dataChaveBR } from "@/lib/agenda/datas";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const CAL_BASE = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
@@ -130,6 +131,9 @@ export type EventoInput = {
   // false = o Google não manda e-mail a ninguém (sendUpdates=none). Usado para
   // consulta que já passou, registrada depois. Padrão: avisa (sendUpdates=all).
   notificar?: boolean;
+  // Bloqueio de dia inteiro (0036): evento de dia inteiro no Google (datas,
+  // com o fim exclusivo, como a própria API pede).
+  diaInteiro?: boolean;
 };
 
 function sendUpdates(ev: { notificar?: boolean }): "all" | "none" {
@@ -140,8 +144,8 @@ export function corpoEvento(ev: EventoInput, comConference: boolean) {
   const body: Record<string, unknown> = {
     summary: ev.titulo,
     description: ev.descricao ?? undefined,
-    start: { dateTime: ev.inicio, timeZone: TIMEZONE },
-    end: { dateTime: ev.fim, timeZone: TIMEZONE },
+    start: ev.diaInteiro ? { date: dataChaveBR(ev.inicio) } : { dateTime: ev.inicio, timeZone: TIMEZONE },
+    end: ev.diaInteiro ? { date: dataChaveBR(ev.fim) } : { dateTime: ev.fim, timeZone: TIMEZONE },
     // Sempre enviado: no PATCH, lista vazia remove um convidado antigo.
     attendees: ev.convidadoEmail ? [{ email: ev.convidadoEmail }] : [],
     // Consulta é individual e sigilosa: o paciente não convida terceiros, não

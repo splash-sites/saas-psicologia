@@ -30,6 +30,7 @@ export type ItemBloqueio = {
   inicio: string;
   fim: string;
   motivo: string | null;
+  dia_inteiro?: boolean;
 };
 
 /** Estado da tela da agenda que vive na URL. */

@@ -84,6 +84,15 @@ export type Bloqueio = {
   inicio: string;
   fim: string;
   motivo: string | null;
+  // Migration 0036: dia inteiro (00:00 do primeiro dia até 00:00 do dia
+  // seguinte ao último), série recorrente e evento no Google Agenda.
+  dia_inteiro: boolean;
+  recorrencia: Recorrencia;
+  serie_id: string | null;
+  google_event_id: string | null;
+  sync_status: SyncStatus;
+  sync_erro: string | null;
+  sync_em: string | null;
   created_at: string;
   updated_at: string;
 };

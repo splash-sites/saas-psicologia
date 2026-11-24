@@ -19,11 +19,19 @@ import {
   dataBR,
 } from "@/lib/agenda/datas";
 import { sobrepoe } from "@/lib/agenda/overlap";
-import { sincronizarConsulta, sincronizarConsultas } from "@/lib/agenda/sync";
+import {
+  removerEventosDeBloqueios,
+  sincronizarBloqueios,
+  sincronizarConsulta,
+  sincronizarConsultas,
+} from "@/lib/agenda/sync";
+import { intervalosDoBloqueio } from "@/lib/agenda/bloqueios";
 
 export type FormState = {
   error?: string;
   fieldErrors?: Record<string, string[]>;
+  /** Bloqueio: consultas no período, para a psicóloga confirmar o cancelamento. */
+  conflitos?: { id: string; quando: string; paciente: string }[];
 };
 
 async function requirePsicologa() {
@@ -351,6 +359,15 @@ export async function sincronizarConsultaAgora(
   redirect(`/agenda/${id}`);
 }
 
+/** Consulta que o bloqueio cancelaria (mostrada antes de confirmar). */
+export type ConflitoBloqueio = { id: string; quando: string; paciente: string };
+
+/**
+ * Bloqueio (entrega D, 0036): horário, dia inteiro (um ou vários dias) ou
+ * recorrente até uma data. Consultas ainda marcadas no período: primeiro
+ * devolve a lista; só cancela quando a psicóloga confirma
+ * ("Bloquear e cancelar essas consultas"). Vai para o Google Agenda dela.
+ */
 export async function criarBloqueio(
   _prev: FormState,
   formData: FormData,
@@ -362,41 +379,101 @@ export async function criarBloqueio(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
   const v = parsed.data;
-  const inicio = brWallTimeToDate(v.data, v.hora_inicio);
-  const fim = brWallTimeToDate(v.data, v.hora_fim);
+  const slots = intervalosDoBloqueio(v);
+  const min = new Date(Math.min(...slots.map((s) => s.inicio.getTime()))).toISOString();
+  const max = new Date(Math.max(...slots.map((s) => s.fim.getTime()))).toISOString();
+  const agoraISO = new Date().toISOString();
 
-  const conflitos = await slotsEmConflito(supabase, [{ inicio, fim }]);
-  if (conflitos.length > 0) {
+  const [{ data: outros }, { data: consultas }] = await Promise.all([
+    supabase.from("bloqueios").select("inicio, fim").lt("inicio", max).gt("fim", min),
+    // Só as que ainda vão acontecer: sessão passada no período não impede.
+    supabase
+      .from("consultas")
+      .select("id, inicio, fim, pacientes(nome)")
+      .eq("status", "agendada")
+      .is("deleted_at", null)
+      .lt("inicio", max)
+      .gt("fim", min)
+      .gt("fim", agoraISO)
+      .order("inicio"),
+  ]);
+
+  const jaBloqueados = slots.filter((s) => (outros ?? []).some((o) => sobrepoe(s.inicio, s.fim, o.inicio, o.fim)));
+  if (jaBloqueados.length > 0) {
+    return { error: `Já existe bloqueio em: ${listaDatas(jaBloqueados)}. Remova o outro bloqueio ou ajuste o período.` };
+  }
+
+  const afetadas = (consultas ?? []).filter((c) => slots.some((s) => sobrepoe(s.inicio, s.fim, c.inicio, c.fim)));
+  if (afetadas.length > 0 && !v.cancelar_consultas) {
     return {
-      error:
-        "Já existe consulta ou bloqueio nesse intervalo. Cancele a consulta antes de bloquear.",
+      conflitos: afetadas.map((c) => {
+        const p = c.pacientes as { nome: string } | { nome: string }[] | null;
+        const nome = (Array.isArray(p) ? p[0]?.nome : p?.nome) ?? "Paciente";
+        return { id: c.id as string, quando: `${dataBR(c.inicio as string)} ${horaBR(c.inicio as string)}`, paciente: nome };
+      }),
     };
   }
 
-  const { error } = await supabase.from("bloqueios").insert({
-    psicologa_id: user.id,
-    inicio: inicio.toISOString(),
-    fim: fim.toISOString(),
-    motivo: v.motivo ?? null,
-  });
+  const serieId = v.recorrencia === "nenhuma" ? null : randomUUID();
+  const { data: inseridos, error } = await supabase
+    .from("bloqueios")
+    .insert(
+      slots.map((s) => ({
+        psicologa_id: user.id,
+        inicio: s.inicio.toISOString(),
+        fim: s.fim.toISOString(),
+        motivo: v.motivo,
+        dia_inteiro: v.dia_inteiro,
+        recorrencia: v.recorrencia,
+        serie_id: serieId,
+      })),
+    )
+    .select("id");
 
   if (error) {
     if (error.code === "23P01") {
-      return { error: "Esse intervalo já está bloqueado." };
+      return { error: "Esse período já está bloqueado." };
     }
     return { error: await mensagemErroEscrita(supabase, error, "Não foi possível criar o bloqueio.") };
   }
 
+  if (afetadas.length > 0) {
+    const { data: canceladas } = await supabase
+      .from("consultas")
+      .update({ status: "cancelada" })
+      .in("id", afetadas.map((c) => c.id as string))
+      .eq("status", "agendada")
+      .select("id");
+    // O paciente convidado recebe o cancelamento pelo Google, como no "Cancelar".
+    await sincronizarConsultas(supabase, user.id, (canceladas ?? []).map((r) => r.id));
+  }
+  await sincronizarBloqueios(supabase, user.id, (inseridos ?? []).map((r) => r.id));
+
   revalidatePath("/agenda");
+  revalidatePath("/dashboard");
   redirect("/agenda/bloqueios");
 }
 
+/** Remove um bloqueio; numa série, só este ou este e os próximos. */
 export async function excluirBloqueio(
   id: string,
-  _formData: FormData,
+  escopo: "este" | "proximos" | FormData,
+  _formData?: FormData,
 ): Promise<void> {
-  const { supabase } = await requirePsicologa();
-  await supabase.from("bloqueios").delete().eq("id", id);
+  const { supabase, user } = await requirePsicologa();
+
+  const { data: alvo } = await supabase.from("bloqueios").select("id, inicio, serie_id").eq("id", id).maybeSingle();
+  if (alvo) {
+    let query = supabase.from("bloqueios").delete();
+    query = escopo === "proximos" && alvo.serie_id
+      ? query.eq("serie_id", alvo.serie_id).gte("inicio", alvo.inicio)
+      : query.eq("id", id);
+    const { data: removidos } = await query.select("google_event_id");
+    await removerEventosDeBloqueios(
+      user.id,
+      (removidos ?? []).map((r) => r.google_event_id as string | null).filter((g): g is string => Boolean(g)),
+    );
+  }
   revalidatePath("/agenda");
   redirect("/agenda/bloqueios");
 }

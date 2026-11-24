@@ -31,6 +31,8 @@ type Props = {
   agoraISO: string;
   consultasPorDia: Map<string, ItemConsulta[]>;
   bloqueiosPorDia: Map<string, ItemBloqueio[]>;
+  /** Dias com bloqueio de dia inteiro → motivo (0036). */
+  diasBloqueados: Map<string, string>;
   faixa: { de: number; ate: number };
   params: ParamsAgenda;
 };
@@ -44,6 +46,7 @@ export function GradeSemana({
   agoraISO,
   consultasPorDia,
   bloqueiosPorDia,
+  diasBloqueados,
   faixa,
   params,
 }: Props) {
@@ -108,6 +111,28 @@ export function GradeSemana({
         })}
       </div>
 
+      {diasBloqueados.size > 0 && (
+        <div className="grid border-b border-slate-200" style={{ gridTemplateColumns: cols }}>
+          <div />
+          {dias.map((dia) => {
+            const motivo = diasBloqueados.get(dia);
+            return (
+              <div key={dia} className="min-w-0 border-l border-slate-100 px-1 py-1">
+                {motivo && (
+                  <span
+                    className="block truncate rounded-md border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600"
+                    style={HACHURA_BLOQUEIO}
+                    title={`Bloqueado: ${motivo}`}
+                  >
+                    {motivo}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div className="grid" style={{ gridTemplateColumns: cols, height: altura }}>
         <div className="relative">
           {horas.map((h) => (
@@ -167,6 +192,10 @@ export function GradeSemana({
                   </Link>
                 );
               })}
+
+              {diasBloqueados.has(dia) && (
+                <div className="pointer-events-none absolute inset-0 z-[5] opacity-60" style={HACHURA_BLOQUEIO} aria-hidden />
+              )}
 
               {bs.map((b) => {
                 const pos = posicao(b.inicio, b.fim);

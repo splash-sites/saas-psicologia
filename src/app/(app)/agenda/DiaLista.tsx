@@ -23,6 +23,8 @@ type Props = {
   agoraISO: string;
   consultasPorDia: Map<string, ItemConsulta[]>;
   bloqueiosPorDia: Map<string, ItemBloqueio[]>;
+  /** Dias com bloqueio de dia inteiro → motivo (0036). */
+  diasBloqueados: Map<string, string>;
   params: ParamsAgenda;
 };
 
@@ -40,6 +42,7 @@ export function DiaLista({
   agoraISO,
   consultasPorDia,
   bloqueiosPorDia,
+  diasBloqueados,
   params,
 }: Props) {
   const cs = consultasPorDia.get(dia) ?? [];
@@ -102,7 +105,16 @@ export function DiaLista({
         </span>
       </div>
 
-      {cs.length === 0 && bs.length === 0 ? (
+      {diasBloqueados.has(dia) && (
+        <div
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600"
+          style={HACHURA_BLOQUEIO}
+        >
+          Dia inteiro bloqueado · {diasBloqueados.get(dia)}
+        </div>
+      )}
+
+      {cs.length === 0 && bs.length === 0 && diasBloqueados.has(dia) ? null : cs.length === 0 && bs.length === 0 ? (
         <Link
           href={`/agenda/nova?data=${dia}`}
           className="flex min-h-14 items-center justify-center gap-2 rounded-lg border border-dashed border-slate-400 text-sm font-medium text-slate-600"

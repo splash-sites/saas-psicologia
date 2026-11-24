@@ -172,6 +172,9 @@ export async function GET() {
       { titulo: "Início", valor: dataHora("inicio") },
       { titulo: "Fim", valor: dataHora("fim") },
       { titulo: "Motivo", valor: txt("motivo") },
+      { titulo: "Dia inteiro", valor: (l) => Boolean(l.dia_inteiro) },
+      { titulo: "Recorrência", valor: txt("recorrencia") },
+      { titulo: "ID da série", valor: txt("serie_id") },
     ],
   };
 

@@ -222,3 +222,79 @@ export async function sincronizarConsultas(
     sincronizarConsulta(supabase, psicologaId, id),
   );
 }
+
+/** Título do bloqueio no Google Agenda da psicóloga (só ela vê). */
+export function tituloDoBloqueio(motivo: string | null | undefined): string {
+  return motivo ? `Bloqueado: ${motivo}` : "Bloqueado";
+}
+
+/**
+ * Empurra um bloqueio para o Google Agenda da psicóloga (0036): sem
+ * convidados e sem aviso a ninguém. Best-effort, como as consultas: nunca
+ * lança, grava o resultado em sync_status/sync_erro.
+ */
+export async function sincronizarBloqueio(
+  supabase: SupabaseClient,
+  psicologaId: string,
+  bloqueioId: string,
+): Promise<void> {
+  const marcarBloqueio = (campos: Record<string, unknown>) =>
+    supabase.from("bloqueios").update({ ...campos, sync_em: new Date().toISOString() }).eq("id", bloqueioId);
+
+  if (!integracaoGoogleConfigurada()) {
+    await marcarBloqueio({ sync_status: "desativada", sync_erro: null });
+    return;
+  }
+  const { data: b } = await supabase
+    .from("bloqueios")
+    .select("id, inicio, fim, motivo, dia_inteiro, google_event_id")
+    .eq("id", bloqueioId)
+    .maybeSingle();
+  if (!b) return;
+
+  const evento = {
+    titulo: tituloDoBloqueio(b.motivo as string | null),
+    inicio: b.inicio as string,
+    fim: b.fim as string,
+    online: false,
+    convidadoEmail: null,
+    notificar: false,
+    diaInteiro: b.dia_inteiro as boolean,
+  };
+  try {
+    const r = b.google_event_id
+      ? await atualizarEvento(psicologaId, b.google_event_id as string, evento)
+      : await criarEvento(psicologaId, evento);
+    await marcarBloqueio({ google_event_id: r.googleEventId, sync_status: "sincronizada", sync_erro: null });
+  } catch (err) {
+    const mensagem = String(err instanceof Error ? err.message : err);
+    if (err instanceof GoogleNaoConectada || ehErroDeEscopo(mensagem)) {
+      await marcarBloqueio({
+        sync_status: "desativada",
+        sync_erro: err instanceof GoogleNaoConectada ? err.message : MSG_SEM_PERMISSAO_CALENDAR,
+      });
+      return;
+    }
+    await marcarBloqueio({ sync_status: "erro", sync_erro: mensagemErroGoogle(mensagem) });
+  }
+}
+
+export async function sincronizarBloqueios(
+  supabase: SupabaseClient,
+  psicologaId: string,
+  ids: string[],
+): Promise<void> {
+  await emParalelo(ids, SYNC_EM_PARALELO, (id) => sincronizarBloqueio(supabase, psicologaId, id));
+}
+
+/** Tira do Google os eventos de bloqueios removidos (best-effort). */
+export async function removerEventosDeBloqueios(psicologaId: string, googleEventIds: string[]): Promise<void> {
+  if (!integracaoGoogleConfigurada()) return;
+  await emParalelo(googleEventIds, SYNC_EM_PARALELO, async (gid) => {
+    try {
+      await removerEvento(psicologaId, gid, false);
+    } catch {
+      // O evento fica no Google; o bloqueio já saiu do Gradatim.
+    }
+  });
+}
