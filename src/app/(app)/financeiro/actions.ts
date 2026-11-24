@@ -169,7 +169,7 @@ export async function arquivarPagamento(
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * "Em aberto por paciente": dá baixa em vários lançamentos de uma vez, com a
+ * Baixa em lote do paciente (a partir de "A receber"): dá baixa em vários lançamentos de uma vez, com a
  * mesma data e forma. Cada sessão continua separada no histórico. Só mexe nos
  * pendentes da própria conta (RLS) e do paciente da tela.
  */

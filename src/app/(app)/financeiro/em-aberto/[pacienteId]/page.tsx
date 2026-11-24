@@ -60,7 +60,7 @@ export default async function EmAbertoPaciente({
     <div className="flex w-full max-w-2xl flex-col gap-6">
       <CabecalhoPagina
         titulo={<span data-sensivel>{paciente.nome}</span>}
-        voltar={{ href: "/financeiro", rotulo: "Financeiro" }}
+        voltar={{ href: "/financeiro/a-receber", rotulo: "A receber" }}
         descricao="Lançamentos em aberto, de todos os meses. Marque os que foram pagos e dê baixa de uma vez."
       />
 
