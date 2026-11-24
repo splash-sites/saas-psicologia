@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { Archive, Download, FileImage, FileText } from "lucide-react";
+import { Archive, Download, FileImage, FileText, FileX, Trash2 } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TIPOS_DOCUMENTO, formatarTamanho, type Documento } from "@/lib/documentos/tipos";
 import { AnexarDocumento } from "./AnexarDocumento";
 import { EditarDocumento } from "./EditarDocumento";
-import { arquivarDocumento } from "./actions";
+import { arquivarDocumento, excluirArquivoDocumento } from "./actions";
 
 const COLUNAS =
-  "id, paciente_id, evolucao_id, nome, tipo, data_documento, finalidade, destinatario, mime, tamanho, enviado_em, deleted_at";
+  "id, paciente_id, evolucao_id, nome, tipo, data_documento, finalidade, destinatario, mime, tamanho, enviado_em, arquivo_excluido_em, deleted_at";
 
 /**
  * Documentos do paciente (ou só os de uma evolução) e o espaço da conta.
@@ -73,11 +73,24 @@ export function DocumentosLista({ pacienteId, docs, espaco, voltar, evolucaoId, 
           <summary className="cursor-pointer text-slate-500">Arquivados ({arquivados.length})</summary>
           <ul className="mt-2 flex flex-col gap-1 pl-4">
             {arquivados.map((d) => (
-              <li key={d.id} className="text-slate-500">
-                <a href={`/api/documentos/${d.id}`} target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
-                  {d.nome}
-                </a>{" "}
-                · {TIPOS_DOCUMENTO[d.tipo]} · {dm(d.data_documento)} · arquivado em {dm(d.deleted_at!.slice(0, 10))}
+              <li key={d.id} className="flex flex-col gap-1 text-slate-500">
+                <span>
+                  {d.arquivo_excluido_em ? (
+                    d.nome
+                  ) : (
+                    <a href={`/api/documentos/${d.id}`} target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
+                      {d.nome}
+                    </a>
+                  )}{" "}
+                  · {TIPOS_DOCUMENTO[d.tipo]} · {dm(d.data_documento)} · arquivado em {dm(d.deleted_at!.slice(0, 10))}
+                  {d.arquivo_excluido_em && ` · arquivo excluído em ${dm(d.arquivo_excluido_em.slice(0, 10))}`}
+                </span>
+                {podeEscrever && !d.arquivo_excluido_em && (
+                  <details>
+                    <summary className="cursor-pointer text-xs">Excluir arquivo</summary>
+                    <ExcluirArquivo d={d} voltar={voltar} />
+                  </details>
+                )}
               </li>
             ))}
           </ul>
@@ -93,7 +106,7 @@ export function DocumentosLista({ pacienteId, docs, espaco, voltar, evolucaoId, 
               {perto && " — perto do limite"}
             </span>
           )}
-          {!evolucaoId && docs.length > 0 && (
+          {!evolucaoId && docs.some((d) => !d.arquivo_excluido_em) && (
             <a href={`/api/pacientes/${pacienteId}/documentos`} className="inline-flex items-center gap-1 font-medium text-teal-700 hover:text-teal-800">
               <Download className="size-3.5" aria-hidden />
               Baixar todos (ZIP)
@@ -118,21 +131,29 @@ function Item({
   sessao?: string;
   podeEscrever: boolean;
 }) {
-  const Icone = d.mime.startsWith("image/") ? FileImage : FileText;
+  const Icone = d.arquivo_excluido_em ? FileX : d.mime.startsWith("image/") ? FileImage : FileText;
   return (
     <li className="flex flex-col gap-1 py-2">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <a
-          href={`/api/documentos/${d.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex min-w-0 items-center gap-2 font-medium text-teal-800 hover:opacity-80"
-        >
-          <Icone className="size-4 shrink-0" aria-hidden />
-          <span className="break-words">{d.nome}</span>
-        </a>
+        {d.arquivo_excluido_em ? (
+          <span className="inline-flex min-w-0 items-center gap-2 font-medium text-slate-500">
+            <Icone className="size-4 shrink-0" aria-hidden />
+            <span className="break-words">{d.nome}</span>
+          </span>
+        ) : (
+          <a
+            href={`/api/documentos/${d.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-w-0 items-center gap-2 font-medium text-teal-800 hover:opacity-80"
+          >
+            <Icone className="size-4 shrink-0" aria-hidden />
+            <span className="break-words">{d.nome}</span>
+          </a>
+        )}
         <span className="text-xs text-slate-500">
-          {TIPOS_DOCUMENTO[d.tipo]} · {dm(d.data_documento)} · {formatarTamanho(d.tamanho)}
+          {TIPOS_DOCUMENTO[d.tipo]} · {dm(d.data_documento)}
+          {d.arquivo_excluido_em ? ` · arquivo excluído em ${dm(d.arquivo_excluido_em.slice(0, 10))}` : ` · ${formatarTamanho(d.tamanho)}`}
           {sessao && (
             <>
               {" · "}
@@ -152,7 +173,9 @@ function Item({
       )}
       {podeEscrever && (
         <details className="text-sm">
-          <summary className="cursor-pointer text-xs text-slate-500">Editar ou arquivar</summary>
+          <summary className="cursor-pointer text-xs text-slate-500">
+            {d.arquivo_excluido_em ? "Editar ou arquivar" : "Editar, arquivar ou excluir arquivo"}
+          </summary>
           <div className="mt-2 flex flex-col gap-3 rounded-lg border border-slate-200 p-3">
             <EditarDocumento doc={d} />
             <form action={arquivarDocumento.bind(null, d.id, voltar)} className="border-t border-slate-100 pt-3">
@@ -164,9 +187,35 @@ function Item({
                 Arquivar documento
               </button>
             </form>
+            {!d.arquivo_excluido_em && <ExcluirArquivo d={d} voltar={voltar} />}
           </div>
         </details>
       )}
     </li>
+  );
+}
+
+/** Apaga só o arquivo (libera espaço); os dados do documento ficam no prontuário. */
+function ExcluirArquivo({ d, voltar }: { d: Documento; voltar: string }) {
+  return (
+    <form action={excluirArquivoDocumento.bind(null, d.id, voltar)} className="flex flex-col gap-2 border-t border-slate-100 pt-3">
+      <p className="text-xs text-slate-600">
+        Excluir apaga o arquivo do Gradatim e libera {formatarTamanho(d.tamanho)} de espaço. Nome, tipo, data,
+        finalidade e destinatário continuam no prontuário. <strong>Baixe o arquivo antes</strong>: a Resolução CFP
+        01/2009 pede guardar o registro por 5 anos, e a guarda deste arquivo passa a ser sua.
+      </p>
+      <a href={`/api/documentos/${d.id}`} target="_blank" rel="noopener noreferrer" className="w-fit text-xs font-medium text-teal-700 hover:text-teal-800">
+        <Download className="mr-1 inline size-3.5" aria-hidden />
+        Baixar o arquivo
+      </a>
+      <label className="flex items-start gap-2 text-xs text-slate-700">
+        <input type="checkbox" name="confirmo" required className="mt-0.5" />
+        Já baixei o arquivo e entendo que ele será excluído do Gradatim.
+      </label>
+      <button className="btn btn-outline btn-sm w-fit border-red-200 text-red-700 hover:bg-red-50">
+        <Trash2 className="size-4" aria-hidden />
+        Excluir arquivo
+      </button>
+    </form>
   );
 }

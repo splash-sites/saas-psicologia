@@ -188,6 +188,7 @@ export async function GET() {
       { titulo: "Formato", valor: txt("mime") },
       { titulo: "Tamanho (bytes)", valor: (l) => Number(l.tamanho) },
       { titulo: "Anexado em", valor: dataHora("enviado_em") },
+      { titulo: "Arquivo excluído em", valor: dataHora("arquivo_excluido_em") },
       { titulo: "Arquivado em", valor: dataHora("deleted_at") },
     ],
     bloqueios: [

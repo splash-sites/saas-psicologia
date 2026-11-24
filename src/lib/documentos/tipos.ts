@@ -61,6 +61,8 @@ export type Documento = {
   mime: MimeDocumento;
   tamanho: number;
   enviado_em: string | null;
+  /** Arquivo apagado do Storage pela psicóloga; a linha (dados) fica. */
+  arquivo_excluido_em: string | null;
   deleted_at: string | null;
 };
 

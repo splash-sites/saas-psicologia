@@ -23,10 +23,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const supabase = await createClient();
   const { data: doc } = await supabase
     .from("documentos")
-    .select("id, paciente_id, nome, mime, arquivo_path, enviado_em")
+    .select("id, paciente_id, nome, mime, arquivo_path, enviado_em, arquivo_excluido_em")
     .eq("id", id)
     .maybeSingle();
   if (!doc || !doc.enviado_em) return respostaErroDownload(404, MSG_DOWNLOAD_NAO_ENCONTRADO);
+  if (doc.arquivo_excluido_em) {
+    return respostaErroDownload(410, "O arquivo deste documento foi excluído. Os dados dele continuam no prontuário.");
+  }
 
   await registrarAcesso(supabase, "documento", doc.paciente_id as string, undefined, doc.id as string);
 

@@ -109,6 +109,30 @@ export async function editarDocumento(id: string, _prev: FormState, formData: Fo
   return { ok: true };
 }
 
+/**
+ * "Excluir arquivo" (decisão do usuário em 2026-11-24): apaga só o arquivo do
+ * Storage para liberar espaço; a linha fica com os dados e a data da exclusão.
+ * Exige a caixa "Já baixei..." marcada (a guarda passa a ser da psicóloga).
+ */
+export async function excluirArquivoDocumento(id: string, voltar: string, formData: FormData): Promise<void> {
+  const { supabase } = await sessao();
+  if (formData.get("confirmo") === "on") {
+    const { data } = await supabase
+      .from("documentos")
+      .update({ arquivo_excluido_em: new Date().toISOString() })
+      .eq("id", id)
+      .is("arquivo_excluido_em", null)
+      .not("enviado_em", "is", null)
+      .select("paciente_id, evolucao_id, arquivo_path");
+    if (data?.length) {
+      // A policy de delete do Storage só deixa apagar depois da marca acima.
+      await supabase.storage.from(BUCKET).remove([data[0].arquivo_path as string]);
+      revalidar(data[0].paciente_id as string, data[0].evolucao_id as string | null);
+    }
+  }
+  redirect(voltar.startsWith("/pacientes/") ? voltar : "/pacientes");
+}
+
 /** Arquivar (guarda de 5 anos: nunca apaga). */
 export async function arquivarDocumento(id: string, voltar: string, _formData: FormData): Promise<void> {
   const { supabase } = await sessao();

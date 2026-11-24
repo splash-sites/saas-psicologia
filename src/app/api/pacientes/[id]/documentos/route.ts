@@ -45,6 +45,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .select("id, nome, tipo, data_documento, mime, arquivo_path, deleted_at")
     .eq("paciente_id", id)
     .not("enviado_em", "is", null)
+    .is("arquivo_excluido_em", null)
     .order("data_documento");
   if (error) return respostaErroDownload(500, MSG_DOWNLOAD_FALHOU);
   if (!docs?.length) return respostaErroDownload(404, "Este paciente não tem documentos.");

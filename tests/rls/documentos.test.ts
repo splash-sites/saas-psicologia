@@ -58,6 +58,20 @@ describe.skipIf(!hasLocalSupabase)("Documentos (0041)", () => {
     // Arquivar = deleted_at.
     expect((await c.from("documentos").update({ deleted_at: new Date().toISOString() }).eq("id", id)).error).toBeNull();
 
+    // "Excluir arquivo": marca na linha, aí o Storage deixa apagar; a linha fica e o espaço volta.
+    const espaco = async () => Number(((await c.rpc("documentos_espaco")).data as { usado: number }[])[0].usado);
+    expect(await espaco()).toBeGreaterThan(0);
+    await c.from("documentos").update({ arquivo_excluido_em: new Date().toISOString() }).eq("id", id);
+    const apagado = await c.storage.from("documentos").remove([caminho]);
+    expect(apagado.data ?? []).toHaveLength(1);
+    expect((await c.storage.from("documentos").download(caminho)).error).not.toBeNull();
+    expect(await espaco()).toBe(0);
+    // Não tem volta, e a linha continua.
+    await c.from("documentos").update({ arquivo_excluido_em: null }).eq("id", id);
+    const linha = await c.from("documentos").select("nome, arquivo_excluido_em").eq("id", id).single();
+    expect(linha.data?.nome).toBe("Atestado");
+    expect(linha.data?.arquivo_excluido_em).toBeTruthy();
+
     // Registro de acesso do tipo documento.
     const acesso = await c.from("acessos_prontuario").insert({ tipo: "documento", paciente_id: pacienteId, documento_id: id });
     expect(acesso.error).toBeNull();
@@ -84,6 +98,11 @@ describe.skipIf(!hasLocalSupabase)("Documentos (0041)", () => {
     expect((await b.c.storage.from("documentos").createSignedUrl(caminho, 60)).error).not.toBeNull();
     expect((await b.c.storage.from("documentos").list(a.u.id)).data ?? []).toHaveLength(0);
     expect((await b.c.from("documentos").update({ nome: "x" }).eq("id", id).select("id")).data ?? []).toHaveLength(0);
+    // B não marca nem apaga o arquivo de A (nem depois de A marcar a exclusão).
+    expect((await b.c.from("documentos").update({ arquivo_excluido_em: new Date().toISOString() }).eq("id", id).select("id")).data ?? []).toHaveLength(0);
+    await a.c.from("documentos").update({ arquivo_excluido_em: new Date().toISOString() }).eq("id", id);
+    expect((await b.c.storage.from("documentos").remove([caminho])).data ?? []).toHaveLength(0);
+    expect((await a.c.storage.from("documentos").download(caminho)).error).toBeNull();
 
     // B não cria documento no paciente de A, nem com o caminho na pasta de A.
     expect((await pendente(b.c, b.u.id, a.pacienteId)).error).not.toBeNull();

@@ -61,7 +61,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   // Documentos (0041): só a lista. Sem a migration, a consulta falha e a lista fica vazia.
   const { data: docsRaw } = await supabase
     .from("documentos")
-    .select("nome, tipo, data_documento, finalidade, destinatario, evolucao_id, deleted_at")
+    .select("nome, tipo, data_documento, finalidade, destinatario, evolucao_id, deleted_at, arquivo_excluido_em")
     .eq("paciente_id", id)
     .not("enviado_em", "is", null)
     .order("data_documento");
@@ -74,6 +74,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     destinatario: x.destinatario as string | null,
     sessao: x.evolucao_id ? (sessaoDe.get(x.evolucao_id as string) ?? null) : null,
     arquivado: Boolean(x.deleted_at),
+    arquivoExcluidoEm: x.arquivo_excluido_em as string | null,
   }));
 
   const pdf = await gerarProntuarioPdf({

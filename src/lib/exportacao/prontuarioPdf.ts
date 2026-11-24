@@ -30,6 +30,8 @@ export type DocumentoPdf = {
   destinatario: string | null;
   sessao: string | null;
   arquivado: boolean;
+  /** Data em que o arquivo foi excluído (os dados ficam). */
+  arquivoExcluidoEm?: string | null;
 };
 
 const A4: [number, number] = [595.28, 841.89];
@@ -219,6 +221,7 @@ export async function gerarProntuarioPdf(d: DadosProntuario): Promise<Uint8Array
         doc.finalidade && `Finalidade: ${doc.finalidade}`,
         doc.destinatario && `Destinatário: ${doc.destinatario}`,
         doc.sessao && `Anexado na sessão de ${dataBRCompleta(doc.sessao)}`,
+        doc.arquivoExcluidoEm && `Arquivo excluído em ${dataBRCompleta(doc.arquivoExcluidoEm.slice(0, 10))}`,
       ].filter(Boolean);
       if (det.length) escrever(det.join(" · "), { tamanho: 8, cor: CINZA });
     }

@@ -5,8 +5,11 @@
 --   * Envio direto do navegador para o Storage (a Vercel recusa corpo acima de
 --     4,5 MB): o servidor cria antes a linha (confere tipo, tamanho e cota) e o
 --     Storage só aceita o arquivo se existir essa linha pendente, da mesma conta.
---   * Só arquivar (deleted_at): guarda de 5 anos. Sem DELETE de linha nem de
---     arquivo (sem policy de delete no Storage).
+--   * Arquivar (deleted_at) tira da lista. "Excluir arquivo" (decisão do usuário
+--     em 2026-11-24, para liberar espaço) apaga só o arquivo do Storage: a linha
+--     fica com nome, tipo, data, finalidade, destinatário e arquivo_excluido_em
+--     (art. 2º VI), e a guarda do arquivo passa a ser da psicóloga. Nunca DELETE
+--     de linha.
 --   * Cota por conta em app_config.documentos_cota_mb (100 MB no plano grátis do
 --     Supabase; subir para 1024 no Pro, sem mudar código).
 --   * Abrir um documento grava em acessos_prontuario (tipo 'documento').
@@ -37,6 +40,8 @@ create table if not exists public.documentos (
   tamanho bigint not null,
   -- null = linha criada, arquivo ainda não confirmado no Storage.
   enviado_em timestamptz,
+  -- Arquivo apagado do Storage pela psicóloga (a linha fica).
+  arquivo_excluido_em timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
@@ -53,6 +58,8 @@ create table if not exists public.documentos (
   constraint documentos_tamanho_valido check (tamanho > 0 and tamanho <= 10485760),
   constraint documentos_caminho_da_conta check (arquivo_path like psicologa_id::text || '/%')
 );
+
+alter table public.documentos add column if not exists arquivo_excluido_em timestamptz;
 
 create index if not exists documentos_paciente_idx
   on public.documentos (psicologa_id, paciente_id, data_documento desc);
@@ -94,6 +101,12 @@ begin
       new.enviado_em := old.enviado_em;
       new.tamanho := old.tamanho;
     end if;
+    -- Excluir o arquivo não tem volta, e só vale para arquivo enviado.
+    if old.arquivo_excluido_em is not null then
+      new.arquivo_excluido_em := old.arquivo_excluido_em;
+    elsif new.arquivo_excluido_em is not null and new.enviado_em is null then
+      new.arquivo_excluido_em := null;
+    end if;
     return new;
   end if;
 
@@ -105,11 +118,14 @@ begin
     raise exception 'Evolução de outro paciente.' using errcode = 'check_violation';
   end if;
 
-  -- Cota: enviados (inclusive arquivados, que ocupam espaço) + pendentes da última hora.
+  -- Cota: enviados (inclusive arquivados, que ocupam espaço; menos os de arquivo
+  -- excluído) + pendentes da última hora.
   select coalesce(sum(tamanho), 0) into usado
   from public.documentos
   where psicologa_id = new.psicologa_id
+    and arquivo_excluido_em is null
     and (enviado_em is not null or created_at > now() - interval '1 hour');
+  new.arquivo_excluido_em := null;
   select documentos_cota_mb::bigint * 1048576 into cota from public.app_config where id = 1;
   if usado + new.tamanho > coalesce(cota, 104857600) then
     raise exception 'documentos_cota_excedida' using errcode = 'check_violation';
@@ -188,7 +204,21 @@ create policy "documentos_storage_insert"
         and d.deleted_at is null
     )
   );
--- Sem update/delete no Storage: o arquivo não é trocado nem apagado.
+-- Sem update no Storage (o arquivo não é trocado). Apagar só depois de marcar
+-- arquivo_excluido_em na linha ("Excluir arquivo").
+drop policy if exists "documentos_storage_delete" on storage.objects;
+create policy "documentos_storage_delete"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'documentos'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and exists (
+      select 1 from public.documentos d
+      where d.arquivo_path = storage.objects.name
+        and d.psicologa_id = (select auth.uid())
+        and d.arquivo_excluido_em is not null
+    )
+  );
 
 -- 5. Espaço usado (tela) --------------------------------------------------------
 create or replace function public.documentos_espaco()
@@ -200,7 +230,8 @@ set search_path = public
 as $$
   select
     (select coalesce(sum(tamanho), 0) from public.documentos
-      where psicologa_id = (select auth.uid()) and enviado_em is not null)::bigint,
+      where psicologa_id = (select auth.uid()) and enviado_em is not null
+        and arquivo_excluido_em is null)::bigint,
     (select documentos_cota_mb::bigint * 1048576 from public.app_config where id = 1);
 $$;
 revoke all on function public.documentos_espaco() from public, anon;
@@ -220,7 +251,7 @@ as $$
     count(distinct psicologa_id)::bigint,
     (select documentos_cota_mb::bigint * 1048576 from public.app_config where id = 1)
   from public.documentos
-  where enviado_em is not null;
+  where enviado_em is not null and arquivo_excluido_em is null;
 $$;
 revoke all on function public.admin_espaco_documentos() from public, anon, authenticated;
 grant execute on function public.admin_espaco_documentos() to service_role;
