@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CheckCheck } from "lucide-react";
+import { CheckCheck, TriangleAlert } from "lucide-react";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { NavegacaoPeriodo } from "@/components/NavegacaoPeriodo";
@@ -15,7 +15,8 @@ export const metadata = { title: "A receber" };
 
 // Detalhe do card "A receber (sessões realizadas)" (2026-11-24, decisão do
 // usuário): o que já aconteceu e não foi pago, por paciente — deste mês (mesma
-// regra do card, resumo_sessoes_mes da 0037) e, separado, de meses anteriores.
+// regra do card, resumo_sessoes_mes da 0037). O que ficou de meses anteriores
+// fica atrás do botão "Atrasados (N)" no topo (?ver=atrasados).
 // "Dar baixa" abre a baixa em lote do paciente.
 
 type Pendente = {
@@ -50,8 +51,8 @@ function agrupar(itens: Pendente[], hoje: string): Grupo[] {
   return [...porPaciente.values()].sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
-export default async function AReceberPage({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
-  const { mes: mesParam } = await searchParams;
+export default async function AReceberPage({ searchParams }: { searchParams: Promise<{ mes?: string; ver?: string }> }) {
+  const { mes: mesParam, ver } = await searchParams;
   const supabase = await createClient();
   const user = await usuarioAtual();
   if (!user) redirect("/login");
@@ -81,6 +82,8 @@ export default async function AReceberPage({ searchParams }: { searchParams: Pro
   const desteMes = agrupar(todos.filter((p) => p.data_referencia >= inicio), hoje);
   const anteriores = agrupar(todos.filter((p) => p.data_referencia < inicio), hoje);
   const soma = (gs: Grupo[]) => gs.reduce((s, g) => s + g.total, 0);
+  const nAtrasadas = anteriores.reduce((n, g) => n + g.itens.length, 0);
+  const verAtrasados = ver === "atrasados" && nAtrasadas > 0;
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
@@ -95,18 +98,40 @@ export default async function AReceberPage({ searchParams }: { searchParams: Pro
             periodo={rotuloMes(mes)}
           />
         }
+        acoes={
+          nAtrasadas > 0 && (
+            <Link
+              href={verAtrasados ? `/financeiro/a-receber?mes=${mes}` : `/financeiro/a-receber?mes=${mes}&ver=atrasados`}
+              aria-current={verAtrasados ? "page" : undefined}
+              className={`relative inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                verAtrasados ? "border-red-300 bg-red-100 text-red-900" : "border-red-200 bg-red-50 text-red-800 hover:bg-red-100"
+              }`}
+            >
+              <TriangleAlert className="size-4" aria-hidden />
+              Atrasados
+              <span
+                className="absolute -right-2 -top-2 flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold leading-5 text-white"
+                aria-label={`${nAtrasadas} ${nAtrasadas === 1 ? "sessão" : "sessões"}`}
+              >
+                {nAtrasadas}
+              </span>
+            </Link>
+          )
+        }
         descricao="Sessões que já aconteceram e ainda não foram pagas. Em cada paciente, “Dar baixa” marca várias como pagas de uma vez."
       />
 
-      {desteMes.length === 0 && anteriores.length === 0 ? (
+      {verAtrasados ? (
+        <>
+          <Secao titulo="Atrasados de meses anteriores" grupos={anteriores} total={soma(anteriores)} hoje={hoje} destaque />
+          <Link href={`/financeiro/a-receber?mes=${mes}`} className="w-fit text-sm font-medium text-teal-700 hover:text-teal-800">
+            Ver {rotuloMes(mes).toLowerCase()}
+          </Link>
+        </>
+      ) : desteMes.length === 0 && anteriores.length === 0 ? (
         <EstadoVazio icon={CheckCheck} titulo="Nada a receber" texto="Todas as sessões realizadas estão pagas." />
       ) : (
-        <>
-          <Secao titulo={`De ${rotuloMes(mes).toLowerCase()}`} grupos={desteMes} total={soma(desteMes)} hoje={hoje} vazio="Nada a receber deste mês." />
-          {anteriores.length > 0 && (
-            <Secao titulo="De meses anteriores" grupos={anteriores} total={soma(anteriores)} hoje={hoje} destaque />
-          )}
-        </>
+        <Secao titulo={`De ${rotuloMes(mes).toLowerCase()}`} grupos={desteMes} total={soma(desteMes)} hoje={hoje} vazio="Nada a receber deste mês." />
       )}
     </div>
   );
