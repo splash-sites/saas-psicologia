@@ -87,7 +87,7 @@ export async function GET() {
       ]);
     // Documentos (0041): sem a migration, fica sem a lista em vez de falhar a exportação.
     const documentos = (await todas(supabase, "documentos", "data_documento").catch(() => [] as Linha[])).filter(
-      (d) => d.enviado_em,
+      (d) => d.enviado_em && !d.arquivo_excluido_em,
     );
     tabelas = { pacientes, anamneses, consultas, evolucoes, pagamentos, bloqueios, documentos };
   } catch {
@@ -188,7 +188,6 @@ export async function GET() {
       { titulo: "Formato", valor: txt("mime") },
       { titulo: "Tamanho (bytes)", valor: (l) => Number(l.tamanho) },
       { titulo: "Anexado em", valor: dataHora("enviado_em") },
-      { titulo: "Arquivo excluído em", valor: dataHora("arquivo_excluido_em") },
       { titulo: "Arquivado em", valor: dataHora("deleted_at") },
     ],
     bloqueios: [

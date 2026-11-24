@@ -11,9 +11,9 @@ import {
   respostaLimiteExportacao,
 } from "@/lib/exportacao/limite";
 
-// "Baixar todos (ZIP)" da ficha (0041): os documentos de um paciente, inclusive
-// arquivados (pasta "arquivados"). O ZIP da conta leva só a lista: 100 MB a 1 GB
-// por conta não cabem numa função. Funciona em somente leitura.
+// "Baixar todos (ZIP)" da ficha (0041): os documentos de um paciente (menos os
+// excluídos). O ZIP da conta leva só a lista: 100 MB a 1 GB por conta não cabem
+// numa função. Funciona em somente leitura.
 
 export const maxDuration = 60;
 
@@ -42,7 +42,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const { data: docs, error } = await supabase
     .from("documentos")
-    .select("id, nome, tipo, data_documento, mime, arquivo_path, deleted_at")
+    .select("id, nome, tipo, data_documento, mime, arquivo_path")
     .eq("paciente_id", id)
     .not("enviado_em", "is", null)
     .is("arquivo_excluido_em", null)
@@ -55,10 +55,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   for (const d of docs) {
     const { data: blob, error: e } = await supabase.storage.from("documentos").download(d.arquivo_path as string);
     if (e || !blob) return respostaErroDownload(500, MSG_DOWNLOAD_FALHOU);
-    const pasta = d.deleted_at ? "arquivados/" : "";
     const base = `${d.data_documento} ${TIPOS_DOCUMENTO[d.tipo as TipoDocumento]} - ${d.nome}`;
-    let nome = pasta + nomeDoArquivo(base, d.mime as string);
-    for (let n = 2; usados.has(nome); n++) nome = pasta + nomeDoArquivo(`${base} (${n})`, d.mime as string);
+    let nome = nomeDoArquivo(base, d.mime as string);
+    for (let n = 2; usados.has(nome); n++) nome = nomeDoArquivo(`${base} (${n})`, d.mime as string);
     usados.add(nome);
     arquivos[nome] = new Uint8Array(await blob.arrayBuffer());
   }

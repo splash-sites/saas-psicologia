@@ -64,6 +64,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .select("nome, tipo, data_documento, finalidade, destinatario, evolucao_id, deleted_at, arquivo_excluido_em")
     .eq("paciente_id", id)
     .not("enviado_em", "is", null)
+    .is("arquivo_excluido_em", null)
     .order("data_documento");
   const sessaoDe = new Map(((evolucoes ?? []) as Evolucao[]).map((e) => [e.id, e.data_sessao]));
   const documentos: DocumentoPdf[] = (docsRaw ?? []).map((x) => ({
@@ -73,7 +74,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     finalidade: x.finalidade as string | null,
     destinatario: x.destinatario as string | null,
     sessao: x.evolucao_id ? (sessaoDe.get(x.evolucao_id as string) ?? null) : null,
-    arquivado: Boolean(x.deleted_at),
+    arquivado: false,
     arquivoExcluidoEm: x.arquivo_excluido_em as string | null,
   }));
 

@@ -101,7 +101,7 @@ export async function editarDocumento(id: string, _prev: FormState, formData: Fo
     .from("documentos")
     .update(parsed.data)
     .eq("id", id)
-    .is("deleted_at", null)
+    .is("arquivo_excluido_em", null)
     .select("paciente_id, evolucao_id");
   if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível salvar.") };
   if (!data?.length) return { error: "Documento não encontrado." };
@@ -110,9 +110,11 @@ export async function editarDocumento(id: string, _prev: FormState, formData: Fo
 }
 
 /**
- * "Excluir arquivo" (decisão do usuário em 2026-11-24): apaga só o arquivo do
- * Storage para liberar espaço; a linha fica com os dados e a data da exclusão.
- * Exige a caixa "Já baixei..." marcada (a guarda passa a ser da psicóloga).
+ * "Excluir" (decisões do usuário em 2026-11-24): apaga o arquivo do Storage
+ * para liberar espaço e o documento some de todas as telas e exportações. A
+ * linha fica no banco, invisível (registro mínimo para auditoria; o log de
+ * acesso aponta para ela). Exige a caixa "Já baixei..." marcada (a guarda
+ * passa a ser da psicóloga).
  */
 export async function excluirArquivoDocumento(id: string, voltar: string, formData: FormData): Promise<void> {
   const { supabase } = await sessao();
@@ -130,18 +132,5 @@ export async function excluirArquivoDocumento(id: string, voltar: string, formDa
       revalidar(data[0].paciente_id as string, data[0].evolucao_id as string | null);
     }
   }
-  redirect(voltar.startsWith("/pacientes/") ? voltar : "/pacientes");
-}
-
-/** Arquivar (guarda de 5 anos: nunca apaga). */
-export async function arquivarDocumento(id: string, voltar: string, _formData: FormData): Promise<void> {
-  const { supabase } = await sessao();
-  const { data } = await supabase
-    .from("documentos")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", id)
-    .is("deleted_at", null)
-    .select("paciente_id, evolucao_id");
-  if (data?.length) revalidar(data[0].paciente_id as string, data[0].evolucao_id as string | null);
   redirect(voltar.startsWith("/pacientes/") ? voltar : "/pacientes");
 }
