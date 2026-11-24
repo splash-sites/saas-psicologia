@@ -74,6 +74,10 @@ export function ListaPacientes({ pacientes }: { pacientes: Item[] }) {
         </label>
       </div>
 
+      {/* Enquanto busca, a área da lista não encolhe abaixo de uma tela: no
+          celular, com o teclado aberto, a página encurtando fazia o navegador
+          rolar para cima e esconder o campo. */}
+      <div className={busca ? "min-h-[100svh]" : undefined}>
       {filtrados.length === 0 ? (
         <p className="text-sm text-slate-500" role="status">
           Nenhum paciente encontrado.
@@ -100,6 +104,7 @@ export function ListaPacientes({ pacientes }: { pacientes: Item[] }) {
           ))}
         </ul>
       )}
+      </div>
     </div>
   );
 }

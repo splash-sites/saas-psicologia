@@ -81,6 +81,10 @@ export function ListaLancamentos({ linhas }: { linhas: LinhaLancamento[] }) {
         </label>
       </div>
 
+      {/* Enquanto busca, a área da lista não encolhe abaixo de uma tela: no
+          celular, com o teclado aberto, a página encurtando fazia o navegador
+          rolar para cima e esconder o campo. */}
+      <div className={busca ? "min-h-[100svh]" : undefined}>
       {filtradas.length === 0 ? (
         <p className="text-sm text-slate-500" role="status">
           Nenhum lançamento encontrado.
@@ -119,6 +123,7 @@ export function ListaLancamentos({ linhas }: { linhas: LinhaLancamento[] }) {
           ))}
         </ul>
       )}
+      </div>
     </div>
   );
 }
