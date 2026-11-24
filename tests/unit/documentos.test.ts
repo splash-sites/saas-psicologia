@@ -10,6 +10,7 @@ import type { Paciente } from "@/lib/pacientes/types";
 
 describe("documentos: utilitários", () => {
   it("tamanho legível", () => {
+    expect(formatarTamanho(0)).toBe("0 KB");
     expect(formatarTamanho(300)).toBe("1 KB");
     expect(formatarTamanho(350 * 1024)).toBe("350 KB");
     expect(formatarTamanho(4.2 * 1024 * 1024)).toBe("4,2 MB");

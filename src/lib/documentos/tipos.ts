@@ -37,6 +37,7 @@ export function tipoValido(v: unknown): v is TipoDocumento {
 
 /** "350 KB", "4,2 MB". */
 export function formatarTamanho(bytes: number): string {
+  if (bytes <= 0) return "0 KB";
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   const mb = bytes / (1024 * 1024);
   return `${mb.toLocaleString("pt-BR", { maximumFractionDigits: mb < 10 ? 1 : 0 })} MB`;
