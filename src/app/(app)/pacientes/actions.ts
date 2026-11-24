@@ -13,6 +13,7 @@ import {
 } from "@/lib/pacientes/schema";
 
 export type FormState = {
+  ok?: boolean;
   error?: string;
   fieldErrors?: Record<string, string[]>;
 };
@@ -143,5 +144,5 @@ export async function salvarAnamnese(
   if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível salvar a anamnese.") };
 
   revalidatePath(`/pacientes/${pacienteId}`);
-  return {};
+  return { ok: true };
 }
