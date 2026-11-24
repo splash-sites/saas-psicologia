@@ -167,7 +167,7 @@ const rotasPublicas = ["/login", "/cadastro"];
 const rotasLegais = { "/termos": "https://gradatim.com.br/termos", "/privacidade": "https://gradatim.com.br/privacidade" };
 const rotasPrivadas = (x) => [
   "/", "/dashboard", "/agenda", `/agenda?consulta=${x.consulta}`, "/agenda/nova",
-  `/agenda/${x.consulta}`, `/agenda/${x.consulta}/editar`, "/agenda/bloqueios", "/agenda/bloqueios/novo",
+  `/agenda/${x.consulta}`, `/agenda/${x.consulta}/editar`, "/agenda/eventos", "/agenda/eventos/novo", "/agenda/bloqueios",
   "/pacientes", "/pacientes/novo", `/pacientes/${x.paciente}`, `/pacientes/${x.paciente}/editar`,
   `/pacientes/${x.paciente}/evolucoes`, `/pacientes/${x.paciente}/evolucoes/nova`,
   `/pacientes/${x.paciente}/evolucoes/${x.evolucao}`, `/pacientes/${x.paciente}/evolucoes/${x.evolucao}/editar`,

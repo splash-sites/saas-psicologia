@@ -58,7 +58,7 @@ Os arquivos se ligam pela coluna "ID do paciente" / "ID da consulta".
 - consultas.csv     agenda (inclui canceladas)
 - evolucoes.csv     prontuário: evoluções por sessão, com notas privadas
 - pagamentos.csv    lançamentos financeiros
-- bloqueios.csv     horários bloqueados
+- bloqueios.csv     eventos da agenda (férias, compromissos)
 
 Registros arquivados também estão aqui (coluna "Arquivado em").
 O prontuário deve ser guardado por no mínimo 5 anos (Resolução CFP 01/2009).
@@ -171,7 +171,7 @@ export async function GET() {
     bloqueios: [
       { titulo: "Início", valor: dataHora("inicio") },
       { titulo: "Fim", valor: dataHora("fim") },
-      { titulo: "Motivo", valor: txt("motivo") },
+      { titulo: "Nome do evento", valor: txt("motivo") },
       { titulo: "Dia inteiro", valor: (l) => Boolean(l.dia_inteiro) },
       { titulo: "Recorrência", valor: txt("recorrencia") },
       { titulo: "ID da série", valor: txt("serie_id") },

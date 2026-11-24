@@ -53,7 +53,7 @@ describe("bloqueioSchema", () => {
 
   it("motivo obrigatório; horário obrigatório fora do dia inteiro", () => {
     const semMotivo = bloqueioSchema.safeParse({ ...base, motivo: "  ", hora_inicio: "14:00", hora_fim: "18:00" });
-    expect(semMotivo.error?.flatten().fieldErrors.motivo?.[0]).toBe("Informe o motivo do bloqueio");
+    expect(semMotivo.error?.flatten().fieldErrors.motivo?.[0]).toBe("Informe o nome do evento");
     const semHora = bloqueioSchema.safeParse(base);
     expect(Object.keys(semHora.error!.flatten().fieldErrors).sort()).toEqual(["hora_fim", "hora_inicio"]);
     const ok = bloqueioSchema.parse({ ...base, hora_inicio: "14:00", hora_fim: "18:00" });
@@ -84,7 +84,7 @@ describe("evento do bloqueio no Google", () => {
   it("dia inteiro vai como datas, com o fim exclusivo; sem convidados", () => {
     const corpo = corpoEvento(
       {
-        titulo: "Bloqueado: Férias",
+        titulo: "Férias",
         inicio: "2026-12-20T03:00:00.000Z",
         fim: "2027-01-06T03:00:00.000Z",
         online: false,

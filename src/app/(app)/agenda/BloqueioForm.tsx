@@ -93,13 +93,13 @@ export function BloqueioForm({ action }: Props) {
       )}
 
       <label className="flex flex-col gap-1 text-sm">
-        Motivo *
+        Nome do evento *
         <input
           name="motivo"
           list="sugestoes-motivo-bloqueio"
           maxLength={LIMITES.bloqueio.motivo}
           required
-          data-obrigatorio="Informe o motivo do bloqueio."
+          data-obrigatorio="Informe o nome do evento."
           placeholder="Férias, compromisso pessoal, curso..."
           className="input"
         />
@@ -145,8 +145,8 @@ export function BloqueioForm({ action }: Props) {
               <p className="flex items-center gap-2 font-medium">
                 <TriangleAlert className="size-4 shrink-0" aria-hidden />
                 {sobrepostos.length === 1
-                  ? "Já existe 1 bloqueio nesse período:"
-                  : `Já existem ${sobrepostos.length} bloqueios nesse período:`}
+                  ? "Já existe 1 evento nesse período:"
+                  : `Já existem ${sobrepostos.length} eventos nesse período:`}
               </p>
               <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto pl-6">
                 {sobrepostos.map((b) => (
@@ -156,7 +156,7 @@ export function BloqueioForm({ action }: Props) {
                 ))}
               </ul>
               <p className="text-xs text-amber-900">
-                {sobrepostos.length === 1 ? "Ele continua" : "Eles continuam"} na agenda junto com o novo bloqueio.
+                {sobrepostos.length === 1 ? "Ele continua" : "Eles continuam"} na agenda junto com o novo evento.
               </p>
             </div>
           )}
@@ -174,13 +174,13 @@ export function BloqueioForm({ action }: Props) {
                 ))}
               </ul>
               <p className="text-xs text-amber-900">
-                Ao bloquear, elas são canceladas. Quem é convidado pelo Google Agenda recebe o aviso de cancelamento.
+                Ao salvar, elas são canceladas. Quem é convidado pelo Google Agenda recebe o aviso de cancelamento.
               </p>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
             <button type="submit" name="cancelar_consultas" value="on" disabled={pending} className="btn btn-primary btn-sm">
-              {pending ? "Salvando..." : conflitos.length > 0 ? "Bloquear e cancelar essas consultas" : "Bloquear mesmo assim"}
+              {pending ? "Salvando..." : conflitos.length > 0 ? "Salvar e cancelar essas consultas" : "Salvar mesmo assim"}
             </button>
             <button type="button" onClick={() => setAvisoVisto(state)} className="btn btn-outline btn-sm">
               Voltar
@@ -192,9 +192,9 @@ export function BloqueioForm({ action }: Props) {
       {!aviso && (
         <div className="flex gap-3">
           <button type="submit" disabled={pending} className="btn btn-primary">
-            {pending ? "Salvando..." : "Bloquear"}
+            {pending ? "Salvando..." : "Salvar evento"}
           </button>
-          <Link href="/agenda/bloqueios" className="btn btn-outline">
+          <Link href="/agenda/eventos" className="btn btn-outline">
             Cancelar
           </Link>
         </div>

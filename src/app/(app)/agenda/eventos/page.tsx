@@ -10,7 +10,7 @@ import { dataLongaBR, dataBR } from "@/lib/agenda/datas";
 import { horarioDoBloqueio } from "@/lib/agenda/bloqueios";
 import { excluirBloqueio } from "../actions";
 
-export const metadata = { title: "Bloqueios" };
+export const metadata = { title: "Eventos" };
 
 type Grupo = { chave: string; itens: Bloqueio[] };
 
@@ -47,12 +47,12 @@ export default async function BloqueiosPage() {
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
       <CabecalhoPagina
-        titulo="Bloqueios de horário"
+        titulo="Eventos"
         voltar={{ href: "/agenda", rotulo: "Agenda" }}
         acoes={
-          <Link href="/agenda/bloqueios/novo" className="btn btn-primary">
+          <Link href="/agenda/eventos/novo" className="btn btn-primary">
             <Plus className="size-4" aria-hidden />
-            Novo bloqueio
+            Novo evento
           </Link>
         }
       />
@@ -60,12 +60,12 @@ export default async function BloqueiosPage() {
       {grupos.length === 0 ? (
         <EstadoVazio
           icon={CalendarOff}
-          titulo="Nenhum bloqueio futuro"
-          texto="Bloqueie férias, um dia inteiro, um horário ou um horário que se repete toda semana."
+          titulo="Nenhum evento futuro"
+          texto="Férias, cursos, compromissos pessoais ou algo que se repete toda semana. Nesses horários não dá para marcar consulta."
         >
-          <Link href="/agenda/bloqueios/novo" className="btn btn-primary">
+          <Link href="/agenda/eventos/novo" className="btn btn-primary">
             <Plus className="size-4" aria-hidden />
-            Novo bloqueio
+            Novo evento
           </Link>
         </EstadoVazio>
       ) : (
@@ -80,7 +80,7 @@ export default async function BloqueiosPage() {
                   <span>
                     <span className="inline-block font-medium first-letter:uppercase">{dataLongaBR(b.inicio)}</span>{" "}
                     · {horarioDoBloqueio(b)}
-                    <span className="text-slate-500"> · {b.motivo ?? "Bloqueado"}</span>
+                    <span className="text-slate-500"> · {b.motivo ?? "Evento"}</span>
                     {serie && (
                       <span className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
                         <Repeat className="size-3.5" aria-hidden />

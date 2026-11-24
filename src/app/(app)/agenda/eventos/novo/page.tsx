@@ -4,7 +4,7 @@ import { criarBloqueio } from "../../actions";
 import { BloqueioForm } from "../../BloqueioForm";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 
-export const metadata = { title: "Novo bloqueio" };
+export const metadata = { title: "Novo evento" };
 
 export default async function NovoBloqueioPage() {
   const user = await usuarioAtual();
@@ -12,7 +12,7 @@ export default async function NovoBloqueioPage() {
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <CabecalhoPagina titulo="Novo bloqueio" voltar={{ href: "/agenda/bloqueios", rotulo: "Bloqueios" }} />
+      <CabecalhoPagina titulo="Novo evento" voltar={{ href: "/agenda/eventos", rotulo: "Eventos" }} />
       <BloqueioForm action={criarBloqueio} />
     </div>
   );

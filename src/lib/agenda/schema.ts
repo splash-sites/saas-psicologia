@@ -86,9 +86,9 @@ export const bloqueioSchema = z
     hora_inicio: z.preprocess(vazioIndefinido, horaStr.optional()),
     hora_fim: z.preprocess(vazioIndefinido, horaStr.optional()),
     motivo: z
-      .string({ error: "Informe o motivo do bloqueio" })
+      .string({ error: "Informe o nome do evento" })
       .trim()
-      .min(1, "Informe o motivo do bloqueio")
+      .min(1, "Informe o nome do evento")
       .max(LIMITES.bloqueio.motivo, `Máximo de ${LIMITES.bloqueio.motivo} caracteres`),
     recorrencia: z.enum(RECORRENCIAS, { error: "Escolha uma recorrência da lista" }).default("nenhuma"),
     repetir_ate: z.preprocess(vazioIndefinido, dataStr.optional()),
@@ -108,7 +108,7 @@ export const bloqueioSchema = z
       if (v.data_fim < v.data) {
         ctx.addIssue({ code: "custom", path: ["data_fim"], message: "O último dia deve ser depois do primeiro" });
       } else if (v.data_fim > limite) {
-        ctx.addIssue({ code: "custom", path: ["data_fim"], message: "No máximo 1 ano num bloqueio só" });
+        ctx.addIssue({ code: "custom", path: ["data_fim"], message: "No máximo 1 ano num evento só" });
       }
     }
     if (v.recorrencia !== "nenhuma") {

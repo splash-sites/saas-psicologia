@@ -13,7 +13,7 @@ const MSG_CPF_CNPJ_INVALIDO = "CPF ou CNPJ inválido. Confira os números.";
 
 /** O que todo ciclo inclui (preço único, sem adicional). */
 const INCLUSOS = [
-  "Agenda com recorrência e bloqueio de horários",
+  "Agenda com recorrência e eventos (férias, compromissos)",
   "Consultas no seu Google Agenda",
   "Link do Google Meet automático",
   "Lembrete de WhatsApp em 1 clique",

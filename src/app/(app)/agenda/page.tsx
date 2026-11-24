@@ -232,7 +232,7 @@ export default async function AgendaPage({
   const diasBloqueados = new Map<string, string>();
   for (const b of todosBloqueios.filter((x) => x.dia_inteiro)) {
     for (const d of diasDoBloqueio(b)) {
-      if (semana.includes(d)) diasBloqueados.set(d, b.motivo || "Bloqueado");
+      if (semana.includes(d)) diasBloqueados.set(d, b.motivo || "Evento");
     }
   }
 
@@ -286,8 +286,8 @@ export default async function AgendaPage({
         }
         acoes={
           <>
-            <Link href="/agenda/bloqueios" className="btn btn-outline">
-              Bloqueios
+            <Link href="/agenda/eventos" className="btn btn-outline">
+              Eventos
             </Link>
             <Link href="/agenda/nova" className="btn btn-primary">
               <Plus className="size-4" aria-hidden />
@@ -386,7 +386,7 @@ function Legenda() {
       <EstadoBadge estado="cancelada" />
       <span className="inline-flex items-center gap-1.5">
         <span className="h-3 w-4 rounded border border-slate-200" style={HACHURA_BLOQUEIO} />
-        Bloqueio
+        Evento
       </span>
       <span className="ml-auto text-slate-500">
         Clique num horário vazio para agendar

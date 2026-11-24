@@ -110,7 +110,7 @@ export function DiaLista({
           className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600"
           style={HACHURA_BLOQUEIO}
         >
-          Dia inteiro bloqueado · {diasBloqueados.get(dia)}
+          Dia inteiro · {diasBloqueados.get(dia)}
         </div>
       )}
 
@@ -145,7 +145,7 @@ export function DiaLista({
                     className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600"
                     style={HACHURA_BLOQUEIO}
                   >
-                    Bloqueio{l.b.motivo ? ` · ${l.b.motivo}` : ""} · até {horaBR(l.b.fim)}
+                    {l.b.motivo || "Evento"} · até {horaBR(l.b.fim)}
                   </div>
                 </li>
               );

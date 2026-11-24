@@ -16,6 +16,10 @@ const headersSeguranca = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // "Bloqueios" virou "Eventos" (2026-11-24): links salvos continuam funcionando.
+  async redirects() {
+    return [{ source: "/agenda/bloqueios/:path*", destination: "/agenda/eventos/:path*", permanent: true }];
+  },
   async headers() {
     return [{ source: "/:path*", headers: headersSeguranca }];
   },

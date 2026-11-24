@@ -118,7 +118,7 @@ export async function criarConsulta(
   const conflitos = await slotsEmConflito(supabase, slots);
   if (conflitos.length > 0) {
     return {
-      error: `Conflito de horário em: ${listaDatas(conflitos)}. Ajuste o horário ou remova o bloqueio.`,
+      error: `Conflito de horário em: ${listaDatas(conflitos)}. Ajuste o horário ou remova o evento.`,
     };
   }
 
@@ -175,7 +175,7 @@ export async function atualizarConsulta(
   if (v.status !== "cancelada") {
     const conflitos = await slotsEmConflito(supabase, [{ inicio, fim }], id);
     if (conflitos.length > 0) {
-      return { error: "Conflito de horário com outra consulta ou bloqueio." };
+      return { error: "Conflito de horário com outra consulta ou evento." };
     }
   }
 
@@ -435,7 +435,7 @@ export async function criarBloqueio(
     .select("id");
 
   if (error) {
-    return { error: await mensagemErroEscrita(supabase, error, "Não foi possível criar o bloqueio.") };
+    return { error: await mensagemErroEscrita(supabase, error, "Não foi possível criar o evento.") };
   }
 
   if (afetadas.length > 0) {
@@ -452,7 +452,7 @@ export async function criarBloqueio(
 
   revalidatePath("/agenda");
   revalidatePath("/dashboard");
-  redirect("/agenda/bloqueios");
+  redirect("/agenda/eventos");
 }
 
 /** Remove um bloqueio; numa série, só este ou este e os próximos. */
@@ -476,5 +476,5 @@ export async function excluirBloqueio(
     );
   }
   revalidatePath("/agenda");
-  redirect("/agenda/bloqueios");
+  redirect("/agenda/eventos");
 }

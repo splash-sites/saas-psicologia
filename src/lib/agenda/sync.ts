@@ -223,9 +223,9 @@ export async function sincronizarConsultas(
   );
 }
 
-/** Título do bloqueio no Google Agenda da psicóloga (só ela vê). */
+/** Título do evento (bloqueio) no Google Agenda da psicóloga (só ela vê): só o nome. */
 export function tituloDoBloqueio(motivo: string | null | undefined): string {
-  return motivo ? `Bloqueado: ${motivo}` : "Bloqueado";
+  return motivo || "Evento";
 }
 
 /**

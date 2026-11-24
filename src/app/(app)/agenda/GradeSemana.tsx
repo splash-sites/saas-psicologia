@@ -122,7 +122,7 @@ export function GradeSemana({
                   <span
                     className="block truncate rounded-md border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600"
                     style={HACHURA_BLOQUEIO}
-                    title={`Bloqueado: ${motivo}`}
+                    title={`Dia inteiro: ${motivo}`}
                   >
                     {motivo}
                   </span>
@@ -205,7 +205,7 @@ export function GradeSemana({
                     className="absolute inset-x-1 z-10 flex flex-col overflow-hidden rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600"
                     style={{ ...pos, ...HACHURA_BLOQUEIO }}
                   >
-                    <span className="font-semibold">{b.motivo || "Bloqueado"}</span>
+                    <span className="font-semibold">{b.motivo || "Evento"}</span>
                     <span>
                       {horaBR(b.inicio)}–{horaBR(b.fim)}
                     </span>
