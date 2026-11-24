@@ -23,6 +23,7 @@ import { estadoVisual, exigeEvolucao } from "@/lib/agenda/grade";
 import { EstadoBadge, classeFaixaFeriado } from "@/app/(app)/agenda/estilos";
 import {
   addDias,
+  dataBR,
   dataChaveBR,
   dataLongaBR,
   diaAlvoLembrete,
@@ -54,6 +55,7 @@ import { AvisoSenhaFraca } from "./AvisoSenhaFraca";
 import { AvisoTermos } from "./AvisoTermos";
 import { mostrarAvisoTermos } from "@/lib/termos";
 import { feriadosDaPsicologa } from "@/lib/feriados";
+import { avisoDaProxima, proximasSessoes } from "@/lib/agenda/feriadoProxima";
 
 export const metadata = { title: "Painel" };
 
@@ -192,6 +194,14 @@ export default async function DashboardPage() {
     .reverse();
 
   const feriadoHoje = feriadosDaPsicologa([hoje], contexto).get(hoje);
+  // Aviso de feriado na sessão anterior (0039): a próxima de cada paciente de hoje.
+  const proximasDeHoje =
+    contexto?.mostrar_feriados !== false && consultasDoDia.length > 0
+      ? await proximasSessoes(
+          supabase,
+          consultasDoDia.map((c) => ({ id: c.id, inicio: c.inicio, status: c.status, paciente_id: unico(c.pacientes)?.id ?? null })),
+        )
+      : new Map();
 
   const { recebido, aReceber, atrasados } = financeiro;
   const previsto = recebido + aReceber;
@@ -468,6 +478,7 @@ export default async function DashboardPage() {
                 const min = minutosAteInicio(c.inicio, agora);
                 const ativa = c.status !== "cancelada" && c.status !== "falta";
                 const proxima = proximaHoje?.id === c.id;
+                const avisoFeriado = avisoDaProxima(proximasDeHoje.get(c.id), contexto);
 
                 return (
                   <li
@@ -505,6 +516,14 @@ export default async function DashboardPage() {
                           {!evolucaoId && exigeEvolucao(c, agora) && (
                             <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
                               Evolução pendente
+                            </span>
+                          )}
+                          {avisoFeriado && (
+                            <span
+                              className="rounded-full bg-rose-100 px-2 py-0.5 font-medium text-rose-800"
+                              title={`Próxima sessão em ${dataBR(avisoFeriado.proxima.inicio)}: ${avisoFeriado.feriado.nome}`}
+                            >
+                              Próxima: {avisoFeriado.feriado.facultativo ? "ponto facultativo" : "feriado"}
                             </span>
                           )}
                         </span>

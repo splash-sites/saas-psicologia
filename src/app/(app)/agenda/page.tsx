@@ -2,6 +2,7 @@ import Link from "next/link";
 import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
 import { diasDoBloqueio } from "@/lib/agenda/bloqueios";
 import { feriadosDaPsicologa } from "@/lib/feriados";
+import { avisoDaProxima, proximasSessoes } from "@/lib/agenda/feriadoProxima";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -153,7 +154,8 @@ export default async function AgendaPage({
   const rows = (consultasRaw ?? []) as unknown as ConsultaRow[];
   const ids = rows.map((r) => r.id);
 
-  const [{ data: pagamentosRaw }, { data: lembreteRaw }] = await Promise.all([
+  const linhaSel = consultaSel ? rows.find((r) => r.id === consultaSel) : undefined;
+  const [{ data: pagamentosRaw }, { data: lembreteRaw }, proximas] = await Promise.all([
     ids.length
       ? supabase
           .from("pagamentos")
@@ -169,6 +171,12 @@ export default async function AgendaPage({
           .eq("consulta_id", consultaSel)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    // Aviso de feriado na sessão anterior (0039): a próxima do mesmo paciente.
+    linhaSel && psicologa?.mostrar_feriados !== false
+      ? proximasSessoes(supabase, [
+          { id: linhaSel.id, inicio: linhaSel.inicio, status: linhaSel.status, paciente_id: unico(linhaSel.pacientes)?.id ?? null },
+        ])
+      : Promise.resolve(new Map()),
   ]);
 
   // Evolução da sessão: ligada à consulta, ou do mesmo paciente no mesmo dia
@@ -362,6 +370,7 @@ export default async function AgendaPage({
           c={selecionada}
           pagamento={pagPorConsulta.get(selecionada.id) ?? null}
           lembreteEnviadoEm={lembreteValido}
+          avisoFeriado={avisoDaProxima(proximas.get(selecionada.id), psicologa)}
           hoje={hoje}
           agoraISO={agoraISO}
           fecharHref={agendaHref({ ...params, consulta: undefined })}

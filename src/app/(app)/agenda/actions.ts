@@ -350,6 +350,29 @@ export async function definirConfirmacao(
   redirect(destinoSeguro(voltar));
 }
 
+/**
+ * "Já combinei" do aviso de feriado (0039): grava na consulta do feriado a
+ * data combinada. Remarcada para outro dia, o aviso volta a valer.
+ */
+export async function dispensarAvisoFeriado(
+  proximaId: string,
+  data: string,
+  voltar: string,
+  _formData: FormData,
+): Promise<void> {
+  const { supabase } = await requirePsicologa();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+    await supabase
+      .from("consultas")
+      .update({ aviso_feriado_dispensado_para: data })
+      .eq("id", proximaId)
+      .is("deleted_at", null);
+  }
+  revalidatePath("/agenda");
+  revalidatePath("/dashboard");
+  redirect(destinoSeguro(voltar));
+}
+
 export async function sincronizarConsultaAgora(
   id: string,
   _formData: FormData,

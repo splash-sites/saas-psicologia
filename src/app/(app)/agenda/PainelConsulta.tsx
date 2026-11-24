@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarClock,
   CalendarDays,
+  CalendarHeart,
   Check,
   CircleDollarSign,
   FileText,
@@ -20,7 +21,9 @@ import {
   dataChaveBR,
   dataLongaBR,
   horaBR,
+  segundaDaSemana,
 } from "@/lib/agenda/datas";
+import type { AvisoProxima } from "@/lib/agenda/feriadoProxima";
 import {
   estadoSessao,
   meetEmDestaque,
@@ -36,16 +39,19 @@ import {
   cancelarConsulta,
   definirConfirmacao,
   definirStatusConsulta,
+  dispensarAvisoFeriado,
 } from "./actions";
 import { devolverPagamento } from "../financeiro/actions";
 import { EstadoBadge } from "./estilos";
 import { FecharComEsc } from "./FecharComEsc";
-import type { ItemConsulta } from "./tipos";
+import { agendaHref, type ItemConsulta } from "./tipos";
 
 type Props = {
   c: ItemConsulta;
   pagamento: { id: string; valor: number; status: "pendente" | "pago"; vencimento: string } | null;
   lembreteEnviadoEm: string | null;
+  /** A próxima sessão do paciente cai em feriado (0039). */
+  avisoFeriado?: AvisoProxima | null;
   hoje: string;
   agoraISO: string;
   /** URL da agenda sem o painel aberto. */
@@ -59,6 +65,7 @@ export function PainelConsulta({
   c,
   pagamento,
   lembreteEnviadoEm,
+  avisoFeriado,
   hoje,
   agoraISO,
   fecharHref,
@@ -188,6 +195,43 @@ export function PainelConsulta({
             </div>
           )}
         </div>
+
+        {avisoFeriado && (
+          <section className="flex flex-col gap-2 border-b border-rose-100 bg-rose-50/70 px-5 py-4 sm:px-6" role="status">
+            <p className="flex items-start gap-2 text-sm text-rose-900">
+              <CalendarHeart className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <span>
+                A próxima sessão, <span className="first-letter:lowercase">{dataLongaBR(avisoFeriado.proxima.inicio)}</span>,
+                cai em {avisoFeriado.feriado.facultativo ? "ponto facultativo" : "feriado"}: {avisoFeriado.feriado.nome}.
+                Vale combinar com o paciente.
+              </span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={agendaHref({
+                  semana: segundaDaSemana(new Date(avisoFeriado.proxima.inicio)),
+                  consulta: avisoFeriado.proxima.id,
+                })}
+                className="btn btn-outline btn-sm"
+              >
+                Ver a sessão de {dataBR(avisoFeriado.proxima.inicio)}
+              </Link>
+              <form
+                action={dispensarAvisoFeriado.bind(
+                  null,
+                  avisoFeriado.proxima.id,
+                  dataChaveBR(avisoFeriado.proxima.inicio),
+                  aquiHref,
+                )}
+              >
+                <button className="btn btn-outline btn-sm">
+                  <Check className="size-4" aria-hidden />
+                  Já combinei
+                </button>
+              </form>
+            </div>
+          </section>
+        )}
 
         {c.status !== "cancelada" && (
           <section className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:px-6">
