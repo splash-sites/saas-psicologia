@@ -405,19 +405,13 @@ export default async function DashboardPage() {
           id="pendentes"
           className="flex scroll-mt-4 flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4"
         >
-          <div>
-            <h2 className="font-medium text-amber-900">
-              Evoluções pendentes
-              <span className="ml-2 text-sm font-normal text-amber-800">
-                {pendentes.length} {pendentes.length === 1 ? "sessão" : "sessões"} sem
-                registro nos últimos {DIAS_PENDENCIA} dias
-              </span>
-            </h2>
-            <p className="text-sm text-amber-800">
-              A Resolução CFP nº 01/2009 pede o registro documental sempre
-              atualizado.
-            </p>
-          </div>
+          <h2 className="font-medium text-amber-900">
+            Evoluções pendentes
+            <span className="ml-2 text-sm font-normal text-amber-800">
+              {pendentes.length} {pendentes.length === 1 ? "sessão" : "sessões"} sem
+              registro nos últimos {DIAS_PENDENCIA} dias
+            </span>
+          </h2>
           <ul className="divide-y divide-amber-200 rounded-lg border border-amber-200 bg-white">
             {pendentes.slice(0, MAX_PENDENTES_LISTADAS).map((c) => {
               const pac = unico(c.pacientes);
