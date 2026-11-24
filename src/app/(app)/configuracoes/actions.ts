@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { preferenciasLembreteSchema } from "@/lib/lembretes/schema";
 import { linkAtendimentoSchema } from "@/lib/agenda/linkOnline";
+import { ufValida } from "@/lib/feriados";
 
 export type FormState = {
   ok?: boolean;
@@ -88,5 +89,32 @@ export async function salvarPreferenciasLembrete(
 
   revalidatePath("/configuracoes");
   revalidatePath("/lembretes");
+  return { ok: true };
+}
+
+/** Feriados no calendário (0038): estado e "Mostrar feriados no calendário". */
+export async function salvarFeriados(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const supabase = await createClient();
+  const user = await usuarioAtual();
+  if (!user) redirect("/login");
+
+  const uf = String(formData.get("feriados_uf") ?? "");
+  if (uf && !ufValida(uf)) return { error: "Estado inválido." };
+
+  // Policy psicologas_update_own: só a própria linha.
+  const { data, error } = await supabase
+    .from("psicologas")
+    .update({ feriados_uf: uf || null, mostrar_feriados: formData.get("mostrar_feriados") === "on" })
+    .eq("id", user.id)
+    .select("id");
+
+  if (error || !data?.length) return { error: "Não foi possível salvar." };
+
+  revalidatePath("/configuracoes");
+  revalidatePath("/agenda");
+  revalidatePath("/dashboard");
   return { ok: true };
 }

@@ -14,7 +14,8 @@ import {
 } from "@/lib/agenda/grade";
 import { horaBR } from "@/lib/agenda/datas";
 import { NaAlturaDeAgora } from "@/components/Relogio";
-import { BLOCO_ESTADO, HACHURA_BLOQUEIO } from "./estilos";
+import { BLOCO_ESTADO, HACHURA_BLOQUEIO, classeFaixaFeriado, classeFundoFeriado } from "./estilos";
+import { rotuloFeriado, type Feriado } from "@/lib/feriados";
 import {
   agendaHref,
   type ItemBloqueio,
@@ -33,6 +34,8 @@ type Props = {
   bloqueiosPorDia: Map<string, ItemBloqueio[]>;
   /** Dias com bloqueio de dia inteiro → motivo (0036). */
   diasBloqueados: Map<string, string>;
+  /** Feriados e pontos facultativos da semana (vazio se desligado). */
+  feriados: Map<string, Feriado>;
   faixa: { de: number; ate: number };
   params: ParamsAgenda;
 };
@@ -47,6 +50,7 @@ export function GradeSemana({
   consultasPorDia,
   bloqueiosPorDia,
   diasBloqueados,
+  feriados,
   faixa,
   params,
 }: Props) {
@@ -111,13 +115,22 @@ export function GradeSemana({
         })}
       </div>
 
-      {diasBloqueados.size > 0 && (
+      {(diasBloqueados.size > 0 || feriados.size > 0) && (
         <div className="grid border-b border-slate-200" style={{ gridTemplateColumns: cols }}>
           <div />
           {dias.map((dia) => {
             const motivo = diasBloqueados.get(dia);
+            const feriado = feriados.get(dia);
             return (
-              <div key={dia} className="min-w-0 border-l border-slate-100 px-1 py-1">
+              <div key={dia} className="flex min-w-0 flex-col gap-1 border-l border-slate-100 px-1 py-1">
+                {feriado && (
+                  <span
+                    className={`block truncate rounded-md border px-2 py-0.5 text-xs font-semibold ${classeFaixaFeriado(feriado.facultativo)}`}
+                    title={rotuloFeriado(feriado)}
+                  >
+                    {feriado.nome}
+                  </span>
+                )}
                 {motivo && (
                   <span
                     className="block truncate rounded-md border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600"
@@ -166,7 +179,7 @@ export function GradeSemana({
           return (
             <div
               key={dia}
-              className={`relative border-l border-slate-100 ${ehHoje ? "bg-teal-50/40" : ""}`}
+              className={`relative border-l border-slate-100 ${ehHoje ? "bg-teal-50/40" : feriados.has(dia) ? classeFundoFeriado(feriados.get(dia)!.facultativo) : ""}`}
               style={{
                 backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${HORA_PX - 1}px, #eef1f4 ${HORA_PX - 1}px, #eef1f4 ${HORA_PX}px)`,
               }}

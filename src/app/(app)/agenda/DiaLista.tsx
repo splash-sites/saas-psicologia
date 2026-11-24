@@ -5,7 +5,8 @@ import { horaBR, dataLongaBR, BR_OFFSET } from "@/lib/agenda/datas";
 import { estadoSessao, meetEmDestaque } from "@/lib/agenda/estado";
 import { MODALIDADE_LABEL } from "@/lib/agenda/types";
 import { HoraAgora } from "@/components/Relogio";
-import { BLOCO_ESTADO, HACHURA_BLOQUEIO } from "./estilos";
+import { BLOCO_ESTADO, HACHURA_BLOQUEIO, classeFaixaFeriado } from "./estilos";
+import { rotuloFeriado, type Feriado } from "@/lib/feriados";
 import { IconesConsulta } from "./GradeSemana";
 import {
   agendaHref,
@@ -25,6 +26,8 @@ type Props = {
   bloqueiosPorDia: Map<string, ItemBloqueio[]>;
   /** Dias com bloqueio de dia inteiro → motivo (0036). */
   diasBloqueados: Map<string, string>;
+  /** Feriados e pontos facultativos da semana (vazio se desligado). */
+  feriados: Map<string, Feriado>;
   params: ParamsAgenda;
 };
 
@@ -43,6 +46,7 @@ export function DiaLista({
   consultasPorDia,
   bloqueiosPorDia,
   diasBloqueados,
+  feriados,
   params,
 }: Props) {
   const cs = consultasPorDia.get(dia) ?? [];
@@ -73,12 +77,15 @@ export function DiaLista({
               scroll={false}
               prefetch={false}
               aria-current={sel ? "date" : undefined}
+              title={feriados.has(d) ? rotuloFeriado(feriados.get(d)!) : undefined}
               className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-lg text-xs ${
                 sel
                   ? "bg-teal-700 text-white"
                   : d === hoje
                     ? "border border-teal-600 text-teal-800"
-                    : "text-slate-600 hover:bg-slate-100"
+                    : feriados.has(d)
+                      ? "bg-rose-50 text-rose-700"
+                      : "text-slate-600 hover:bg-slate-100"
               }`}
             >
               <span>{DIA_CURTO[dow]}</span>
@@ -104,6 +111,12 @@ export function DiaLista({
           {canceladas > 0 && ` · ${canceladas} cancelada${canceladas === 1 ? "" : "s"}`}
         </span>
       </div>
+
+      {feriados.has(dia) && (
+        <div className={`rounded-lg border px-3 py-2 text-sm font-medium ${classeFaixaFeriado(feriados.get(dia)!.facultativo)}`}>
+          {rotuloFeriado(feriados.get(dia)!)}
+        </div>
+      )}
 
       {diasBloqueados.has(dia) && (
         <div

@@ -19,12 +19,10 @@ export default async function EditarConsultaPage({
   const user = await usuarioAtual();
   if (!user) redirect("/login");
 
-  const { data } = await supabase
-    .from("consultas")
-    .select("*")
-    .eq("id", id)
-    .is("deleted_at", null)
-    .maybeSingle();
+  const [{ data }, { data: psicologa }] = await Promise.all([
+    supabase.from("consultas").select("*").eq("id", id).is("deleted_at", null).maybeSingle(),
+    supabase.from("psicologas").select("feriados_uf, mostrar_feriados").eq("id", user.id).maybeSingle(),
+  ]);
 
   if (!data) notFound();
   const c = data as Consulta;
@@ -38,6 +36,7 @@ export default async function EditarConsultaPage({
       <ConsultaEdicaoForm
         action={atualizarConsulta.bind(null, id)}
         cancelHref={`/agenda/${id}`}
+        feriados={psicologa}
         defaults={{
           data: dataChaveBR(c.inicio),
           hora: horaBR(c.inicio),

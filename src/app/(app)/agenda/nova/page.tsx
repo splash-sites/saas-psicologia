@@ -18,12 +18,15 @@ export default async function NovaConsultaPage({
   const user = await usuarioAtual();
   if (!user) redirect("/login");
 
-  const { data: pacientes } = await supabase
-    .from("pacientes")
-    .select("id, nome, valor_sessao")
-    .is("deleted_at", null)
-    .neq("status", "alta")
-    .order("nome");
+  const [{ data: pacientes }, { data: psicologa }] = await Promise.all([
+    supabase
+      .from("pacientes")
+      .select("id, nome, valor_sessao")
+      .is("deleted_at", null)
+      .neq("status", "alta")
+      .order("nome"),
+    supabase.from("psicologas").select("feriados_uf, mostrar_feriados").eq("id", user.id).maybeSingle(),
+  ]);
 
   const lista = (pacientes ?? []) as { id: string; nome: string; valor_sessao: number | null }[];
 
@@ -43,6 +46,7 @@ export default async function NovaConsultaPage({
           pacientes={lista}
           dataPadrao={dataQ && /^\d{4}-\d{2}-\d{2}$/.test(dataQ) ? dataQ : undefined}
           horaPadrao={horaQ && /^\d{2}:\d{2}$/.test(horaQ) ? horaQ : undefined}
+          feriados={psicologa}
         />
       )}
     </div>

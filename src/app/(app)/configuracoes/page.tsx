@@ -11,8 +11,10 @@ import { ConectarGoogleButton } from "./ConectarGoogleButton";
 import { LinkAtendimentoForm } from "./LinkAtendimentoForm";
 import { LinkAtendimentoProvider } from "./LinkAtendimentoContext";
 import { PreferenciasLembreteForm } from "./PreferenciasLembreteForm";
+import { FeriadosForm } from "./FeriadosForm";
 import {
   desconectarGoogle,
+  salvarFeriados,
   salvarLinkAtendimento,
   salvarPreferenciasLembrete,
 } from "./actions";
@@ -49,7 +51,7 @@ export default async function ConfiguracoesPage({
 
   const { data: psicologa } = await supabase
     .from("psicologas")
-    .select("link_atendimento_online")
+    .select("link_atendimento_online, feriados_uf, mostrar_feriados")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -167,6 +169,20 @@ export default async function ConfiguracoesPage({
           }}
           mostrarConviteGoogle={GOOGLE_AGENDA_ATIVA}
           meetAutomatico={meetAutomatico}
+        />
+      </section>
+
+      <section className="flex flex-col gap-3 card">
+        <h2 className="font-medium">Feriados</h2>
+        <p className="text-sm text-slate-600">
+          Os feriados aparecem na agenda e no painel, e o sistema avisa ao marcar
+          consulta num feriado. Pontos facultativos (Carnaval, Cinzas, Corpus
+          Christi) aparecem em cor mais leve.
+        </p>
+        <FeriadosForm
+          action={salvarFeriados}
+          uf={psicologa?.feriados_uf ?? null}
+          mostrar={psicologa?.mostrar_feriados ?? true}
         />
       </section>
     </div>

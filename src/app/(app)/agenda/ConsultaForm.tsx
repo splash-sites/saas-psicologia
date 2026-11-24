@@ -15,6 +15,10 @@ import { PacienteSelect } from "@/components/PacienteSelect";
 import { CampoValorConsulta } from "./CampoValorConsulta";
 import type { FormState } from "./actions";
 import { LIMITES } from "@/lib/limites";
+import { brWallTimeToDate, dataChaveBR, gerarOcorrencias } from "@/lib/agenda/datas";
+import { avisoFeriados, feriadosDasSessoes, type PreferenciaFeriados } from "@/lib/feriados";
+import type { Recorrencia } from "@/lib/agenda/types";
+import { AvisoFeriado } from "./AvisoFeriado";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -22,10 +26,25 @@ type Props = {
   /** Vindos do clique num horário vazio da agenda. */
   dataPadrao?: string;
   horaPadrao?: string;
+  /** Estado e "mostrar feriados" da psicóloga (0038). */
+  feriados?: PreferenciaFeriados;
 };
 
+/** Datas (AAAA-MM-DD) das sessões que o formulário vai criar. */
+function datasDoFormulario(form: HTMLFormElement): string[] {
+  const fd = new FormData(form);
+  const data = String(fd.get("data") ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return [];
+  const hora = /^\d{2}:\d{2}$/.test(String(fd.get("hora") ?? "")) ? String(fd.get("hora")) : "12:00";
+  const recorrencia = String(fd.get("recorrencia") ?? "nenhuma") as Recorrencia;
+  const n = Math.min(Math.max(Number(fd.get("ocorrencias")) || 1, 1), LIMITES.consulta.ocorrenciasMax);
+  const inicio = brWallTimeToDate(data, hora);
+  if (Number.isNaN(inicio.getTime())) return [];
+  return gerarOcorrencias(inicio, 50, recorrencia, n).map((s) => dataChaveBR(s.inicio.toISOString()));
+}
 
-export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Props) {
+
+export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriados }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
     {},
@@ -35,9 +54,20 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
   const [valor, setValor] = useState("");
   const fe = state.fieldErrors ?? {};
   const { erros, formProps } = useValidacao();
+  // Datas das sessões, para o aviso de feriado (só informa; deixa marcar).
+  const [datas, setDatas] = useState<string[]>(dataPadrao ? [dataPadrao] : []);
+  const aviso = avisoFeriados(feriadosDasSessoes(datas, feriados), datas.length);
 
   return (
-    <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
+    <form
+      {...formProps}
+      onChange={(e) => {
+        formProps.onChange(e);
+        setDatas(datasDoFormulario(e.currentTarget));
+      }}
+      onSubmit={enviarSemLimpar(formAction)}
+      className="flex flex-col gap-4"
+    >
       {state.error && (
         <p className="alert alert-error">
           {state.error}
@@ -154,6 +184,8 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao }: Prop
           className="input"
         />
       </label>
+
+      <AvisoFeriado texto={aviso} />
 
       <div className="flex gap-3">
         <button

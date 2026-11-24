@@ -37,3 +37,15 @@ export const HACHURA_BLOQUEIO: React.CSSProperties = {
   backgroundImage:
     "repeating-linear-gradient(135deg, #f8fafc 0 6px, #e2e8f0 6px 8px)",
 };
+
+/** Faixa do feriado no topo do dia (0038); ponto facultativo mais leve. */
+export function classeFaixaFeriado(facultativo: boolean): string {
+  return facultativo
+    ? "border-rose-100 bg-rose-50/60 text-rose-700"
+    : "border-rose-200 bg-rose-100 text-rose-900";
+}
+
+/** Fundo da coluna/dia de feriado. */
+export function classeFundoFeriado(facultativo: boolean): string {
+  return facultativo ? "bg-rose-50/30" : "bg-rose-50/70";
+}

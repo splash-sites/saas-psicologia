@@ -14,6 +14,8 @@ import {
 } from "@/lib/agenda/types";
 import type { FormState } from "./actions";
 import { LIMITES } from "@/lib/limites";
+import { avisoFeriados, feriadosDasSessoes, type PreferenciaFeriados } from "@/lib/feriados";
+import { AvisoFeriado } from "./AvisoFeriado";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -28,10 +30,12 @@ type Props = {
     cobrar: boolean;
   };
   cancelHref: string;
+  /** Estado e "mostrar feriados" da psicóloga (0038). */
+  feriados?: PreferenciaFeriados;
 };
 
 
-export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
+export function ConsultaEdicaoForm({ action, defaults, cancelHref, feriados }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
     {},
@@ -40,6 +44,8 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
   const { erros, formProps } = useValidacao();
   const [valor, setValor] = useState(defaults.valor != null ? String(defaults.valor) : "");
   const [status, setStatus] = useState(defaults.status);
+  const [data, setData] = useState(defaults.data);
+  const aviso = status === "agendada" ? avisoFeriados(feriadosDasSessoes(data ? [data] : [], feriados), 1) : null;
 
   return (
     <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
@@ -56,6 +62,7 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
             name="data"
             type="date"
             defaultValue={defaults.data}
+            onChange={(e) => setData(e.target.value)}
             required
             className="input"
           />
@@ -143,6 +150,8 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref }: Props) {
           className="input"
         />
       </label>
+
+      <AvisoFeriado texto={aviso} />
 
       <div className="flex gap-3">
         <button

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
 import { diasDoBloqueio } from "@/lib/agenda/bloqueios";
+import { feriadosDaPsicologa } from "@/lib/feriados";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -144,7 +145,7 @@ export default async function AgendaPage({
         .lte("data_sessao", semana[6]),
       supabase
         .from("psicologas")
-        .select("link_atendimento_online")
+        .select("link_atendimento_online, feriados_uf, mostrar_feriados")
         .eq("id", user.id)
         .maybeSingle(),
     ]);
@@ -236,13 +237,14 @@ export default async function AgendaPage({
     }
   }
 
+  const feriados = feriadosDaPsicologa(semana, psicologa);
   const consultasPorDia = agrupar(visiveis, (c) => dataChaveBR(c.inicio));
   const bloqueiosPorDia = agrupar(bloqueios, (b) => dataChaveBR(b.inicio));
 
   // Domingo só aparece na grade se houver algo nele.
   const domingo = semana[6];
   const diasGrade =
-    consultasPorDia.has(domingo) || bloqueiosPorDia.has(domingo) || diasBloqueados.has(domingo)
+    consultasPorDia.has(domingo) || bloqueiosPorDia.has(domingo) || diasBloqueados.has(domingo) || feriados.has(domingo)
       ? semana
       : semana.slice(0, 6);
   const faixa = faixaDeHoras([...visiveis, ...bloqueios]);
@@ -334,6 +336,7 @@ export default async function AgendaPage({
           consultasPorDia={consultasPorDia}
           bloqueiosPorDia={bloqueiosPorDia}
           diasBloqueados={diasBloqueados}
+          feriados={feriados}
           faixa={faixa}
           params={params}
         />
@@ -347,6 +350,7 @@ export default async function AgendaPage({
           consultasPorDia={consultasPorDia}
           bloqueiosPorDia={bloqueiosPorDia}
           diasBloqueados={diasBloqueados}
+          feriados={feriados}
           params={params}
         />
       </div>
@@ -387,6 +391,10 @@ function Legenda() {
       <span className="inline-flex items-center gap-1.5">
         <span className="h-3 w-4 rounded border border-slate-200" style={HACHURA_BLOQUEIO} />
         Evento
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-3 w-4 rounded border border-rose-200 bg-rose-100" />
+        Feriado
       </span>
       <span className="ml-auto text-slate-500">
         Clique num horário vazio para agendar

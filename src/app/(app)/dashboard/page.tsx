@@ -20,7 +20,7 @@ import {
   type Modalidade,
 } from "@/lib/agenda/types";
 import { estadoVisual, exigeEvolucao } from "@/lib/agenda/grade";
-import { EstadoBadge } from "@/app/(app)/agenda/estilos";
+import { EstadoBadge, classeFaixaFeriado } from "@/app/(app)/agenda/estilos";
 import {
   addDias,
   dataChaveBR,
@@ -53,6 +53,7 @@ import { AvisoCupom } from "./AvisoCupom";
 import { AvisoSenhaFraca } from "./AvisoSenhaFraca";
 import { AvisoTermos } from "./AvisoTermos";
 import { mostrarAvisoTermos } from "@/lib/termos";
+import { feriadosDaPsicologa } from "@/lib/feriados";
 
 export const metadata = { title: "Painel" };
 
@@ -78,6 +79,8 @@ type ContextoPainel = {
   created_at: string;
   termos_versao_vista: string | null;
   link_atendimento_online: string | null;
+  feriados_uf: string | null;
+  mostrar_feriados: boolean;
   preferencias_lembrete: { antecedencia_horas: number } | { antecedencia_horas: number }[] | null;
   google_oauth_tokens: { escopo: string | null } | { escopo: string | null }[] | null;
   cupom_avisos: AvisoCupomRow | AvisoCupomRow[] | null;
@@ -128,7 +131,7 @@ export default async function DashboardPage() {
     supabase
       .from("psicologas")
       .select(
-        "nome, created_at, termos_versao_vista, link_atendimento_online, preferencias_lembrete(antecedencia_horas), google_oauth_tokens(escopo), cupom_avisos(codigo, status, lido_em), assinaturas(trial_fim)",
+        "nome, created_at, termos_versao_vista, link_atendimento_online, feriados_uf, mostrar_feriados, preferencias_lembrete(antecedencia_horas), google_oauth_tokens(escopo), cupom_avisos(codigo, status, lido_em), assinaturas(trial_fim)",
       )
       .eq("id", user.id)
       .maybeSingle(),
@@ -187,6 +190,8 @@ export default async function DashboardPage() {
         new Date(c.fim) < agora,
     )
     .reverse();
+
+  const feriadoHoje = feriadosDaPsicologa([hoje], contexto).get(hoje);
 
   const { recebido, aReceber, atrasados } = financeiro;
   const previsto = recebido + aReceber;
@@ -267,6 +272,11 @@ export default async function DashboardPage() {
         <p className="text-sm first-letter:uppercase text-slate-500">
           {dataLongaBR(`${hoje}T12:00:00${BR_OFFSET}`)}
         </p>
+        {feriadoHoje && (
+          <p className={`mt-2 w-fit rounded-md border px-2.5 py-1 text-sm font-medium ${classeFaixaFeriado(feriadoHoje.facultativo)}`}>
+            {feriadoHoje.facultativo ? "Hoje é ponto facultativo" : "Hoje é feriado"}: {feriadoHoje.nome}
+          </p>
+        )}
       </div>
 
       <AvisoSenhaFraca />
