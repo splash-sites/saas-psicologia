@@ -2,12 +2,14 @@ import Link from "next/link";
 import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
 import { redirect } from "next/navigation";
 import {
+  Cake,
   CalendarCheck,
   CalendarClock,
   CalendarPlus,
   Check,
   ChevronRight,
   FileText,
+  MessageCircle,
   Receipt,
   UserPlus,
   Video,
@@ -56,6 +58,8 @@ import { AvisoTermos } from "./AvisoTermos";
 import { mostrarAvisoTermos } from "@/lib/termos";
 import { feriadosDaPsicologa } from "@/lib/feriados";
 import { avisoDaProxima, proximasSessoes } from "@/lib/agenda/feriadoProxima";
+import { aniversariantesPorDia, mensagemAniversario, type PacienteNascimento } from "@/lib/aniversario";
+import { whatsappLinkComTexto } from "@/lib/pacientes/whatsapp";
 
 export const metadata = { title: "Painel" };
 
@@ -83,6 +87,7 @@ type ContextoPainel = {
   link_atendimento_online: string | null;
   feriados_uf: string | null;
   mostrar_feriados: boolean;
+  mensagem_aniversario: string | null;
   preferencias_lembrete: { antecedencia_horas: number } | { antecedencia_horas: number }[] | null;
   google_oauth_tokens: { escopo: string | null } | { escopo: string | null }[] | null;
   cupom_avisos: AvisoCupomRow | AvisoCupomRow[] | null;
@@ -129,11 +134,12 @@ export default async function DashboardPage() {
     { data: evolucoesRaw },
     { count: pendentesTotalRaw },
     financeiro,
+    { data: nascimentosRaw },
   ] = await Promise.all([
     supabase
       .from("psicologas")
       .select(
-        "nome, created_at, termos_versao_vista, link_atendimento_online, feriados_uf, mostrar_feriados, preferencias_lembrete(antecedencia_horas), google_oauth_tokens(escopo), cupom_avisos(codigo, status, lido_em), assinaturas(trial_fim)",
+        "nome, created_at, termos_versao_vista, link_atendimento_online, feriados_uf, mostrar_feriados, mensagem_aniversario, preferencias_lembrete(antecedencia_horas), google_oauth_tokens(escopo), cupom_avisos(codigo, status, lido_em), assinaturas(trial_fim)",
       )
       .eq("id", user.id)
       .maybeSingle(),
@@ -160,6 +166,13 @@ export default async function DashboardPage() {
     // as dos últimos DIAS_PENDENCIA dias).
     supabase.rpc("consultas_sem_evolucao", {}, { count: "exact", head: true }),
     resumoFinanceiroMes(supabase, primeiroDia(mes), ultimoDia(mes), hoje),
+    // Aniversários (item H): todos os pacientes com data, menos arquivados.
+    supabase
+      .from("pacientes")
+      .select("id, nome, data_nascimento, telefone")
+      .is("deleted_at", null)
+      .not("data_nascimento", "is", null)
+      .limit(1000),
   ]);
 
   const contexto = contextoRaw as ContextoPainel | null;
@@ -194,6 +207,11 @@ export default async function DashboardPage() {
     .reverse();
 
   const feriadoHoje = feriadosDaPsicologa([hoje], contexto).get(hoje);
+  // Aniversários de hoje e dos próximos 7 dias.
+  const aniversarios = aniversariantesPorDia(
+    (nascimentosRaw ?? []) as PacienteNascimento[],
+    Array.from({ length: 8 }, (_, i) => addDias(hoje, i)),
+  );
   // Aviso de feriado na sessão anterior (0039): a próxima de cada paciente de hoje.
   const proximasDeHoje =
     contexto?.mostrar_feriados !== false && consultasDoDia.length > 0
@@ -577,6 +595,7 @@ export default async function DashboardPage() {
           )}
         </section>
 
+        <div className="flex flex-col gap-6">
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-medium">Próximos dias</h2>
@@ -626,6 +645,42 @@ export default async function DashboardPage() {
             </div>
           )}
         </section>
+
+        {aniversarios.size > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="flex items-center gap-2 font-medium">
+              <Cake className="size-4 text-amber-700" aria-hidden />
+              Aniversários
+            </h2>
+            <ul className="card flex flex-col gap-1 p-2">
+              {[...aniversarios.entries()].flatMap(([dia, lista]) =>
+                lista.map((a) => {
+                  const wa = whatsappLinkComTexto(a.telefone, mensagemAniversario(contexto?.mensagem_aniversario, a.nome));
+                  return (
+                    <li
+                      key={`${dia}-${a.id}`}
+                      className={`flex flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm ${dia === hoje ? "bg-amber-50" : ""}`}
+                    >
+                      <Link href={`/pacientes/${a.id}`} className="min-w-0 hover:opacity-80">
+                        <span className="font-medium" data-sensivel>{a.nome}</span>
+                        <span className="text-slate-500">
+                          {" "}· {dia === hoje ? "hoje" : rotuloDia(dia).toLowerCase()} · {a.idade} anos
+                        </span>
+                      </Link>
+                      {wa && (
+                        <a href={wa} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-sm">
+                          <MessageCircle className="size-4" aria-hidden />
+                          Parabéns
+                        </a>
+                      )}
+                    </li>
+                  );
+                }),
+              )}
+            </ul>
+          </section>
+        )}
+        </div>
       </div>
     </div>
   );

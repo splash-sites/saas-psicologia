@@ -3,6 +3,8 @@ import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
 import { diasDoBloqueio } from "@/lib/agenda/bloqueios";
 import { feriadosDaPsicologa } from "@/lib/feriados";
 import { avisoDaProxima, proximasSessoes } from "@/lib/agenda/feriadoProxima";
+import { aniversariantesPorDia, idadeNoAniversario, mensagemAniversario, type PacienteNascimento } from "@/lib/aniversario";
+import { whatsappLinkComTexto } from "@/lib/pacientes/whatsapp";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -121,6 +123,7 @@ export default async function AgendaPage({
     { data: bloqueiosRaw },
     { data: evolucoesRaw },
     { data: psicologa },
+    { data: nascimentosRaw },
   ] = await Promise.all([
       supabase
         .from("consultas")
@@ -146,9 +149,16 @@ export default async function AgendaPage({
         .lte("data_sessao", semana[6]),
       supabase
         .from("psicologas")
-        .select("link_atendimento_online, feriados_uf, mostrar_feriados")
+        .select("link_atendimento_online, feriados_uf, mostrar_feriados, mensagem_aniversario")
         .eq("id", user.id)
         .maybeSingle(),
+      // Aniversários (item H): todos os pacientes com data, menos arquivados.
+      supabase
+        .from("pacientes")
+        .select("id, nome, data_nascimento, telefone")
+        .is("deleted_at", null)
+        .not("data_nascimento", "is", null)
+        .limit(1000),
     ]);
 
   const rows = (consultasRaw ?? []) as unknown as ConsultaRow[];
@@ -246,13 +256,15 @@ export default async function AgendaPage({
   }
 
   const feriados = feriadosDaPsicologa(semana, psicologa);
+  const nascimentos = (nascimentosRaw ?? []) as PacienteNascimento[];
+  const aniversarios = aniversariantesPorDia(nascimentos, semana);
   const consultasPorDia = agrupar(visiveis, (c) => dataChaveBR(c.inicio));
   const bloqueiosPorDia = agrupar(bloqueios, (b) => dataChaveBR(b.inicio));
 
   // Domingo só aparece na grade se houver algo nele.
   const domingo = semana[6];
   const diasGrade =
-    consultasPorDia.has(domingo) || bloqueiosPorDia.has(domingo) || diasBloqueados.has(domingo) || feriados.has(domingo)
+    consultasPorDia.has(domingo) || bloqueiosPorDia.has(domingo) || diasBloqueados.has(domingo) || feriados.has(domingo) || aniversarios.has(domingo)
       ? semana
       : semana.slice(0, 6);
   const faixa = faixaDeHoras([...visiveis, ...bloqueios]);
@@ -266,6 +278,18 @@ export default async function AgendaPage({
   };
 
   const selecionada = consultaSel ? todas.find((c) => c.id === consultaSel) : undefined;
+  // A sessão cai no aniversário do paciente?
+  const pacSel = selecionada?.paciente ? nascimentos.find((p) => p.id === selecionada.paciente!.id) : undefined;
+  const idadeSel = pacSel && selecionada ? idadeNoAniversario(pacSel.data_nascimento, dataChaveBR(selecionada.inicio)) : null;
+  const aniversarioDaSessao =
+    pacSel && selecionada && idadeSel !== null
+      ? {
+          nome: pacSel.nome,
+          idade: idadeSel,
+          hoje: dataChaveBR(selecionada.inicio) === hoje,
+          whatsapp: whatsappLinkComTexto(pacSel.telefone, mensagemAniversario(psicologa?.mensagem_aniversario, pacSel.nome)),
+        }
+      : null;
   const lembrete = lembreteRaw as { consulta_inicio: string; enviado_em: string } | null;
   const lembreteValido =
     selecionada &&
@@ -345,6 +369,7 @@ export default async function AgendaPage({
           bloqueiosPorDia={bloqueiosPorDia}
           diasBloqueados={diasBloqueados}
           feriados={feriados}
+          aniversarios={aniversarios}
           faixa={faixa}
           params={params}
         />
@@ -359,6 +384,7 @@ export default async function AgendaPage({
           bloqueiosPorDia={bloqueiosPorDia}
           diasBloqueados={diasBloqueados}
           feriados={feriados}
+          aniversarios={aniversarios}
           params={params}
         />
       </div>
@@ -371,6 +397,7 @@ export default async function AgendaPage({
           pagamento={pagPorConsulta.get(selecionada.id) ?? null}
           lembreteEnviadoEm={lembreteValido}
           avisoFeriado={avisoDaProxima(proximas.get(selecionada.id), psicologa)}
+          aniversario={aniversarioDaSessao}
           hoje={hoje}
           agoraISO={agoraISO}
           fecharHref={agendaHref({ ...params, consulta: undefined })}

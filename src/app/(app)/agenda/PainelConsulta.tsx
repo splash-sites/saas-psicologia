@@ -3,6 +3,7 @@ import { MinutosAte } from "@/components/Relogio";
 import {
   Building2,
   CalendarClock,
+  Cake,
   CalendarDays,
   CalendarHeart,
   Check,
@@ -52,6 +53,8 @@ type Props = {
   lembreteEnviadoEm: string | null;
   /** A próxima sessão do paciente cai em feriado (0039). */
   avisoFeriado?: AvisoProxima | null;
+  /** A sessão cai no aniversário do paciente (item H). */
+  aniversario?: { nome: string; idade: number; hoje: boolean; whatsapp: string | null } | null;
   hoje: string;
   agoraISO: string;
   /** URL da agenda sem o painel aberto. */
@@ -66,6 +69,7 @@ export function PainelConsulta({
   pagamento,
   lembreteEnviadoEm,
   avisoFeriado,
+  aniversario,
   hoje,
   agoraISO,
   fecharHref,
@@ -195,6 +199,29 @@ export function PainelConsulta({
             </div>
           )}
         </div>
+
+        {aniversario && (
+          <section className="flex flex-col gap-2 border-b border-amber-100 bg-amber-50/70 px-5 py-4 sm:px-6" role="status">
+            <p className="flex items-start gap-2 text-sm text-amber-950">
+              <Cake className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <span>
+                {aniversario.hoje ? "Hoje é" : "Nesse dia é"} aniversário de{" "}
+                <span data-sensivel>{aniversario.nome}</span>: {aniversario.idade} anos.
+              </span>
+            </p>
+            {aniversario.whatsapp && (
+              <a
+                href={aniversario.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline btn-sm w-fit"
+              >
+                <MessageCircle className="size-4" aria-hidden />
+                Dar parabéns pelo WhatsApp
+              </a>
+            )}
+          </section>
+        )}
 
         {avisoFeriado && (
           <section className="flex flex-col gap-2 border-b border-rose-100 bg-rose-50/70 px-5 py-4 sm:px-6" role="status">

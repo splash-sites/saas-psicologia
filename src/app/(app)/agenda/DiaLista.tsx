@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { CalendarPlus, FileText, Video } from "lucide-react";
+import { Cake, CalendarPlus, FileText, Video } from "lucide-react";
 import { ESTADO_VISUAL_LABEL } from "@/lib/agenda/grade";
 import { horaBR, dataLongaBR, BR_OFFSET } from "@/lib/agenda/datas";
 import { estadoSessao, meetEmDestaque } from "@/lib/agenda/estado";
 import { MODALIDADE_LABEL } from "@/lib/agenda/types";
 import { HoraAgora } from "@/components/Relogio";
-import { BLOCO_ESTADO, HACHURA_BLOQUEIO, classeFaixaFeriado } from "./estilos";
+import { BLOCO_ESTADO, CLASSE_ANIVERSARIO, HACHURA_BLOQUEIO, classeFaixaFeriado } from "./estilos";
 import { rotuloFeriado, type Feriado } from "@/lib/feriados";
 import { IconesConsulta } from "./GradeSemana";
 import {
   agendaHref,
+  type ItemAniversario,
   type ItemBloqueio,
   type ItemConsulta,
   type ParamsAgenda,
@@ -28,6 +29,8 @@ type Props = {
   diasBloqueados: Map<string, string>;
   /** Feriados e pontos facultativos da semana (vazio se desligado). */
   feriados: Map<string, Feriado>;
+  /** Aniversários de pacientes da semana (item H). */
+  aniversarios: Map<string, ItemAniversario[]>;
   params: ParamsAgenda;
 };
 
@@ -47,6 +50,7 @@ export function DiaLista({
   bloqueiosPorDia,
   diasBloqueados,
   feriados,
+  aniversarios,
   params,
 }: Props) {
   const cs = consultasPorDia.get(dia) ?? [];
@@ -117,6 +121,19 @@ export function DiaLista({
           {rotuloFeriado(feriados.get(dia)!)}
         </div>
       )}
+
+      {(aniversarios.get(dia) ?? []).map((a) => (
+        <Link
+          key={a.id}
+          href={`/pacientes/${a.id}`}
+          className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium ${CLASSE_ANIVERSARIO}`}
+        >
+          <Cake className="size-4 shrink-0" aria-hidden />
+          <span>
+            Aniversário: <span data-sensivel>{a.nome}</span> · {a.idade} anos
+          </span>
+        </Link>
+      ))}
 
       {diasBloqueados.has(dia) && (
         <div

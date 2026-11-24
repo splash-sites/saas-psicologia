@@ -49,3 +49,6 @@ export function classeFaixaFeriado(facultativo: boolean): string {
 export function classeFundoFeriado(facultativo: boolean): string {
   return facultativo ? "bg-rose-50/30" : "bg-rose-50/70";
 }
+
+/** Aniversário do paciente na faixa do topo do dia (item H). */
+export const CLASSE_ANIVERSARIO = "border-amber-200 bg-amber-50 text-amber-900";

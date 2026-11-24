@@ -127,6 +127,7 @@ export function PacienteForm({
             defaultValue={paciente?.data_nascimento ?? ""}
             className="input"
           />
+          <span className="text-xs text-slate-500">Para avisar no aniversário.</span>
           <ErroCampo nome="data_nascimento" cliente={erros} servidor={fe.data_nascimento} />
         </label>
 

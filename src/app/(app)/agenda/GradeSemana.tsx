@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   Building2,
+  Cake,
   CircleDollarSign,
   FileText,
   Plus,
@@ -14,10 +15,11 @@ import {
 } from "@/lib/agenda/grade";
 import { horaBR } from "@/lib/agenda/datas";
 import { NaAlturaDeAgora } from "@/components/Relogio";
-import { BLOCO_ESTADO, HACHURA_BLOQUEIO, classeFaixaFeriado, classeFundoFeriado } from "./estilos";
+import { BLOCO_ESTADO, CLASSE_ANIVERSARIO, HACHURA_BLOQUEIO, classeFaixaFeriado, classeFundoFeriado } from "./estilos";
 import { rotuloFeriado, type Feriado } from "@/lib/feriados";
 import {
   agendaHref,
+  type ItemAniversario,
   type ItemBloqueio,
   type ItemConsulta,
   type ParamsAgenda,
@@ -36,6 +38,8 @@ type Props = {
   diasBloqueados: Map<string, string>;
   /** Feriados e pontos facultativos da semana (vazio se desligado). */
   feriados: Map<string, Feriado>;
+  /** Aniversários de pacientes da semana (item H). */
+  aniversarios: Map<string, ItemAniversario[]>;
   faixa: { de: number; ate: number };
   params: ParamsAgenda;
 };
@@ -51,6 +55,7 @@ export function GradeSemana({
   bloqueiosPorDia,
   diasBloqueados,
   feriados,
+  aniversarios,
   faixa,
   params,
 }: Props) {
@@ -115,7 +120,7 @@ export function GradeSemana({
         })}
       </div>
 
-      {(diasBloqueados.size > 0 || feriados.size > 0) && (
+      {(diasBloqueados.size > 0 || feriados.size > 0 || aniversarios.size > 0) && (
         <div className="grid border-b border-slate-200" style={{ gridTemplateColumns: cols }}>
           <div />
           {dias.map((dia) => {
@@ -131,6 +136,19 @@ export function GradeSemana({
                     {feriado.nome}
                   </span>
                 )}
+                {(aniversarios.get(dia) ?? []).map((a) => (
+                  <Link
+                    key={a.id}
+                    href={`/pacientes/${a.id}`}
+                    className={`flex min-w-0 items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold hover:opacity-80 ${CLASSE_ANIVERSARIO}`}
+                    title={`Aniversário: ${a.nome}, ${a.idade} anos`}
+                  >
+                    <Cake className="size-3 shrink-0" aria-hidden />
+                    <span className="truncate" data-sensivel>
+                      {a.nome}
+                    </span>
+                  </Link>
+                ))}
                 {motivo && (
                   <span
                     className="block truncate rounded-md border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600"

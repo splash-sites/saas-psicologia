@@ -48,3 +48,6 @@ export function agendaHref(p: ParamsAgenda): string {
   if (p.consulta) q.set("consulta", p.consulta);
   return `/agenda?${q.toString()}`;
 }
+
+/** Aniversariante do dia na agenda (item H). */
+export type ItemAniversario = { id: string; nome: string; idade: number };

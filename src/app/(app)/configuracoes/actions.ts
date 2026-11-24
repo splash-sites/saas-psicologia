@@ -7,6 +7,7 @@ import { usuarioAtual } from "@/lib/auth/usuario";
 import { preferenciasLembreteSchema } from "@/lib/lembretes/schema";
 import { linkAtendimentoSchema } from "@/lib/agenda/linkOnline";
 import { ufValida } from "@/lib/feriados";
+import { LIMITES } from "@/lib/limites";
 
 export type FormState = {
   ok?: boolean;
@@ -112,6 +113,35 @@ export async function salvarFeriados(
     .select("id");
 
   if (error || !data?.length) return { error: "Não foi possível salvar." };
+
+  revalidatePath("/configuracoes");
+  revalidatePath("/agenda");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/** Mensagem de parabéns do aniversário do paciente (0040). Vazio = padrão. */
+export async function salvarMensagemAniversario(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const supabase = await createClient();
+  const user = await usuarioAtual();
+  if (!user) redirect("/login");
+
+  const texto = String(formData.get("mensagem_aniversario") ?? "").trim();
+  if (texto.length > LIMITES.aniversario.mensagem) {
+    return { fieldErrors: { mensagem_aniversario: [`Máximo de ${LIMITES.aniversario.mensagem} caracteres`] } };
+  }
+
+  // Policy psicologas_update_own: só a própria linha.
+  const { data, error } = await supabase
+    .from("psicologas")
+    .update({ mensagem_aniversario: texto || null })
+    .eq("id", user.id)
+    .select("id");
+
+  if (error || !data?.length) return { error: "Não foi possível salvar a mensagem." };
 
   revalidatePath("/configuracoes");
   revalidatePath("/agenda");

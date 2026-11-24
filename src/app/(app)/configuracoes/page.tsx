@@ -12,9 +12,11 @@ import { LinkAtendimentoForm } from "./LinkAtendimentoForm";
 import { LinkAtendimentoProvider } from "./LinkAtendimentoContext";
 import { PreferenciasLembreteForm } from "./PreferenciasLembreteForm";
 import { FeriadosForm } from "./FeriadosForm";
+import { AniversarioForm } from "./AniversarioForm";
 import {
   desconectarGoogle,
   salvarFeriados,
+  salvarMensagemAniversario,
   salvarLinkAtendimento,
   salvarPreferenciasLembrete,
 } from "./actions";
@@ -51,7 +53,7 @@ export default async function ConfiguracoesPage({
 
   const { data: psicologa } = await supabase
     .from("psicologas")
-    .select("link_atendimento_online, feriados_uf, mostrar_feriados")
+    .select("link_atendimento_online, feriados_uf, mostrar_feriados, mensagem_aniversario")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -183,6 +185,19 @@ export default async function ConfiguracoesPage({
           action={salvarFeriados}
           uf={psicologa?.feriados_uf ?? null}
           mostrar={psicologa?.mostrar_feriados ?? true}
+        />
+      </section>
+
+      <section className="flex flex-col gap-3 card">
+        <h2 className="font-medium">Aniversários</h2>
+        <p className="text-sm text-slate-600">
+          No dia do aniversário do paciente (com data de nascimento no cadastro),
+          a agenda e o painel avisam, com um botão que abre o WhatsApp com esta
+          mensagem pronta. A mensagem sai do seu número; nada é enviado sozinho.
+        </p>
+        <AniversarioForm
+          action={salvarMensagemAniversario}
+          mensagem={psicologa?.mensagem_aniversario ?? null}
         />
       </section>
     </div>

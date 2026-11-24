@@ -24,4 +24,6 @@ export const LIMITES = {
   bloqueio: { motivo: 200 },
   pagamento: { valorMax: 100000, observacoes: 2000 },
   lembrete: { antecedenciaMin: 1, antecedenciaMax: 168, mensagem: 1000 },
+  /** Mensagem de parabéns (0040). */
+  aniversario: { mensagem: 1000 },
 } as const;
