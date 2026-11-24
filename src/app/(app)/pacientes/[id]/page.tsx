@@ -12,6 +12,7 @@ import { StatusBadge } from "../StatusBadge";
 import { excluirPaciente, salvarAnamnese } from "../actions";
 import { AnamneseForm } from "./AnamneseForm";
 import { registrarAcesso } from "@/lib/prontuario/acesso";
+import { carregarDocumentos, DocumentosLista } from "./documentos/DocumentosLista";
 
 function formatarData(iso: string | null): string {
   if (!iso) return "—";
@@ -39,7 +40,7 @@ export default async function PacienteDetailPage({
   if (!pacienteRow) notFound();
   const paciente = pacienteRow as Paciente;
 
-  const [{ data: anamneseRow }, { data: evolucoesRecentes }] = await Promise.all([
+  const [{ data: anamneseRow }, { data: evolucoesRecentes }, , documentos, { data: permite }] = await Promise.all([
     supabase.from("anamneses").select("*").eq("paciente_id", id).maybeSingle(),
     supabase
       .from("evolucoes")
@@ -50,7 +51,15 @@ export default async function PacienteDetailPage({
       .order("created_at", { ascending: false })
       .limit(3),
     registrarAcesso(supabase, "ficha", id),
+    carregarDocumentos(supabase, id),
+    supabase.rpc("assinatura_permite_escrita", { p_psicologa_id: user.id }),
   ]);
+  // Data da sessão dos documentos anexados em evoluções (link "Sessão de DD/MM").
+  const idsEvolucao = [...new Set(documentos.docs.map((d) => d.evolucao_id).filter((x): x is string => Boolean(x)))];
+  const { data: sessoesRaw } = idsEvolucao.length
+    ? await supabase.from("evolucoes").select("id, data_sessao").in("id", idsEvolucao)
+    : { data: [] };
+  const sessoes = new Map((sessoesRaw ?? []).map((e) => [e.id as string, e.data_sessao as string]));
 
   const wa = whatsappLink(paciente.telefone);
 
@@ -178,6 +187,20 @@ export default async function PacienteDetailPage({
           </ul>
         )}
       </section>
+
+      {documentos.disponivel && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-medium">Documentos</h2>
+          <DocumentosLista
+            pacienteId={id}
+            docs={documentos.docs}
+            espaco={documentos.espaco}
+            voltar={`/pacientes/${id}`}
+            sessoes={sessoes}
+            podeEscrever={permite !== false}
+          />
+        </section>
+      )}
 
       <section className="border-t pt-4">
         <form action={excluirPaciente.bind(null, id)}>

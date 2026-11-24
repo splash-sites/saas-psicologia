@@ -26,4 +26,6 @@ export const LIMITES = {
   lembrete: { antecedenciaMin: 1, antecedenciaMax: 168, mensagem: 1000 },
   /** Mensagem de parabéns (0040). */
   aniversario: { mensagem: 1000 },
+  /** Documentos do paciente (0041). Tamanho em bytes, igual ao do bucket. */
+  documento: { nome: 200, finalidade: 300, destinatario: 200, tamanhoMax: 10485760 },
 } as const;

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type TipoAcesso = "ficha" | "evolucoes" | "evolucao";
+export type TipoAcesso = "ficha" | "evolucoes" | "evolucao" | "documento";
 
 /**
  * Registra que a psicóloga abriu parte do prontuário de um paciente (tabela
@@ -15,12 +15,14 @@ export async function registrarAcesso(
   tipo: TipoAcesso,
   pacienteId: string,
   evolucaoId?: string,
+  documentoId?: string,
 ): Promise<void> {
   try {
     await supabase.from("acessos_prontuario").insert({
       tipo,
       paciente_id: pacienteId,
       evolucao_id: tipo === "evolucao" ? (evolucaoId ?? null) : null,
+      ...(tipo === "documento" ? { documento_id: documentoId ?? null } : {}),
     });
   } catch {
     // de propósito: o registro não pode derrubar a página

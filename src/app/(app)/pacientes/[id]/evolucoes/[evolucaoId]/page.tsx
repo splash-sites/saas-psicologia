@@ -7,6 +7,7 @@ import { arquivarEvolucao } from "../actions";
 import { ArquivarForm } from "./ArquivarForm";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { registrarAcesso } from "@/lib/prontuario/acesso";
+import { carregarDocumentos, DocumentosLista } from "../../documentos/DocumentosLista";
 
 function dataBR(iso: string): string {
   const [a, m, d] = iso.split("-");
@@ -41,7 +42,11 @@ export default async function EvolucaoDetailPage({
     .maybeSingle();
 
   if (!data) notFound();
-  await registrarAcesso(supabase, "evolucao", id, evolucaoId);
+  const [, documentos, { data: permite }] = await Promise.all([
+    registrarAcesso(supabase, "evolucao", id, evolucaoId),
+    carregarDocumentos(supabase, id, evolucaoId),
+    supabase.rpc("assinatura_permite_escrita", { p_psicologa_id: user.id }),
+  ]);
   const e = data as Evolucao;
   const arquivada = Boolean(e.deleted_at);
   const editado = e.updated_at !== e.created_at;
@@ -92,6 +97,20 @@ export default async function EvolucaoDetailPage({
           </section>
         )}
       </div>
+
+      {documentos.disponivel && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-sm font-medium">Documentos desta sessão</h2>
+          <DocumentosLista
+            pacienteId={id}
+            docs={documentos.docs}
+            espaco={documentos.espaco}
+            voltar={`/pacientes/${id}/evolucoes/${evolucaoId}`}
+            evolucaoId={evolucaoId}
+            podeEscrever={permite !== false && !arquivada}
+          />
+        </section>
+      )}
 
       {e.consulta_id && (
         <Link

@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Anamnese, Paciente } from "@/lib/pacientes/types";
 import type { Evolucao } from "@/lib/prontuario/types";
-import { gerarProntuarioPdf } from "@/lib/exportacao/prontuarioPdf";
+import { gerarProntuarioPdf, type DocumentoPdf } from "@/lib/exportacao/prontuarioPdf";
+import { TIPOS_DOCUMENTO, type TipoDocumento } from "@/lib/documentos/tipos";
 import {
   MSG_DOWNLOAD_FALHOU,
   MSG_DOWNLOAD_NAO_ENCONTRADO,
@@ -57,11 +58,30 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!paciente) return respostaErroDownload(404, MSG_DOWNLOAD_NAO_ENCONTRADO);
   if (error) return respostaErroDownload(500, MSG_DOWNLOAD_FALHOU);
 
+  // Documentos (0041): só a lista. Sem a migration, a consulta falha e a lista fica vazia.
+  const { data: docsRaw } = await supabase
+    .from("documentos")
+    .select("nome, tipo, data_documento, finalidade, destinatario, evolucao_id, deleted_at")
+    .eq("paciente_id", id)
+    .not("enviado_em", "is", null)
+    .order("data_documento");
+  const sessaoDe = new Map(((evolucoes ?? []) as Evolucao[]).map((e) => [e.id, e.data_sessao]));
+  const documentos: DocumentoPdf[] = (docsRaw ?? []).map((x) => ({
+    nome: x.nome as string,
+    tipo: TIPOS_DOCUMENTO[x.tipo as TipoDocumento] ?? "Outro",
+    data_documento: x.data_documento as string,
+    finalidade: x.finalidade as string | null,
+    destinatario: x.destinatario as string | null,
+    sessao: x.evolucao_id ? (sessaoDe.get(x.evolucao_id as string) ?? null) : null,
+    arquivado: Boolean(x.deleted_at),
+  }));
+
   const pdf = await gerarProntuarioPdf({
     psicologa: { nome: psicologa?.nome ?? null, crp: psicologa?.crp ?? null },
     paciente: paciente as Paciente,
     anamnese: anamnese as Anamnese | null,
     evolucoes: (evolucoes ?? []) as Evolucao[],
+    documentos,
   });
 
   return new Response(new Blob([pdf as BlobPart], { type: "application/pdf" }), {

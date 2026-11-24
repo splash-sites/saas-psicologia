@@ -12,6 +12,7 @@ import {
 } from "@/lib/exportacao/limite";
 import { dataBRCompleta, dataHoraBR } from "@/lib/exportacao/datas";
 import { formatarCpf, formatarTelefoneBR } from "@/lib/pacientes/formatacao";
+import { TIPOS_DOCUMENTO, type TipoDocumento } from "@/lib/documentos/tipos";
 import { rotuloFormaPagamento } from "@/lib/financeiro/types";
 
 // Exportação de TODOS os dados da conta (portabilidade/LGPD e guarda de 5 anos
@@ -59,6 +60,8 @@ Os arquivos se ligam pela coluna "ID do paciente" / "ID da consulta".
 - evolucoes.csv     prontuário: evoluções por sessão, com notas privadas
 - pagamentos.csv    lançamentos financeiros
 - bloqueios.csv     eventos da agenda (férias, compromissos)
+- documentos.csv    lista dos documentos anexados (os arquivos saem em
+                    "Baixar todos (ZIP)" na ficha de cada paciente)
 
 Registros arquivados também estão aqui (coluna "Arquivado em").
 O prontuário deve ser guardado por no mínimo 5 anos (Resolução CFP 01/2009).
@@ -82,7 +85,11 @@ export async function GET() {
         todas(supabase, "pagamentos", "data_referencia"),
         todas(supabase, "bloqueios", "inicio"),
       ]);
-    tabelas = { pacientes, anamneses, consultas, evolucoes, pagamentos, bloqueios };
+    // Documentos (0041): sem a migration, fica sem a lista em vez de falhar a exportação.
+    const documentos = (await todas(supabase, "documentos", "data_documento").catch(() => [] as Linha[])).filter(
+      (d) => d.enviado_em,
+    );
+    tabelas = { pacientes, anamneses, consultas, evolucoes, pagamentos, bloqueios, documentos };
   } catch {
     return respostaErroDownload(500, MSG_DOWNLOAD_FALHOU);
   }
@@ -166,6 +173,21 @@ export async function GET() {
       { titulo: "Forma de pagamento", valor: (l) => rotuloFormaPagamento(l.forma_pagamento as string | null) },
       { titulo: "Observações", valor: txt("observacoes") },
       { titulo: "Origem", valor: (l) => (l.origem === "sessao" ? "Sessão (automático)" : "Lançado à mão") },
+      { titulo: "Arquivado em", valor: dataHora("deleted_at") },
+    ],
+    documentos: [
+      { titulo: "ID do documento", valor: txt("id") },
+      { titulo: "ID do paciente", valor: txt("paciente_id") },
+      { titulo: "Paciente", valor: paciente },
+      { titulo: "ID da evolução", valor: txt("evolucao_id") },
+      { titulo: "Nome", valor: txt("nome") },
+      { titulo: "Tipo", valor: (l) => TIPOS_DOCUMENTO[l.tipo as TipoDocumento] ?? (l.tipo as string) },
+      { titulo: "Data", valor: data("data_documento") },
+      { titulo: "Finalidade", valor: txt("finalidade") },
+      { titulo: "Destinatário", valor: txt("destinatario") },
+      { titulo: "Formato", valor: txt("mime") },
+      { titulo: "Tamanho (bytes)", valor: (l) => Number(l.tamanho) },
+      { titulo: "Anexado em", valor: dataHora("enviado_em") },
       { titulo: "Arquivado em", valor: dataHora("deleted_at") },
     ],
     bloqueios: [

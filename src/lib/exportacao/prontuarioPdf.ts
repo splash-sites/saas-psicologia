@@ -17,7 +17,19 @@ export type DadosProntuario = {
   paciente: Paciente;
   anamnese: Anamnese | null;
   evolucoes: Evolucao[];
+  /** Documentos anexados (0041): só a lista, os arquivos vão no ZIP do paciente. */
+  documentos?: DocumentoPdf[];
   emitidoEm?: Date;
+};
+
+export type DocumentoPdf = {
+  nome: string;
+  tipo: string;
+  data_documento: string;
+  finalidade: string | null;
+  destinatario: string | null;
+  sessao: string | null;
+  arquivado: boolean;
 };
 
 const A4: [number, number] = [595.28, 841.89];
@@ -191,6 +203,25 @@ export async function gerarProntuarioPdf(d: DadosProntuario): Promise<Uint8Array
       `Registrada em ${dataHoraBR(e.created_at)}${e.updated_at !== e.created_at ? ` · última edição em ${dataHoraBR(e.updated_at)}` : ""}`,
       { tamanho: 8, cor: CINZA, antes: 6 },
     );
+  }
+
+  const docs = d.documentos ?? [];
+  if (docs.length > 0) {
+    titulo(`Documentos anexados (${docs.length})`);
+    escrever("Os arquivos saem em \"Baixar todos (ZIP)\" na ficha do paciente.", { tamanho: 8, cor: CINZA });
+    for (const doc of docs) {
+      garantirEspaco(40);
+      escrever(
+        `${dataBRCompleta(doc.data_documento)} · ${doc.tipo} · ${doc.nome}${doc.arquivado ? " (arquivado)" : ""}`,
+        { fonte: negrito, tamanho: 9, antes: 6 },
+      );
+      const det = [
+        doc.finalidade && `Finalidade: ${doc.finalidade}`,
+        doc.destinatario && `Destinatário: ${doc.destinatario}`,
+        doc.sessao && `Anexado na sessão de ${dataBRCompleta(doc.sessao)}`,
+      ].filter(Boolean);
+      if (det.length) escrever(det.join(" · "), { tamanho: 8, cor: CINZA });
+    }
   }
 
   // Rodapé em todas as páginas, com a numeração final.

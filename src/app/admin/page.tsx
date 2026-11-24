@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { exigirAdmin } from "@/lib/admin/acesso";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { formatarTamanho } from "@/lib/documentos/tipos";
+
+// Espaço de arquivos do plano do Supabase (projeto todo). Grátis = 1 GB;
+// no Pro, 100 GB incluídos: trocar aqui ao mudar de plano.
+const ESPACO_DO_PLANO = 1024 * 1024 * 1024;
 import { formatarBRL } from "@/lib/financeiro/types";
 import {
   porcentagem,
@@ -19,7 +24,12 @@ function dataCurta(iso: string): string {
 
 export default async function VisaoGeral() {
   await exigirAdmin();
-  const { data, error } = await createAdminClient().rpc("admin_indicadores");
+  const admin = createAdminClient();
+  const [{ data, error }, { data: espacoRaw }] = await Promise.all([
+    admin.rpc("admin_indicadores"),
+    admin.rpc("admin_espaco_documentos"),
+  ]);
+  const espaco = (espacoRaw as { usado: number; arquivos: number; contas: number; cota_conta: number }[] | null)?.[0];
   if (error || !data) {
     return (
       <div className="flex flex-col gap-6">
@@ -111,6 +121,29 @@ export default async function VisaoGeral() {
           ))}
         </ul>
       </section>
+
+      {espaco && (
+        <section className="card flex flex-col gap-3 sm:p-6">
+          <h2 className="text-lg font-semibold">Documentos (Storage)</h2>
+          <p className="text-sm text-slate-700">
+            {formatarTamanho(Number(espaco.usado))} de {formatarTamanho(ESPACO_DO_PLANO)} do plano do Supabase (projeto
+            todo) · {espaco.arquivos} arquivos em {espaco.contas} {Number(espaco.contas) === 1 ? "conta" : "contas"} ·
+            limite por conta: {formatarTamanho(Number(espaco.cota_conta))}
+          </p>
+          <span className="h-2 overflow-hidden rounded bg-slate-100" aria-hidden>
+            <span
+              className={`block h-full rounded ${Number(espaco.usado) > ESPACO_DO_PLANO * 0.8 ? "bg-red-600" : "bg-teal-700"}`}
+              style={{ width: `${Math.min(100, Math.round((Number(espaco.usado) / ESPACO_DO_PLANO) * 100))}%` }}
+            />
+          </span>
+          {Number(espaco.usado) > ESPACO_DO_PLANO * 0.8 && (
+            <p className="text-sm font-medium text-red-700">
+              Perto do limite do plano grátis: hora de passar para o Supabase Pro (e subir a cota por conta em
+              app_config.documentos_cota_mb).
+            </p>
+          )}
+        </section>
+      )}
     </div>
   );
 }

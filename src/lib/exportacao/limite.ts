@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type TipoExportacao = "conta" | "prontuario";
+export type TipoExportacao = "conta" | "prontuario" | "documentos";
 
 /**
  * Registra a exportação se estiver dentro do limite por minuto (rpc
