@@ -171,7 +171,7 @@ const rotasPrivadas = (x) => [
   "/pacientes", "/pacientes/novo", `/pacientes/${x.paciente}`, `/pacientes/${x.paciente}/editar`,
   `/pacientes/${x.paciente}/evolucoes`, `/pacientes/${x.paciente}/evolucoes/nova`,
   `/pacientes/${x.paciente}/evolucoes/${x.evolucao}`, `/pacientes/${x.paciente}/evolucoes/${x.evolucao}/editar`,
-  "/financeiro", "/financeiro/a-receber", "/financeiro/previsto", "/financeiro/novo", "/financeiro/historico", `/financeiro/${x.pagamento}`, `/financeiro/${x.pagamento}/editar`,
+  `/pacientes/${x.paciente}/financeiro`, "/financeiro", "/financeiro/a-receber", "/financeiro/previsto", "/financeiro/novo", "/financeiro/historico", `/financeiro/${x.pagamento}`, `/financeiro/${x.pagamento}/editar`,
   "/lembretes", "/assinatura", "/configuracoes", `/api/prontuario/${x.paciente}`,
 ];
 const curto = (p) => p.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/g, ":id");

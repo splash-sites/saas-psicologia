@@ -4,8 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { Phone, TriangleAlert } from "lucide-react";
-import { descricaoCobranca, type Anamnese, type Paciente } from "@/lib/pacientes/types";
-import { formatarBRL } from "@/lib/financeiro/types";
+import type { Anamnese, Paciente } from "@/lib/pacientes/types";
 import { whatsappLink } from "@/lib/pacientes/whatsapp";
 import { formatarCpf, formatarTelefoneBR } from "@/lib/pacientes/formatacao";
 import { StatusBadge } from "../StatusBadge";
@@ -13,6 +12,9 @@ import { excluirPaciente, salvarAnamnese } from "../actions";
 import { AnamneseForm } from "./AnamneseForm";
 import { registrarAcesso } from "@/lib/prontuario/acesso";
 import { carregarDocumentos, DocumentosLista } from "./documentos/DocumentosLista";
+import { resumoDoPaciente } from "@/lib/pacientes/resumo";
+import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
+import { FinanceiroPaciente, ResumoSessoes } from "./ResumoPaciente";
 
 function formatarData(iso: string | null): string {
   if (!iso) return "—";
@@ -40,7 +42,8 @@ export default async function PacienteDetailPage({
   if (!pacienteRow) notFound();
   const paciente = pacienteRow as Paciente;
 
-  const [{ data: anamneseRow }, { data: evolucoesRecentes }, , documentos, { data: permite }] = await Promise.all([
+  await gerarLancamentosDasSessoes(supabase);
+  const [{ data: anamneseRow }, { data: evolucoesRecentes }, , documentos, { data: permite }, resumo] = await Promise.all([
     supabase.from("anamneses").select("*").eq("paciente_id", id).maybeSingle(),
     supabase
       .from("evolucoes")
@@ -53,6 +56,7 @@ export default async function PacienteDetailPage({
     registrarAcesso(supabase, "ficha", id),
     carregarDocumentos(supabase, id),
     supabase.rpc("assinatura_permite_escrita", { p_psicologa_id: user.id }),
+    resumoDoPaciente(supabase, id),
   ]);
   // Data da sessão dos documentos anexados em evoluções (link "Sessão de DD/MM").
   const idsEvolucao = [...new Set(documentos.docs.map((d) => d.evolucao_id).filter((x): x is string => Boolean(x)))];
@@ -64,7 +68,7 @@ export default async function PacienteDetailPage({
   const wa = whatsappLink(paciente.telefone);
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-6">
+    <div className="flex w-full max-w-6xl flex-col gap-6">
       <CabecalhoPagina
         titulo={<span data-sensivel>{paciente.nome}</span>}
         voltar={{ href: "/pacientes", rotulo: "Pacientes" }}
@@ -98,7 +102,27 @@ export default async function PacienteDetailPage({
         }
       />
 
-      <section className="grid grid-cols-1 gap-x-6 gap-y-3 card text-sm sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+      <div className="flex min-w-0 flex-col gap-6">
+      {/* Celular: resumo no topo e atalhos para as seções (no computador fica na lateral). */}
+      <div className="flex flex-col gap-3 lg:hidden">
+        <ResumoSessoes r={resumo} />
+        <nav aria-label="Seções da ficha" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 text-sm">
+          {[
+            ["#dados", "Dados"],
+            ["#financeiro", "Financeiro"],
+            ["#anamnese", "Anamnese"],
+            ["#evolucoes", "Evoluções"],
+            ...(documentos.disponivel ? [["#documentos", "Documentos"]] : []),
+          ].map(([href, rotulo]) => (
+            <a key={href} href={href} className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700">
+              {rotulo}
+            </a>
+          ))}
+        </nav>
+      </div>
+
+      <section id="dados" className="grid scroll-mt-4 grid-cols-1 gap-x-6 gap-y-3 card text-sm sm:grid-cols-2">
         <Dado rotulo="E-mail" valor={paciente.email} />
         <Dado
           rotulo="Telefone"
@@ -114,26 +138,9 @@ export default async function PacienteDetailPage({
 
       <ContatoEmergencia paciente={paciente} />
 
-      <section className="grid grid-cols-1 gap-x-6 gap-y-3 card text-sm sm:grid-cols-2">
-        <h2 className="font-medium sm:col-span-2">Cobrança</h2>
-        <Dado
-          rotulo="Valor da sessão"
-          valor={paciente.valor_sessao !== null ? formatarBRL(Number(paciente.valor_sessao)) : "Sem valor (atendimento sem cobrança)"}
-          sensivel
-        />
-        <Dado rotulo="Forma de cobrança" valor={descricaoCobranca(paciente)} />
-        {paciente.responsavel_nome && (
-          <div className="flex flex-col gap-1 sm:col-span-2">
-            <span className="text-xs text-slate-500">Quem paga as sessões</span>
-            <span data-sensivel>
-              {paciente.responsavel_nome}
-              {paciente.responsavel_relacao && ` (${paciente.responsavel_relacao})`}
-              {paciente.responsavel_cpf && ` · CPF ${formatarCpf(paciente.responsavel_cpf)}`}
-              {paciente.responsavel_telefone && ` · ${formatarTelefoneBR(paciente.responsavel_telefone)}`}
-            </span>
-          </div>
-        )}
-      </section>
+      <div id="financeiro" className="scroll-mt-4 lg:hidden">
+        <FinanceiroPaciente paciente={paciente} r={resumo} limite={5} />
+      </div>
 
       {paciente.observacoes && (
         <section className="flex flex-col gap-1 text-sm">
@@ -144,7 +151,7 @@ export default async function PacienteDetailPage({
         </section>
       )}
 
-      <section className="flex flex-col gap-3">
+      <section id="anamnese" className="flex scroll-mt-4 flex-col gap-3">
         <h2 className="font-medium">Anamnese / avaliação inicial</h2>
         <AnamneseForm
           action={salvarAnamnese.bind(null, id)}
@@ -152,7 +159,7 @@ export default async function PacienteDetailPage({
         />
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section id="evolucoes" className="flex scroll-mt-4 flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-medium">Evoluções</h2>
           <div className="flex gap-2 text-sm">
@@ -189,7 +196,7 @@ export default async function PacienteDetailPage({
       </section>
 
       {documentos.disponivel && (
-        <section className="flex flex-col gap-3">
+        <section id="documentos" className="flex scroll-mt-4 flex-col gap-3">
           <h2 className="font-medium">Documentos</h2>
           <DocumentosLista
             pacienteId={id}
@@ -216,6 +223,14 @@ export default async function PacienteDetailPage({
           5 anos.
         </p>
       </section>
+      </div>
+
+      {/* Computador: lateral fixa ao rolar. */}
+      <aside className="hidden flex-col gap-4 lg:sticky lg:top-6 lg:flex">
+        <ResumoSessoes r={resumo} />
+        <FinanceiroPaciente paciente={paciente} r={resumo} limite={10} />
+      </aside>
+      </div>
     </div>
   );
 }
