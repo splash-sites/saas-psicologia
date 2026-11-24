@@ -245,16 +245,23 @@ export default async function DashboardPage() {
   };
 
   // Lembretes a enviar: consultas do dia-alvo com paciente que aceita, telefone
-  // válido e sem registro de envio para o horário atual.
-  const lembretesAEnviar = todas.filter((c) => {
-    if (c.status !== "agendada" || c.inicio < alvo.inicio || c.inicio >= alvo.fim) return false;
+  // válido e sem registro de envio para o horário atual. Contam também as que
+  // ficaram sem lembrete antes do dia-alvo e ainda não começaram (atrasados).
+  const semLembrete = (c: ConsultaPainel) => {
     const p = unico(c.pacientes);
     if (!p?.aceita_lembretes || !whatsappLink(p.telefone)) return false;
     const enviadoPara = unico(c.lembretes)?.consulta_inicio;
     return !(
       enviadoPara && new Date(enviadoPara).getTime() === new Date(c.inicio).getTime()
     );
-  }).length;
+  };
+  const lembretesDoAlvo = todas.filter(
+    (c) => c.status === "agendada" && c.inicio >= alvo.inicio && c.inicio < alvo.fim && semLembrete(c),
+  ).length;
+  const lembretesAtrasados = todas.filter(
+    (c) => c.status === "agendada" && new Date(c.inicio) > agora && c.inicio < alvo.inicio && semLembrete(c),
+  ).length;
+  const lembretesAEnviar = lembretesDoAlvo + lembretesAtrasados;
 
   const pendentes = consultasSemEvolucao(
     passadas,
@@ -347,7 +354,8 @@ export default async function DashboardPage() {
           rotulo="Lembretes a enviar"
           valor={lembretesAEnviar > 0 ? String(lembretesAEnviar) : null}
           href="/lembretes"
-          destaque={lembretesAEnviar > 0 ? "amber" : undefined}
+          destaque={lembretesAtrasados > 0 ? "red" : lembretesAEnviar > 0 ? "amber" : undefined}
+          sub={lembretesAtrasados > 0 ? `${lembretesAtrasados} atrasado${lembretesAtrasados === 1 ? "" : "s"}` : undefined}
         />
         <Indicador
           rotulo="Recebido no mês"
