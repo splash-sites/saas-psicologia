@@ -15,7 +15,7 @@ import { PacienteSelect } from "@/components/PacienteSelect";
 import { CampoValorConsulta } from "./CampoValorConsulta";
 import type { FormState } from "./actions";
 import { LIMITES } from "@/lib/limites";
-import { brWallTimeToDate, dataChaveBR, gerarOcorrencias, hojeBR } from "@/lib/agenda/datas";
+import { brWallTimeToDate, dataChaveBR, dataUtil, gerarOcorrencias, hojeBR } from "@/lib/agenda/datas";
 import { avisoFeriados, feriadosDasSessoes, type PreferenciaFeriados } from "@/lib/feriados";
 import type { Recorrencia } from "@/lib/agenda/types";
 import { AvisoFeriado } from "./AvisoFeriado";
@@ -35,7 +35,7 @@ type Props = {
 function datasDoFormulario(form: HTMLFormElement): string[] {
   const fd = new FormData(form);
   const data = String(fd.get("data") ?? "");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return [];
+  if (!dataUtil(data)) return [];
   const hora = /^\d{2}:\d{2}$/.test(String(fd.get("hora") ?? "")) ? String(fd.get("hora")) : "12:00";
   const recorrencia = String(fd.get("recorrencia") ?? "nenhuma") as Recorrencia;
   const n = Math.min(Math.max(Number(fd.get("ocorrencias")) || 1, 1), LIMITES.consulta.ocorrenciasMax);
@@ -139,7 +139,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriad
 
       {/* Chegando pelo clique num horário da agenda, a prévia vem fechada. */}
       <PreviaSemana
-        data={dataSel || hojeBR()}
+        data={dataUtil(dataSel) ? dataSel : hojeBR()}
         hora={horaSel}
         abertoInicial={!horaPadrao}
         onEscolher={(d, h) => {

@@ -17,6 +17,7 @@ import { LIMITES } from "@/lib/limites";
 import { avisoFeriados, feriadosDasSessoes, type PreferenciaFeriados } from "@/lib/feriados";
 import { AvisoFeriado } from "./AvisoFeriado";
 import { PreviaSemana } from "./PreviaSemana";
+import { dataUtil } from "@/lib/agenda/datas";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -51,7 +52,7 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref, consultaId, f
   const [hora, setHora] = useState(defaults.hora);
   const dataRef = useRef<HTMLInputElement>(null);
   const horaRef = useRef<HTMLInputElement>(null);
-  const aviso = status === "agendada" ? avisoFeriados(feriadosDasSessoes(data ? [data] : [], feriados), 1) : null;
+  const aviso = status === "agendada" ? avisoFeriados(feriadosDasSessoes(dataUtil(data) ? [data] : [], feriados), 1) : null;
 
   return (
     <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
@@ -108,7 +109,7 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref, consultaId, f
       </div>
 
       <PreviaSemana
-        data={data}
+        data={dataUtil(data) ? data : defaults.data}
         hora={hora}
         ignorarConsultaId={consultaId}
         abertoInicial={false}

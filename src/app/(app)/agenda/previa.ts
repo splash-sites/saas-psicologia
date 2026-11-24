@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import { addDias, brWallTimeToDate, dataChaveBR, diasDaSemana, segundaDaSemana } from "@/lib/agenda/datas";
+import { addDias, brWallTimeToDate, dataChaveBR, dataUtil, diasDaSemana, segundaDaSemana } from "@/lib/agenda/datas";
 import { minutosNoDiaBR } from "@/lib/agenda/grade";
 import { diasDoBloqueio } from "@/lib/agenda/bloqueios";
 import { feriadosDaPsicologa, rotuloFeriado } from "@/lib/feriados";
@@ -32,7 +32,7 @@ const um = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? nul
 
 export async function semanaParaPrevia(data: string, ignorarConsultaId?: string): Promise<SemanaPrevia | null> {
   const user = await usuarioAtual();
-  if (!user || !/^\d{4}-\d{2}-\d{2}$/.test(data)) return null;
+  if (!user || !dataUtil(data)) return null;
   const supabase = await createClient();
 
   const segunda = segundaDaSemana(brWallTimeToDate(data, "12:00"));

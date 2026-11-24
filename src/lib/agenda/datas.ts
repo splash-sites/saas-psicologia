@@ -117,6 +117,17 @@ const FMT_CHAVE = new Intl.DateTimeFormat("en-CA", {
   timeZone: "America/Sao_Paulo",
 });
 
+/**
+ * Data completa e plausível (AAAA-MM-DD, ano 1900–2100). Enquanto a pessoa
+ * digita no campo de data, o navegador passa por valores como "0002-11-26";
+ * calcular feriado ou semana com isso quebrava a tela.
+ */
+export function dataUtil(v: string | null | undefined): v is string {
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const ano = Number(v.slice(0, 4));
+  return ano >= 1900 && ano <= 2100 && !Number.isNaN(new Date(`${v}T12:00:00Z`).getTime());
+}
+
 /** Data no fuso de Brasília como YYYY-MM-DD — chave para agrupar por dia. */
 export function dataChaveBR(iso: string): string {
   return FMT_CHAVE.format(new Date(iso));

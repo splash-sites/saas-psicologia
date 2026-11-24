@@ -161,6 +161,7 @@ const cache = new Map<string, Map<string, Feriado>>();
 
 /** Feriados do ano (nacionais + do estado), um por dia: feriado vence ponto facultativo. */
 export function feriadosDoAno(ano: number, uf?: UF | null): Map<string, Feriado> {
+  if (!Number.isInteger(ano) || ano < 1900 || ano > 2100) return new Map();
   const chave = `${ano}-${uf ?? ""}`;
   const pronto = cache.get(chave);
   if (pronto) return pronto;
@@ -187,6 +188,7 @@ export function feriadosDoAno(ano: number, uf?: UF | null): Map<string, Feriado>
 
 /** Feriado (ou ponto facultativo) do dia AAAA-MM-DD, se houver. */
 export function feriadoDoDia(data: string, uf?: UF | null): Feriado | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return null;
   return feriadosDoAno(Number(data.slice(0, 4)), uf).get(data) ?? null;
 }
 

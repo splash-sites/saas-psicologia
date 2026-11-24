@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
-import { addDias } from "@/lib/agenda/datas";
+import { addDias, dataUtil } from "@/lib/agenda/datas";
 import { semanaParaPrevia, type SemanaPrevia } from "./previa";
 
 const DIA_CURTO = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -37,7 +37,7 @@ export function PreviaSemana({ data, hora, onEscolher, ignorarConsultaId, aberto
     setDataBase(data);
     setDeslocamento(0);
   }
-  const alvo = /^\d{4}-\d{2}-\d{2}$/.test(dataBase) ? addDias(dataBase, deslocamento * 7) : null;
+  const alvo = dataUtil(dataBase) ? addDias(dataBase, deslocamento * 7) : null;
 
   useEffect(() => {
     if (!aberto || !alvo) return;

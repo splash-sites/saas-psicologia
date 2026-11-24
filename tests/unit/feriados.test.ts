@@ -9,6 +9,7 @@ import {
   rotuloFeriado,
   ufValida,
 } from "@/lib/feriados";
+import { dataUtil } from "@/lib/agenda/datas";
 
 // Entrega E (0038): feriados calculados no código.
 
@@ -53,6 +54,16 @@ describe("feriados nacionais e móveis", () => {
 
   it("dia comum não é feriado", () => {
     expect(feriadoDoDia("2026-11-24")).toBeNull();
+  });
+
+  it("data incompleta (digitando o ano) não quebra", () => {
+    expect(feriadoDoDia("0002-11-26")).toBeNull();
+    expect(feriadoDoDia("")).toBeNull();
+    expect(feriadosDoAno(Number.NaN).size).toBe(0);
+    expect(dataUtil("0002-11-26")).toBe(false);
+    expect(dataUtil("2026-02-30")).toBe(true); // o navegador nunca manda; o servidor recusa
+    expect(dataUtil("2026-11-26")).toBe(true);
+    expect(dataUtil(undefined)).toBe(false);
   });
 });
 
