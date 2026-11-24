@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { CampoValorConsulta } from "./CampoValorConsulta";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import { useValidacao } from "@/lib/form/validacao";
@@ -16,6 +16,7 @@ import type { FormState } from "./actions";
 import { LIMITES } from "@/lib/limites";
 import { avisoFeriados, feriadosDasSessoes, type PreferenciaFeriados } from "@/lib/feriados";
 import { AvisoFeriado } from "./AvisoFeriado";
+import { PreviaSemana } from "./PreviaSemana";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -30,12 +31,14 @@ type Props = {
     cobrar: boolean;
   };
   cancelHref: string;
+  /** A própria consulta não aparece como ocupada na prévia da semana. */
+  consultaId?: string;
   /** Estado e "mostrar feriados" da psicóloga (0038). */
   feriados?: PreferenciaFeriados;
 };
 
 
-export function ConsultaEdicaoForm({ action, defaults, cancelHref, feriados }: Props) {
+export function ConsultaEdicaoForm({ action, defaults, cancelHref, consultaId, feriados }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
     {},
@@ -45,6 +48,9 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref, feriados }: P
   const [valor, setValor] = useState(defaults.valor != null ? String(defaults.valor) : "");
   const [status, setStatus] = useState(defaults.status);
   const [data, setData] = useState(defaults.data);
+  const [hora, setHora] = useState(defaults.hora);
+  const dataRef = useRef<HTMLInputElement>(null);
+  const horaRef = useRef<HTMLInputElement>(null);
   const aviso = status === "agendada" ? avisoFeriados(feriadosDasSessoes(data ? [data] : [], feriados), 1) : null;
 
   return (
@@ -59,6 +65,7 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref, feriados }: P
         <label className="flex flex-col gap-1 text-sm">
           Data
           <input
+            ref={dataRef}
             name="data"
             type="date"
             defaultValue={defaults.data}
@@ -71,9 +78,11 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref, feriados }: P
         <label className="flex flex-col gap-1 text-sm">
           Hora
           <input
+            ref={horaRef}
             name="hora"
             type="time"
             defaultValue={defaults.hora}
+            onChange={(e) => setHora(e.target.value)}
             required
             className="input"
           />
@@ -97,6 +106,20 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref, feriados }: P
           <ErroCampo nome="duracao_min" cliente={erros} servidor={fe.duracao_min} />
         </label>
       </div>
+
+      <PreviaSemana
+        data={data}
+        hora={hora}
+        ignorarConsultaId={consultaId}
+        abertoInicial={false}
+        onEscolher={(d, h) => {
+          if (dataRef.current) dataRef.current.value = d;
+          if (horaRef.current) horaRef.current.value = h;
+          setData(d);
+          setHora(h);
+          horaRef.current?.focus();
+        }}
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">

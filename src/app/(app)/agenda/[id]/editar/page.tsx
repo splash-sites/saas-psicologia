@@ -36,6 +36,7 @@ export default async function EditarConsultaPage({
       <ConsultaEdicaoForm
         action={atualizarConsulta.bind(null, id)}
         cancelHref={`/agenda/${id}`}
+        consultaId={id}
         feriados={psicologa}
         defaults={{
           data: dataChaveBR(c.inicio),

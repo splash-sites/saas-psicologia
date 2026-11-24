@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { enviarSemLimpar } from "@/lib/form/enviarSemLimpar";
 import { useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
@@ -15,10 +15,11 @@ import { PacienteSelect } from "@/components/PacienteSelect";
 import { CampoValorConsulta } from "./CampoValorConsulta";
 import type { FormState } from "./actions";
 import { LIMITES } from "@/lib/limites";
-import { brWallTimeToDate, dataChaveBR, gerarOcorrencias } from "@/lib/agenda/datas";
+import { brWallTimeToDate, dataChaveBR, gerarOcorrencias, hojeBR } from "@/lib/agenda/datas";
 import { avisoFeriados, feriadosDasSessoes, type PreferenciaFeriados } from "@/lib/feriados";
 import type { Recorrencia } from "@/lib/agenda/types";
 import { AvisoFeriado } from "./AvisoFeriado";
+import { PreviaSemana } from "./PreviaSemana";
 
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -57,6 +58,11 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriad
   // Datas das sessões, para o aviso de feriado (só informa; deixa marcar).
   const [datas, setDatas] = useState<string[]>(dataPadrao ? [dataPadrao] : []);
   const aviso = avisoFeriados(feriadosDasSessoes(datas, feriados), datas.length);
+  // Data e hora escolhidas, para a prévia da semana (e para ela preencher).
+  const [dataSel, setDataSel] = useState(dataPadrao ?? "");
+  const [horaSel, setHoraSel] = useState(horaPadrao ?? "");
+  const dataRef = useRef<HTMLInputElement>(null);
+  const horaRef = useRef<HTMLInputElement>(null);
 
   return (
     <form
@@ -64,6 +70,8 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriad
       onChange={(e) => {
         formProps.onChange(e);
         setDatas(datasDoFormulario(e.currentTarget));
+        setDataSel(dataRef.current?.value ?? "");
+        setHoraSel(horaRef.current?.value ?? "");
       }}
       onSubmit={enviarSemLimpar(formAction)}
       className="flex flex-col gap-4"
@@ -89,6 +97,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriad
         <label className="flex flex-col gap-1 text-sm">
           Data *
           <input
+            ref={dataRef}
             name="data"
             type="date"
             defaultValue={dataPadrao}
@@ -100,6 +109,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriad
         <label className="flex flex-col gap-1 text-sm">
           Hora *
           <input
+            ref={horaRef}
             name="hora"
             type="time"
             defaultValue={horaPadrao}
@@ -126,6 +136,22 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriad
           <ErroCampo nome="duracao_min" cliente={erros} servidor={fe.duracao_min} />
         </label>
       </div>
+
+      {/* Chegando pelo clique num horário da agenda, a prévia vem fechada. */}
+      <PreviaSemana
+        data={dataSel || hojeBR()}
+        hora={horaSel}
+        abertoInicial={!horaPadrao}
+        onEscolher={(d, h) => {
+          if (dataRef.current) dataRef.current.value = d;
+          if (horaRef.current) horaRef.current.value = h;
+          setDataSel(d);
+          setHoraSel(h);
+          const form = dataRef.current?.form;
+          if (form) setDatas(datasDoFormulario(form));
+          horaRef.current?.focus();
+        }}
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
