@@ -6,7 +6,10 @@
 --     ocorrência, ligadas por serie_id, como as consultas;
 --   * motivo obrigatório nos bloqueios novos (os antigos sem motivo ficam);
 --   * vai para o Google Agenda da psicóloga ("Bloqueado: <motivo>"), por isso
---     google_event_id/sync_* como nas consultas.
+--     google_event_id/sync_* como nas consultas;
+--   * bloqueios podem se sobrepor entre si (férias por cima do futevôlei de
+--     toda terça; decisão do usuário em 2026-11-24): o app avisa antes de
+--     salvar. A regra continua só entre bloqueio e consulta.
 -- Bloqueio não é dado clínico: continua com exclusão física.
 -- Aplicar no SQL Editor de produção ANTES do push. Idempotente.
 
@@ -18,6 +21,8 @@ alter table public.bloqueios
   add column if not exists sync_status public.sync_status not null default 'pendente',
   add column if not exists sync_erro text,
   add column if not exists sync_em timestamptz;
+
+alter table public.bloqueios drop constraint if exists bloqueios_sem_sobreposicao;
 
 create index if not exists bloqueios_serie_idx on public.bloqueios (serie_id) where serie_id is not null;
 -- A agenda busca por sobreposição (início antes do fim da semana e fim depois do início).

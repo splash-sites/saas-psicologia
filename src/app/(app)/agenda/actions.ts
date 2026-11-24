@@ -25,13 +25,15 @@ import {
   sincronizarConsulta,
   sincronizarConsultas,
 } from "@/lib/agenda/sync";
-import { intervalosDoBloqueio } from "@/lib/agenda/bloqueios";
+import { horarioDoBloqueio, intervalosDoBloqueio } from "@/lib/agenda/bloqueios";
 
 export type FormState = {
   error?: string;
   fieldErrors?: Record<string, string[]>;
   /** Bloqueio: consultas no período, para a psicóloga confirmar o cancelamento. */
   conflitos?: { id: string; quando: string; paciente: string }[];
+  /** Bloqueio: outros bloqueios no período (podem se sobrepor; só avisa). */
+  sobrepostos?: { id: string; quando: string; motivo: string }[];
 };
 
 async function requirePsicologa() {
@@ -385,7 +387,7 @@ export async function criarBloqueio(
   const agoraISO = new Date().toISOString();
 
   const [{ data: outros }, { data: consultas }] = await Promise.all([
-    supabase.from("bloqueios").select("inicio, fim").lt("inicio", max).gt("fim", min),
+    supabase.from("bloqueios").select("id, inicio, fim, motivo, dia_inteiro").lt("inicio", max).gt("fim", min).order("inicio"),
     // Só as que ainda vão acontecer: sessão passada no período não impede.
     supabase
       .from("consultas")
@@ -398,19 +400,21 @@ export async function criarBloqueio(
       .order("inicio"),
   ]);
 
-  const jaBloqueados = slots.filter((s) => (outros ?? []).some((o) => sobrepoe(s.inicio, s.fim, o.inicio, o.fim)));
-  if (jaBloqueados.length > 0) {
-    return { error: `Já existe bloqueio em: ${listaDatas(jaBloqueados)}. Remova o outro bloqueio ou ajuste o período.` };
-  }
-
-  const afetadas = (consultas ?? []).filter((c) => slots.some((s) => sobrepoe(s.inicio, s.fim, c.inicio, c.fim)));
-  if (afetadas.length > 0 && !v.cancelar_consultas) {
+  // Bloqueios podem se sobrepor (férias por cima do futevôlei de terça): só avisa.
+  const sobrepostos = (outros ?? []).filter((o) => slots.some((x) => sobrepoe(x.inicio, x.fim, o.inicio, o.fim)));
+  const afetadas = (consultas ?? []).filter((c) => slots.some((x) => sobrepoe(x.inicio, x.fim, c.inicio, c.fim)));
+  if ((afetadas.length > 0 || sobrepostos.length > 0) && !v.cancelar_consultas) {
     return {
       conflitos: afetadas.map((c) => {
         const p = c.pacientes as { nome: string } | { nome: string }[] | null;
         const nome = (Array.isArray(p) ? p[0]?.nome : p?.nome) ?? "Paciente";
         return { id: c.id as string, quando: `${dataBR(c.inicio as string)} ${horaBR(c.inicio as string)}`, paciente: nome };
       }),
+      sobrepostos: sobrepostos.map((o) => ({
+        id: o.id as string,
+        quando: `${dataBR(o.inicio as string)} · ${horarioDoBloqueio(o as { inicio: string; fim: string; dia_inteiro: boolean })}`,
+        motivo: (o.motivo as string | null) ?? "Sem motivo",
+      })),
     };
   }
 
@@ -431,9 +435,6 @@ export async function criarBloqueio(
     .select("id");
 
   if (error) {
-    if (error.code === "23P01") {
-      return { error: "Esse período já está bloqueado." };
-    }
     return { error: await mensagemErroEscrita(supabase, error, "Não foi possível criar o bloqueio.") };
   }
 

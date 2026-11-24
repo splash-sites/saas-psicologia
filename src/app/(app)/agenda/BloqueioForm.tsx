@@ -24,9 +24,11 @@ export function BloqueioForm({ action }: Props) {
   const [diaInteiro, setDiaInteiro] = useState(false);
   const [recorrencia, setRecorrencia] = useState<Recorrencia>("nenhuma");
   const [data, setData] = useState(hojeBR());
-  // A lista de consultas some se a pessoa mexer no formulário (pode não valer mais).
-  const [conflitosVistos, setConflitosVistos] = useState<FormState["conflitos"]>(undefined);
-  const conflitos = state.conflitos && state.conflitos !== conflitosVistos ? state.conflitos : undefined;
+  // O aviso some se a pessoa mexer no formulário (pode não valer mais).
+  const [avisoVisto, setAvisoVisto] = useState<FormState | undefined>(undefined);
+  const aviso = state !== avisoVisto && (state.conflitos?.length || state.sobrepostos?.length) ? state : undefined;
+  const conflitos = aviso?.conflitos ?? [];
+  const sobrepostos = aviso?.sobrepostos ?? [];
   const limite = data ? addDias(data, MAX_DIAS_BLOQUEIO) : undefined;
   const recorrente = recorrencia !== "nenhuma";
 
@@ -34,7 +36,7 @@ export function BloqueioForm({ action }: Props) {
     <form
       {...formProps}
       onInput={(e) => {
-        if (state.conflitos) setConflitosVistos(state.conflitos);
+        if (aviso) setAvisoVisto(state);
         formProps.onInput(e);
       }}
       onSubmit={enviarSemLimpar(formAction)}
@@ -136,34 +138,58 @@ export function BloqueioForm({ action }: Props) {
         )}
       </div>
 
-      {conflitos && conflitos.length > 0 && (
-        <section className="flex flex-col gap-2 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" role="alert">
-          <p className="flex items-center gap-2 font-medium">
-            <TriangleAlert className="size-4 shrink-0" aria-hidden />
-            {conflitos.length === 1 ? "Há 1 consulta nesse período:" : `Há ${conflitos.length} consultas nesse período:`}
-          </p>
-          <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto pl-6">
-            {conflitos.map((c) => (
-              <li key={c.id}>
-                {c.quando} · <span data-sensivel>{c.paciente}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-xs text-amber-900">
-            Ao bloquear, elas são canceladas. Quem é convidado pelo Google Agenda recebe o aviso de cancelamento.
-          </p>
+      {aviso && (
+        <section className="flex flex-col gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" role="alert">
+          {sobrepostos.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="flex items-center gap-2 font-medium">
+                <TriangleAlert className="size-4 shrink-0" aria-hidden />
+                {sobrepostos.length === 1
+                  ? "Já existe 1 bloqueio nesse período:"
+                  : `Já existem ${sobrepostos.length} bloqueios nesse período:`}
+              </p>
+              <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto pl-6">
+                {sobrepostos.map((b) => (
+                  <li key={b.id}>
+                    {b.quando} · {b.motivo}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-amber-900">
+                {sobrepostos.length === 1 ? "Ele continua" : "Eles continuam"} na agenda junto com o novo bloqueio.
+              </p>
+            </div>
+          )}
+          {conflitos.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="flex items-center gap-2 font-medium">
+                <TriangleAlert className="size-4 shrink-0" aria-hidden />
+                {conflitos.length === 1 ? "Há 1 consulta nesse período:" : `Há ${conflitos.length} consultas nesse período:`}
+              </p>
+              <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto pl-6">
+                {conflitos.map((c) => (
+                  <li key={c.id}>
+                    {c.quando} · <span data-sensivel>{c.paciente}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-amber-900">
+                Ao bloquear, elas são canceladas. Quem é convidado pelo Google Agenda recebe o aviso de cancelamento.
+              </p>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
             <button type="submit" name="cancelar_consultas" value="on" disabled={pending} className="btn btn-primary btn-sm">
-              {pending ? "Salvando..." : "Bloquear e cancelar essas consultas"}
+              {pending ? "Salvando..." : conflitos.length > 0 ? "Bloquear e cancelar essas consultas" : "Bloquear mesmo assim"}
             </button>
-            <button type="button" onClick={() => setConflitosVistos(state.conflitos)} className="btn btn-outline btn-sm">
+            <button type="button" onClick={() => setAvisoVisto(state)} className="btn btn-outline btn-sm">
               Voltar
             </button>
           </div>
         </section>
       )}
 
-      {!conflitos && (
+      {!aviso && (
         <div className="flex gap-3">
           <button type="submit" disabled={pending} className="btn btn-primary">
             {pending ? "Salvando..." : "Bloquear"}

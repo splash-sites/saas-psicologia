@@ -72,7 +72,8 @@ export default async function FinanceiroPage({
       : Promise.resolve({ data: null }),
     supabase.rpc("em_aberto_por_paciente", { p_hoje: hoje }),
   ]);
-  const previsto = (resumo as { previsto: number; sessoes_previstas: number }[] | null)?.[0] ?? null;
+  const previsto =
+    (resumo as { a_receber: number; previsto: number; sessoes_previstas: number }[] | null)?.[0] ?? null;
   const emAberto = (abertos ?? []) as EmAberto[];
 
   const lista = (doMes ?? []) as unknown as Linha[];
@@ -80,9 +81,10 @@ export default async function FinanceiroPage({
     (s, r) => s + Number(r.valor),
     0,
   );
-  const aReceber = lista
-    .filter((l) => l.status === "pendente")
-    .reduce((s, l) => s + Number(l.valor), 0);
+  // Mês atual ou futuro: só o que já aconteceu (o resto está no previsto, 0037).
+  const aReceber = previsto
+    ? Number(previsto.a_receber)
+    : lista.filter((l) => l.status === "pendente").reduce((s, l) => s + Number(l.valor), 0);
   const atrasados = lista.filter(
     (l) => statusExibicao(l, hoje) === "atrasado",
   ).length;
@@ -114,7 +116,7 @@ export default async function FinanceiroPage({
 
       <div className={`grid grid-cols-2 gap-3 ${previsto ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
         <Tile rotulo="Recebido no mês" valor={formatarBRL(recebidoNoMes)} tom="green" />
-        <Tile rotulo="A receber no mês" valor={formatarBRL(aReceber)} tom="amber" />
+        <Tile rotulo={previsto ? "A receber (sessões realizadas)" : "A receber no mês"} valor={formatarBRL(aReceber)} tom="amber" />
         {previsto && (
           <Tile
             rotulo={`Previsto até o fim do mês (${previsto.sessoes_previstas} ${previsto.sessoes_previstas === 1 ? "sessão" : "sessões"})`}

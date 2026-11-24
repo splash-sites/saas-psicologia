@@ -23,17 +23,17 @@ describe.skipIf(!hasLocalSupabase)("Bloqueios (0036)", () => {
     expect(data).toEqual({ motivo: "Curso", dia_inteiro: false, recorrencia: "nenhuma", sync_status: "pendente" });
   });
 
-  it("férias num bloqueio só e série recorrente com serie_id; sem sobrepor outro bloqueio", async () => {
+  it("férias num bloqueio só e série recorrente com serie_id; bloqueios podem se sobrepor", async () => {
     const { u, c } = await conta("bloq2");
     const ferias = await c.from("bloqueios").insert({
       psicologa_id: u.id, inicio: dia("2027-01-10"), fim: dia("2027-01-21"), motivo: "Férias", dia_inteiro: true,
     });
     expect(ferias.error).toBeNull();
-    // Um horário dentro das férias: recusado pela exclusão entre bloqueios.
+    // Um horário dentro das férias (futevôlei de terça): aceito, os dois ficam.
     const dentro = await c.from("bloqueios").insert({
       psicologa_id: u.id, inicio: dia("2027-01-12", "14:00"), fim: dia("2027-01-12", "15:00"), motivo: "Curso",
     });
-    expect(dentro.error?.code).toBe("23P01");
+    expect(dentro.error).toBeNull();
     // Mais de 1 ano num bloqueio só: recusado.
     const longo = await c.from("bloqueios").insert({
       psicologa_id: u.id, inicio: dia("2028-01-01"), fim: dia("2029-01-05"), motivo: "Sabático", dia_inteiro: true,

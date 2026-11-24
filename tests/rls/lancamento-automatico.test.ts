@@ -215,6 +215,40 @@ describe.skipIf(!hasLocalSupabase)("Lançamento automático das sessões (0035)"
     }
   });
 
+  it("0037: a receber só do que já aconteceu; sessão futura conta uma vez no previsto", async () => {
+    const { u, c } = await conta("lanc10");
+    const p = await paciente(c, u.id);
+    const lancar = (extra: Record<string, unknown>) =>
+      c.from("pagamentos").insert({ psicologa_id: u.id, paciente_id: p, ...extra }).then(({ error }) => {
+        if (error) throw error;
+      });
+    // Sessão passada: o trigger cria o "a receber" de 200.
+    await consulta(c, u.id, p, -2 * HORA - 50 * 60_000);
+    // Caso relatado: sessão futura com "ainda vou receber" lançado à mão.
+    const futura = await consulta(c, u.id, p, 2 * DIA, { valor: 150 });
+    await lancar({ consulta_id: futura, valor: 150, data_referencia: diaBR(2 * DIA), vencimento: diaBR(2 * DIA) });
+    // Paga adiantado: fica em "Recebido", fora do previsto.
+    const adiantada = await consulta(c, u.id, p, 3 * DIA, { valor: 120 });
+    await lancar({
+      consulta_id: adiantada, valor: 120, status: "pago", data_referencia: diaBR(3 * DIA),
+      vencimento: diaBR(3 * DIA), data_pagamento: diaBR(0), forma_pagamento: "pix",
+    });
+    // Marcada, sem lançamento.
+    await consulta(c, u.id, p, 4 * DIA, { valor: 100 });
+    // Manuais sem consulta: hoje (a receber) e daqui a 5 dias (previsto).
+    await lancar({ valor: 30, data_referencia: diaBR(0), vencimento: diaBR(0) });
+    await lancar({ valor: 50, data_referencia: diaBR(5 * DIA), vencimento: diaBR(5 * DIA) });
+
+    const { data, error } = await c.rpc("resumo_sessoes_mes", {
+      p_inicio: diaBR(-10 * DIA), p_fim: diaBR(10 * DIA), p_agora: new Date().toISOString(),
+    });
+    expect(error).toBeNull();
+    const r = (data as { a_receber: number; previsto: number; sessoes_previstas: number }[])[0];
+    expect(Number(r.a_receber)).toBe(230);
+    expect(Number(r.previsto)).toBe(300);
+    expect(r.sessoes_previstas).toBe(2);
+  });
+
   it.skipIf(!hasAdmin)("service role (cron) gera para todas as contas", async () => {
     const { u, c } = await conta("lanc9");
     const p = await paciente(c, u.id);
