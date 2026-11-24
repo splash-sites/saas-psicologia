@@ -140,10 +140,15 @@ test("cadastro de paciente válido padroniza os dados", async () => {
 });
 
 test("anamnese salva", async () => {
+  // Em leitura por padrão (2026-11-24): vazia, abre por "Preencher anamnese".
+  await page.getByRole("button", { name: "Preencher anamnese" }).click();
   await page.locator('[name="demanda"]').fill("Ansiedade no trabalho");
   await page.locator('[name="objetivos"]').fill("Reduzir crises");
   await enviar(page, "objetivos");
+  await expect(page.getByText("Anamnese salva.")).toBeVisible();
   await page.reload();
+  await expect(page.getByText("Ansiedade no trabalho")).toBeVisible();
+  await page.getByRole("button", { name: "Editar anamnese" }).click();
   await expect(page.locator('[name="demanda"]')).toHaveValue("Ansiedade no trabalho");
 });
 

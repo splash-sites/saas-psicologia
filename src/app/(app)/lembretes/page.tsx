@@ -63,11 +63,15 @@ export default async function LembretesPage({
   const user = await usuarioAtual();
   if (!user) redirect("/login");
 
-  const { data: pref } = await supabase
-    .from("preferencias_lembrete")
-    .select("antecedencia_horas, mensagem_template")
-    .eq("psicologa_id", user.id)
+  // Uma consulta só: link fixo + preferências de lembrete embutidas.
+  const { data: psicologa } = await supabase
+    .from("psicologas")
+    .select("link_atendimento_online, preferencias_lembrete(antecedencia_horas, mensagem_template)")
+    .eq("id", user.id)
     .maybeSingle();
+  type Pref = { antecedencia_horas: number; mensagem_template: string | null };
+  const prefRaw = psicologa?.preferencias_lembrete as Pref | Pref[] | null | undefined;
+  const pref = Array.isArray(prefRaw) ? (prefRaw[0] ?? null) : (prefRaw ?? null);
 
   const agora = new Date();
   const hoje = hojeBR();
@@ -86,12 +90,11 @@ export default async function LembretesPage({
       .select("id, inicio, modalidade, meet_link, pacientes(id, nome, telefone, aceita_lembretes)")
       .eq("status", "agendada")
       .is("deleted_at", null);
-  const [{ data: consultasRaw }, { data: atrasadasRaw }, { data: psicologa }] = await Promise.all([
+  const [{ data: consultasRaw }, { data: atrasadasRaw }] = await Promise.all([
     selecionar().gte("inicio", inicio).lt("inicio", fim).order("inicio"),
     noPadrao
       ? selecionar().gt("inicio", agora.toISOString()).lt("inicio", inicioAlvo).order("inicio")
       : Promise.resolve({ data: [] }),
-    supabase.from("psicologas").select("link_atendimento_online").eq("id", user.id).maybeSingle(),
   ]);
   const comLink = (raw: unknown) =>
     ((raw ?? []) as Linha[]).map((c) => ({ ...c, meet_link: linkDaConsulta(c, psicologa?.link_atendimento_online) }));

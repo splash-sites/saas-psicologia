@@ -11,6 +11,7 @@ import { StatusBadge } from "../StatusBadge";
 import { excluirPaciente, salvarAnamnese } from "../actions";
 import { AnamneseForm } from "./AnamneseForm";
 import { registrarAcesso } from "@/lib/prontuario/acesso";
+import { buscarStatusAssinatura } from "@/lib/assinatura/guard";
 import { carregarDocumentos, DocumentosLista } from "./documentos/DocumentosLista";
 import { resumoDoPaciente } from "@/lib/pacientes/resumo";
 import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
@@ -43,7 +44,7 @@ export default async function PacienteDetailPage({
   const paciente = pacienteRow as Paciente;
 
   await gerarLancamentosDasSessoes(supabase);
-  const [{ data: anamneseRow }, { data: evolucoesRecentes }, , documentos, { data: permite }, resumo] = await Promise.all([
+  const [{ data: anamneseRow }, { data: evolucoesRecentes }, , documentos, status, resumo] = await Promise.all([
     supabase.from("anamneses").select("*").eq("paciente_id", id).maybeSingle(),
     supabase
       .from("evolucoes")
@@ -55,7 +56,8 @@ export default async function PacienteDetailPage({
       .limit(3),
     registrarAcesso(supabase, "ficha", id),
     carregarDocumentos(supabase, id),
-    supabase.rpc("assinatura_permite_escrita", { p_psicologa_id: user.id }),
+    // Mesma leitura do layout (cache por requisição): sem consulta a mais.
+    buscarStatusAssinatura(user.id),
     resumoDoPaciente(supabase, id),
   ]);
   // Data da sessão dos documentos anexados em evoluções (link "Sessão de DD/MM").
@@ -204,7 +206,7 @@ export default async function PacienteDetailPage({
             espaco={documentos.espaco}
             voltar={`/pacientes/${id}`}
             sessoes={sessoes}
-            podeEscrever={permite !== false}
+            podeEscrever={!status.somenteLeitura}
           />
         </section>
       )}

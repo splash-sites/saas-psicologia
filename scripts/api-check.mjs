@@ -39,7 +39,7 @@ async function criarUsuario(email, nome) {
   if (antigo) {
     // limpa dados antigos (tabelas com FK restrict) antes de apagar o usuário.
     // Desde a 0016 a conta só sai depois do prontuário e da própria psicóloga.
-    for (const t of ["lembretes", "evolucoes", "pagamentos", "consultas", "bloqueios", "anamneses", "pacientes"]) {
+    for (const t of ["acessos_prontuario", "documentos", "exportacoes", "lembretes", "evolucoes", "pagamentos", "consultas", "bloqueios", "anamneses", "pacientes"]) {
       await admin.from(t).delete().eq("psicologa_id", antigo.id);
     }
     await admin.from("psicologas").delete().eq("id", antigo.id);
@@ -167,7 +167,7 @@ const rotasPublicas = ["/login", "/cadastro"];
 const rotasLegais = { "/termos": "https://gradatim.com.br/termos", "/privacidade": "https://gradatim.com.br/privacidade" };
 const rotasPrivadas = (x) => [
   "/", "/dashboard", "/agenda", `/agenda?consulta=${x.consulta}`, "/agenda/nova",
-  `/agenda/${x.consulta}`, `/agenda/${x.consulta}/editar`, "/agenda/eventos", "/agenda/eventos/novo", "/agenda/bloqueios",
+  `/agenda/${x.consulta}`, `/agenda/${x.consulta}/editar`, "/agenda/eventos", "/agenda/eventos/novo",
   "/pacientes", "/pacientes/novo", `/pacientes/${x.paciente}`, `/pacientes/${x.paciente}/editar`,
   `/pacientes/${x.paciente}/evolucoes`, `/pacientes/${x.paciente}/evolucoes/nova`,
   `/pacientes/${x.paciente}/evolucoes/${x.evolucao}`, `/pacientes/${x.paciente}/evolucoes/${x.evolucao}/editar`,
@@ -267,8 +267,8 @@ const webhook = (headers, body) => req("/api/asaas/webhook", { method: "POST", h
   const csv = (n) => (arquivos[n] ? strFromU8(arquivos[n]) : "");
   const nomes = Object.keys(arquivos).sort();
   r.resumo = `${nomes.join(", ")} (${zip.length} bytes)`;
-  registrar("EXPORTAÇÃO", "GET /api/exportar logado (ZIP com 6 CSVs + LEIA-ME)", (x) =>
-    x.status === 200 && nomes.length === 7 && res.headers.get("cache-control") === "no-store", r);
+  registrar("EXPORTAÇÃO", "GET /api/exportar logado (ZIP com 7 CSVs + LEIA-ME)", (x) =>
+    x.status === 200 && nomes.length === 8 && res.headers.get("cache-control") === "no-store", r);
 
   const tudo = nomes.map(csv).join("\n");
   linhas.push({ grupo: "EXPORTAÇÃO", nome: "contém dados de A (paciente, evolução, nota privada)", status: "", destino: "", ms: "", nota: "",
@@ -367,10 +367,11 @@ for (const [arq, nome, args, tipo] of casos) {
   registrar("ADMIN", "estenderTeste pela outra conta (B)", (x) => antes.trial_fim === depois.trial_fim && /Não encontrado/.test(x.retorno ?? ""), r2);
 
   // Excluir cupom: B não exclui; A exclui o sem uso; o usado o banco segura.
-  const idExc = actionId(mapa, "admin/cupons/actions", "excluirCupom");
   const { data: alvo } = await admin.from("cupons").insert({ codigo: `EXCLUIR${Date.now().toString(36).toUpperCase()}`, dias: 5 }).select("id").single();
-  // Em dev, a action só fica registrada depois que a página que a usa compila.
+  // Em dev, a action só fica registrada depois que a página que a usa compila:
+  // lê o mapa de novo depois de abrir a página (antes o id saía vazio → 400).
   await req(`/admin/cupons/${alvo.id}`, { cookie: cA });
+  const idExc = actionId(idsDasActions(), "admin/cupons/actions", "excluirCupom");
   const r3 = await chamarAction(idExc, [alvo.id, vazio], { cookie: cookieB });
   const { data: aindaLa } = await admin.from("cupons").select("id").eq("id", alvo.id).maybeSingle();
   registrar("ADMIN", "excluirCupom pela outra conta (B)", (x) => Boolean(aindaLa) && /Não encontrado/.test(x.retorno ?? ""), r3);

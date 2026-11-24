@@ -21,7 +21,15 @@ const nextConfig: NextConfig = {
     return [{ source: "/agenda/bloqueios/:path*", destination: "/agenda/eventos/:path*", permanent: true }];
   },
   async headers() {
-    return [{ source: "/:path*", headers: headersSeguranca }];
+    // Ícones da aba: o Next os servia com max-age=0 e o navegador buscava de
+    // novo a cada troca de tela (auditoria de 2026-11-24). Um dia de cache.
+    const cacheIcone = [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }];
+    return [
+      { source: "/:path*", headers: headersSeguranca },
+      { source: "/icon.svg", headers: cacheIcone },
+      { source: "/apple-icon.png", headers: cacheIcone },
+      { source: "/favicon.ico", headers: cacheIcone },
+    ];
   },
 };
 

@@ -34,28 +34,29 @@ export default async function ConfiguracoesPage({
   const user = await usuarioAtual();
   if (!user) redirect("/login");
 
-  const { data: token } = await supabase
-    .from("google_oauth_tokens")
-    .select("updated_at, escopo")
-    .eq("psicologa_id", user.id)
+  // Uma consulta só (eram 3 em sequência): dados da psicóloga com o token do
+  // Google e as preferências de lembrete embutidos.
+  const { data: contexto } = await supabase
+    .from("psicologas")
+    .select(
+      "link_atendimento_online, feriados_uf, mostrar_feriados, mensagem_aniversario, google_oauth_tokens(updated_at, escopo), preferencias_lembrete(antecedencia_horas, mensagem_template, convite_google)",
+    )
+    .eq("id", user.id)
     .maybeSingle();
+  const um = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
+  const psicologa = contexto;
+  const token = um(contexto?.google_oauth_tokens as { updated_at: string; escopo: string | null } | { updated_at: string; escopo: string | null }[] | null);
+  const pref = um(
+    contexto?.preferencias_lembrete as
+      | { antecedencia_horas: number; mensagem_template: string | null; convite_google: boolean }
+      | { antecedencia_horas: number; mensagem_template: string | null; convite_google: boolean }[]
+      | null,
+  );
 
   // escopo nulo = token antigo, gravado antes de registrarmos o escopo; a
   // sincronização valida de verdade. Só sinaliza quando sabemos que falta.
   const tokenSemAgenda =
     token?.escopo != null && !escopoTemCalendar(token.escopo);
-
-  const { data: pref } = await supabase
-    .from("preferencias_lembrete")
-    .select("antecedencia_horas, mensagem_template, convite_google")
-    .eq("psicologa_id", user.id)
-    .maybeSingle();
-
-  const { data: psicologa } = await supabase
-    .from("psicologas")
-    .select("link_atendimento_online, feriados_uf, mostrar_feriados, mensagem_aniversario")
-    .eq("id", user.id)
-    .maybeSingle();
 
   const configurada = integracaoGoogleConfigurada();
   const conectada = Boolean(token) && !tokenSemAgenda;

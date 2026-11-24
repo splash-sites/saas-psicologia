@@ -7,6 +7,7 @@ import { arquivarEvolucao } from "../actions";
 import { ArquivarForm } from "./ArquivarForm";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { registrarAcesso } from "@/lib/prontuario/acesso";
+import { buscarStatusAssinatura } from "@/lib/assinatura/guard";
 import { carregarDocumentos, DocumentosLista } from "../../documentos/DocumentosLista";
 
 function dataBR(iso: string): string {
@@ -42,10 +43,10 @@ export default async function EvolucaoDetailPage({
     .maybeSingle();
 
   if (!data) notFound();
-  const [, documentos, { data: permite }] = await Promise.all([
+  const [, documentos, status] = await Promise.all([
     registrarAcesso(supabase, "evolucao", id, evolucaoId),
     carregarDocumentos(supabase, id, evolucaoId),
-    supabase.rpc("assinatura_permite_escrita", { p_psicologa_id: user.id }),
+    buscarStatusAssinatura(user.id),
   ]);
   const e = data as Evolucao;
   const arquivada = Boolean(e.deleted_at);
@@ -107,7 +108,7 @@ export default async function EvolucaoDetailPage({
             espaco={documentos.espaco}
             voltar={`/pacientes/${id}/evolucoes/${evolucaoId}`}
             evolucaoId={evolucaoId}
-            podeEscrever={permite !== false && !arquivada}
+            podeEscrever={!status.somenteLeitura && !arquivada}
           />
         </section>
       )}
