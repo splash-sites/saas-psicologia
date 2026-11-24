@@ -137,11 +137,11 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriad
         </label>
       </div>
 
-      {/* Chegando pelo clique num horário da agenda, a prévia vem fechada. */}
+      {/* Prévia da semana: fechada; abre com um clique (decisão do usuário). */}
       <PreviaSemana
         data={dataUtil(dataSel) ? dataSel : hojeBR()}
         hora={horaSel}
-        abertoInicial={!horaPadrao}
+        abertoInicial={false}
         onEscolher={(d, h) => {
           if (dataRef.current) dataRef.current.value = d;
           if (horaRef.current) horaRef.current.value = h;
