@@ -93,7 +93,7 @@ export default async function AReceberPage({ searchParams }: { searchParams: Pro
         periodo={
           <NavegacaoPeriodo
             anterior={{ href: `/financeiro/a-receber?mes=${mesAnterior(mes)}`, rotulo: "Mês anterior" }}
-            atual={{ href: "/financeiro/a-receber", rotulo: "Este mês" }}
+            atual={{ href: "/financeiro/a-receber", rotulo: "Mês atual" }}
             proximo={{ href: `/financeiro/a-receber?mes=${mesSeguinte(mes)}`, rotulo: "Próximo mês" }}
             periodo={rotuloMes(mes)}
           />

@@ -92,7 +92,7 @@ export default async function FinanceiroPage({
         periodo={
           <NavegacaoPeriodo
             anterior={{ href: `/financeiro?mes=${mesAnterior(mes)}`, rotulo: "Mês anterior" }}
-            atual={{ href: "/financeiro", rotulo: "Este mês" }}
+            atual={{ href: "/financeiro", rotulo: "Mês atual" }}
             proximo={{ href: `/financeiro?mes=${mesSeguinte(mes)}`, rotulo: "Próximo mês" }}
             periodo={rotuloMes(mes)}
           />

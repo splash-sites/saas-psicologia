@@ -117,7 +117,7 @@ export default async function PrevistoPage({ searchParams }: { searchParams: Pro
         periodo={
           <NavegacaoPeriodo
             anterior={{ href: `/financeiro/previsto?mes=${mesAnterior(mes)}`, rotulo: "Mês anterior" }}
-            atual={{ href: "/financeiro/previsto", rotulo: "Este mês" }}
+            atual={{ href: "/financeiro/previsto", rotulo: "Mês atual" }}
             proximo={{ href: `/financeiro/previsto?mes=${mesSeguinte(mes)}`, rotulo: "Próximo mês" }}
             periodo={rotuloMes(mes)}
           />
