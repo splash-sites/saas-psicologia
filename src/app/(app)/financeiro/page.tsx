@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronRight, Plus, Wallet } from "lucide-react";
+import { situacaoLancamento } from "@/lib/financeiro/situacao";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { NavegacaoPeriodo } from "@/components/NavegacaoPeriodo";
@@ -28,7 +29,11 @@ type Linha = Pick<
   | "vencimento"
   | "data_pagamento"
   | "forma_pagamento"
-> & { pacientes: { nome: string } | null };
+> & {
+  paciente_id: string;
+  pacientes: { nome: string } | null;
+  consultas: { fim: string; modalidade: string } | { fim: string; modalidade: string }[] | null;
+};
 
 export default async function FinanceiroPage({
   searchParams,
@@ -49,12 +54,13 @@ export default async function FinanceiroPage({
 
   await gerarLancamentosDasSessoes(supabase);
   const mesCorrenteOuFuturo = mes >= mesAtual();
+  const nomeMes = rotuloMes(mes).split(" de ")[0].toLowerCase();
 
   const [{ data: doMes }, { data: recebidosNoMes }, { data: resumo }] = await Promise.all([
     supabase
       .from("pagamentos")
       .select(
-        "id, valor, status, data_referencia, vencimento, data_pagamento, forma_pagamento, pacientes(nome)",
+        "id, paciente_id, valor, status, data_referencia, vencimento, data_pagamento, forma_pagamento, pacientes(nome), consultas(fim, modalidade)",
       )
       .is("deleted_at", null)
       .gte("data_referencia", inicio)
@@ -84,12 +90,22 @@ export default async function FinanceiroPage({
   const aReceber = previsto
     ? Number(previsto.a_receber)
     : lista.filter((l) => l.status === "pendente").reduce((s, l) => s + Number(l.valor), 0);
+  // Sessões a receber (já aconteceram), para a contagem embaixo do valor: mesma
+  // regra do resumo_sessoes_mes (0037).
+  const agora = new Date().getTime();
+  const consultaDe = (l: Linha) => (Array.isArray(l.consultas) ? (l.consultas[0] ?? null) : l.consultas);
+  const realizado = (l: Linha) => {
+    const c = consultaDe(l);
+    return c ? new Date(c.fim).getTime() <= agora : l.data_referencia <= hoje;
+  };
+  const nAReceber = lista.filter((l) => l.status === "pendente" && (!previsto || realizado(l))).length;
+  const n = (x: number, um: string, varios: string) => `${x} ${x === 1 ? um : varios}`;
   // Atrasados do mês: lançamentos deste mês pendentes e já vencidos.
   const atrasadosDoMes = lista.filter((l) => statusExibicao(l, hoje) === "atrasado");
   const valorAtrasadoMes = atrasadosDoMes.reduce((s, l) => s + Number(l.valor), 0);
 
   return (
-    <div className="flex w-full max-w-3xl flex-col gap-6">
+    <div className="flex w-full max-w-5xl flex-col gap-5 text-[#12302B]">
       <CabecalhoPagina
         titulo="Financeiro"
         periodo={
@@ -124,30 +140,38 @@ export default async function FinanceiroPage({
         </div>
       )}
 
-      <div className={`grid grid-cols-2 gap-3 ${previsto ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
-        <Tile rotulo="Recebido no mês" valor={formatarBRL(recebidoNoMes)} tom="green" />
+      {/* Resumo do mês (canvas Financeiro) */}
+      <section aria-label="Resumo do mês" className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <div className="col-span-2 flex flex-col gap-1 rounded-2xl bg-[#12302B] px-5 py-4 text-[#F4F7F6] lg:col-span-1">
+          <span className="text-[13px] text-[#C9DAD5]">Recebido em {nomeMes}</span>
+          <span className="text-[28px] font-bold tracking-tight" data-sensivel>
+            {formatarBRL(recebidoNoMes)}
+          </span>
+          <span className="text-[13px] text-[#C9DAD5]">{n(recebidosNoMes?.length ?? 0, "pagamento", "pagamentos")}</span>
+        </div>
         <Tile
-          rotulo={previsto ? "A receber (sessões realizadas)" : "A receber no mês"}
+          rotulo={previsto ? "A receber" : "A receber no mês"}
           valor={formatarBRL(aReceber)}
-          tom="amber"
+          sub={previsto ? n(nAReceber, "sessão realizada", "sessões realizadas") : n(nAReceber, "lançamento", "lançamentos")}
           href={`/financeiro/a-receber?mes=${mes}`}
         />
         {previsto && (
           <Tile
-            rotulo={`Previsto até o fim do mês (${previsto.sessoes_previstas} ${previsto.sessoes_previstas === 1 ? "sessão" : "sessões"})`}
+            rotulo="Previsto até o fim do mês"
             valor={formatarBRL(Number(previsto.previsto))}
-            tom="slate"
+            sub={n(previsto.sessoes_previstas, "sessão marcada", "sessões marcadas")}
             href={`/financeiro/previsto?mes=${mes}`}
           />
         )}
         <Tile
-          rotulo={`Atrasados do mês${atrasadosDoMes.length ? ` (${atrasadosDoMes.length})` : ""}`}
+          rotulo="Atrasados do mês"
           valor={formatarBRL(valorAtrasadoMes)}
-          tom="red"
-          className={previsto ? "" : "col-span-2 sm:col-span-1"}
+          sub={atrasadosDoMes.length ? n(atrasadosDoMes.length, "lançamento", "lançamentos") : "nada atrasado"}
+          tom={atrasadosDoMes.length ? "atraso" : undefined}
+          className="col-span-2 lg:col-span-1"
           href={atrasadosDoMes.length ? `/financeiro/a-receber?mes=${mes}&atrasados=1` : undefined}
         />
-      </div>
+      </section>
 
       {lista.length === 0 ? (
         <EstadoVazio icon={Wallet} titulo="Nenhum lançamento neste mês">
@@ -157,16 +181,30 @@ export default async function FinanceiroPage({
           </Link>
         </EstadoVazio>
       ) : (
-        <ListaLancamentos
-          linhas={lista.map((l) => ({
-            id: l.id,
-            pacienteNome: l.pacientes?.nome ?? "Paciente",
-            valor: Number(l.valor),
-            vencimento: l.vencimento,
-            formaPagamento: l.forma_pagamento,
-            status: statusExibicao(l, hoje),
-          }))}
-        />
+        <>
+          <ListaLancamentos
+            hoje={hoje}
+            linhas={lista.map((l) => {
+              const c = consultaDe(l);
+              return {
+                id: l.id,
+                pacienteId: l.paciente_id,
+                pacienteNome: l.pacientes?.nome ?? "Paciente",
+                valor: Number(l.valor),
+                data: l.data_referencia,
+                referente: c ? `Sessão ${c.modalidade === "online" ? "online" : "presencial"}` : "Lançamento",
+                online: c?.modalidade === "online",
+                pago: l.status === "pago",
+                atrasado: statusExibicao(l, hoje) === "atrasado",
+                situacao: situacaoLancamento(l, hoje),
+                formaPagamento: l.forma_pagamento,
+              };
+            })}
+          />
+          <Link href="/financeiro/historico" className="self-center text-sm font-semibold text-[#0F766E] hover:text-[#12302B] lg:hidden">
+            Ver histórico mensal
+          </Link>
+        </>
       )}
     </div>
   );
@@ -175,39 +213,38 @@ export default async function FinanceiroPage({
 function Tile({
   rotulo,
   valor,
+  sub,
   tom,
   className = "",
   href,
 }: {
   rotulo: string;
   valor: string;
-  tom: "green" | "amber" | "red" | "slate";
+  sub: string;
+  /** "atraso": valor em vermelho (há algo atrasado). */
+  tom?: "atraso";
   className?: string;
   /** Card clicável: abre o detalhe. */
   href?: string;
 }) {
-  const cores = {
-    green: "border-green-200 bg-green-50 text-green-800",
-    amber: "border-amber-200 bg-amber-50 text-amber-800",
-    red: "border-red-200 bg-red-50 text-red-800",
-    slate: "border-slate-200 bg-white text-slate-700",
-  }[tom];
   const conteudo = (
     <>
-      <div className="text-xs">{rotulo}</div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-lg font-semibold" data-sensivel>
-          {valor}
-        </span>
-        {href && <ChevronRight className="size-4 shrink-0 opacity-60" aria-hidden />}
-      </div>
+      <span className="flex items-center justify-between gap-2 text-[13px] text-[#4A5F5A]">
+        {rotulo}
+        {href && <ChevronRight className="size-4 shrink-0 text-[#0F766E]" aria-hidden />}
+      </span>
+      <span className={`text-xl font-bold ${tom === "atraso" ? "text-[#A3261B]" : ""}`} data-sensivel>
+        {valor}
+      </span>
+      <span className={`text-[13px] ${href ? "text-[#0F766E]" : "text-[#4A5F5A]"}`}>{sub}</span>
     </>
   );
+  const classe = `flex flex-col gap-1 rounded-2xl border border-[#DFEBE7] bg-white px-4 py-3.5 ${className}`;
   return href ? (
-    <Link href={href} className={`card ${cores} ${className} transition hover:shadow-md hover:brightness-[0.98]`}>
+    <Link href={href} className={`${classe} transition hover:border-[#0F766E] hover:shadow-sm`}>
       {conteudo}
     </Link>
   ) : (
-    <div className={`card ${cores} ${className}`}>{conteudo}</div>
+    <div className={classe}>{conteudo}</div>
   );
 }
