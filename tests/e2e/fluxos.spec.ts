@@ -225,11 +225,16 @@ test("outra conta não abre o paciente nem o prontuário", async ({ browser }) =
   const outra = await browser.newPage();
   await entrar(outra, EMAIL_B);
   const id = pacienteUrl.split("/").pop();
-  for (const url of [pacienteUrl, `/api/prontuario/${id}`]) {
-    const resposta = await outra.goto(url);
-    expect(resposta?.status()).toBe(404);
-    await expect(outra.locator("body")).not.toContainText("Maria da Silva");
-  }
+  // A ficha tem tela de carregamento (streaming): o status 200 sai antes de o
+  // servidor saber que o registro não é da conta, e então vem a tela "não
+  // encontrado" (comportamento documentado do Next). O que importa é que nada
+  // do paciente aparece. O PDF (rota de API) continua respondendo 404.
+  await outra.goto(pacienteUrl);
+  await expect(outra.getByText("Não encontramos o que você procurava")).toBeVisible();
+  await expect(outra.locator("body")).not.toContainText("Maria da Silva");
+  const pdf = await outra.goto(`/api/prontuario/${id}`);
+  expect(pdf?.status()).toBe(404);
+  await expect(outra.locator("body")).not.toContainText("Maria da Silva");
   await outra.close();
 });
 

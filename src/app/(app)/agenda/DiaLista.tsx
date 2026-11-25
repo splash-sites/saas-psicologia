@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { Cake, FileText, Video } from "lucide-react";
 import { ESTADO_VISUAL_LABEL } from "@/lib/agenda/grade";
@@ -7,7 +10,7 @@ import { MODALIDADE_LABEL } from "@/lib/agenda/types";
 import { HoraAgora } from "@/components/Relogio";
 import { BLOCO_ESTADO, CLASSE_ANIVERSARIO, HACHURA_BLOQUEIO, SUB_ESTADO, classeFaixaFeriado } from "./estilos";
 import { rotuloFeriado, type Feriado } from "@/lib/feriados";
-import { IconesConsulta } from "./GradeSemana";
+import { IconesConsulta } from "./IconesConsulta";
 import {
   agendaHref,
   type ItemAniversario,
@@ -22,9 +25,10 @@ const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julh
 
 type Props = {
   semana: string[];
-  dia: string;
-  /** Canceladas do dia, mesmo quando ocultas. */
-  canceladasNoDia: number;
+  /** Dia aberto ao carregar; trocar de dia depois não vai ao servidor. */
+  diaInicial: string;
+  /** Canceladas de cada dia, mesmo quando ocultas. */
+  canceladasPorDia: Map<string, number>;
   hoje: string;
   agoraISO: string;
   consultasPorDia: Map<string, ItemConsulta[]>;
@@ -48,8 +52,8 @@ type Linha =
 // escolhido — hora à esquerda, cartão pastel à direita, linha de "agora".
 export function DiaLista({
   semana,
-  dia,
-  canceladasNoDia,
+  diaInicial,
+  canceladasPorDia,
   hoje,
   agoraISO,
   consultasPorDia,
@@ -59,6 +63,10 @@ export function DiaLista({
   aniversarios,
   params,
 }: Props) {
+  // Troca de dia instantânea (2026-11-25): os dados da semana já estão aqui;
+  // só o endereço é atualizado (recarregar volta ao mesmo dia).
+  const [dia, setDia] = useState(diaInicial);
+  const p: ParamsAgenda = { ...params, dia };
   const cs = consultasPorDia.get(dia) ?? [];
   const bs = bloqueiosPorDia.get(dia) ?? [];
   const agora = new Date(agoraISO);
@@ -71,7 +79,7 @@ export function DiaLista({
   linhas.sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime());
 
   const ativas = cs.filter((c) => c.status !== "cancelada").length;
-  const canceladas = canceladasNoDia;
+  const canceladas = canceladasPorDia.get(dia) ?? 0;
   const ocultas = Boolean(params.ocultarCanceladas);
   const anivs = aniversarios.get(dia) ?? [];
   // "Terça, 24 de novembro" (canvas "Celular").
@@ -88,11 +96,13 @@ export function DiaLista({
           const dow = new Date(`${d}T12:00:00Z`).getUTCDay();
           const feriado = feriados.get(d);
           return (
-            <Link
+            <button
               key={d}
-              href={agendaHref({ ...params, dia: d, consulta: undefined })}
-              scroll={false}
-              prefetch={false}
+              type="button"
+              onClick={() => {
+                setDia(d);
+                window.history.replaceState(null, "", agendaHref({ ...params, dia: d, consulta: undefined }));
+              }}
               aria-current={sel ? "date" : undefined}
               aria-label={`${NOME_DIA[dow]}, ${Number(d.slice(8))}${ehHoje ? ", hoje" : ""}, ${n} ${n === 1 ? "sessão" : "sessões"}${feriado ? `, ${rotuloFeriado(feriado)}` : ""}`}
               title={feriado ? rotuloFeriado(feriado) : undefined}
@@ -114,7 +124,7 @@ export function DiaLista({
                 aria-hidden
                 className={`size-[5px] rounded-full ${n > 0 ? (sel ? "bg-white" : "bg-[#0F766E]") : "bg-transparent"}`}
               />
-            </Link>
+            </button>
           );
         })}
       </nav>
@@ -133,7 +143,7 @@ export function DiaLista({
               {ocultas && (canceladas === 1 ? " oculta" : " ocultas")}
               {" · "}
               <Link
-                href={agendaHref({ ...params, consulta: undefined, ocultarCanceladas: !ocultas })}
+                href={agendaHref({ ...p, consulta: undefined, ocultarCanceladas: !ocultas })}
                 scroll={false}
                 className="font-semibold text-[#0F766E] hover:text-[#12302B]"
               >
@@ -220,7 +230,7 @@ export function DiaLista({
                 </span>
                 <div className={`flex min-w-0 flex-1 flex-col gap-2 rounded-xl border px-3 py-2.5 ${BLOCO_ESTADO[c.estado]}`}>
                   <Link
-                    href={agendaHref({ ...params, consulta: c.id })}
+                    href={agendaHref({ ...p, consulta: c.id })}
                     scroll={false}
                     prefetch={false}
                     className="flex min-h-10 flex-col justify-center gap-[3px]"

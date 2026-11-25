@@ -112,8 +112,10 @@ export default async function AgendaPage({
     ocultarCanceladas: sp.canceladas === "0",
   };
 
-  // Lançamentos "a receber" das sessões que já passaram (0035), antes de ler.
-  await gerarLancamentosDasSessoes(supabase);
+  // Lançamentos "a receber" das sessões que já passaram (0035). Roda junto com
+  // a 1ª leitura (que não lê pagamentos) e termina antes de ler os pagamentos:
+  // uma rodada a menos ao banco.
+  const gerando = gerarLancamentosDasSessoes(supabase);
 
   const inicioSemana = new Date(`${segunda}T00:00:00${BR_OFFSET}`).toISOString();
   const fimSemana = new Date(`${addDias(segunda, 7)}T00:00:00${BR_OFFSET}`).toISOString();
@@ -165,6 +167,7 @@ export default async function AgendaPage({
   const ids = rows.map((r) => r.id);
 
   const linhaSel = consultaSel ? rows.find((r) => r.id === consultaSel) : undefined;
+  await gerando;
   const [{ data: pagamentosRaw }, { data: lembreteRaw }, proximas] = await Promise.all([
     ids.length
       ? supabase
@@ -425,9 +428,10 @@ export default async function AgendaPage({
       </div>
       <div className="md:hidden">
         <DiaLista
+          key={`${segunda}-${dia}`}
           semana={semana}
-          dia={dia}
-          canceladasNoDia={canceladasPorDia.get(dia) ?? 0}
+          diaInicial={dia}
+          canceladasPorDia={canceladasPorDia}
           hoje={hoje}
           agoraISO={agoraISO}
           consultasPorDia={consultasPorDia}

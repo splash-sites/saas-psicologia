@@ -33,17 +33,16 @@ export default async function PacienteDetailPage({
   const user = await usuarioAtual();
   if (!user) redirect("/login");
 
-  const { data: pacienteRow } = await supabase
-    .from("pacientes")
-    .select("*")
-    .eq("id", id)
-    .is("deleted_at", null)
-    .maybeSingle();
+  // Lançamentos "a receber" (0035) junto com a leitura do paciente: uma rodada
+  // a menos; o resumo financeiro só lê depois que terminam.
+  const [{ data: pacienteRow }] = await Promise.all([
+    supabase.from("pacientes").select("*").eq("id", id).is("deleted_at", null).maybeSingle(),
+    gerarLancamentosDasSessoes(supabase),
+  ]);
 
   if (!pacienteRow) notFound();
   const paciente = pacienteRow as Paciente;
 
-  await gerarLancamentosDasSessoes(supabase);
   const [{ data: anamneseRow }, { data: evolucoesRecentes }, , documentos, status, resumo] = await Promise.all([
     supabase.from("anamneses").select("*").eq("paciente_id", id).maybeSingle(),
     supabase

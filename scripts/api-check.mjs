@@ -108,9 +108,18 @@ async function req(path, { cookie, method = "GET", headers = {}, body } = {}) {
 }
 
 // Conteúdo "de verdade" da página: detecta 404 renderizado como página e erros.
+// Com loading.tsx (2026-11-25) a página é enviada em streaming: o status 200
+// sai antes do notFound(), e o Next marca a resposta com robots noindex. Só
+// isso (ou o 404) indica "não encontrado" — o texto da tela vem embutido em
+// toda página, não serve.
+const NAO_ENCONTRADO_STREAM = /<meta name="robots" content="noindex"\/?>/;
+function naoEncontrado(r) {
+  return r.status === 404 || NAO_ENCONTRADO_STREAM.test(r.texto);
+}
+
 function resumoPagina(r) {
-  // O template de not-found vem embutido em toda página; só o status HTTP é confiável.
   if (r.status === 404) return "404 (notFound)";
+  if (NAO_ENCONTRADO_STREAM.test(r.texto)) return "notFound (streaming)";
   if (/Application error|Unhandled Runtime Error|__next_error__/i.test(r.texto)) return "ERRO de render";
   return "";
 }
@@ -207,7 +216,7 @@ for (const p of rotasPrivadas(B).filter((p) => /[0-9a-f]{8}-/.test(p))) {
   // ?consulta=<id> é só o painel lateral da agenda: com id alheio, a página
   // abre normal sem o painel. Basta não vazar.
   const soPainel = p.includes("?consulta=");
-  registrar("GET A→ids de B", curto(p), (x) => !vazou && (soPainel || x.status === 404 || (x.status >= 300 && x.status < 400)), r);
+  registrar("GET A→ids de B", curto(p), (x) => !vazou && (soPainel || naoEncontrado(x) || (x.status >= 300 && x.status < 400)), r);
 }
 
 // 3b. Painel /admin: só a administradora (A); para a B, "não encontrada".
