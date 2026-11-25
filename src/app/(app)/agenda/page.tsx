@@ -259,6 +259,13 @@ export default async function AgendaPage({
   const nascimentos = (nascimentosRaw ?? []) as PacienteNascimento[];
   const aniversarios = aniversariantesPorDia(nascimentos, semana);
   const consultasPorDia = agrupar(visiveis, (c) => dataChaveBR(c.inicio));
+  // Canceladas de cada dia, mesmo ocultas (o celular mostra "1 cancelada oculta").
+  const canceladasPorDia = new Map<string, number>();
+  for (const c of todas) {
+    if (c.status !== "cancelada") continue;
+    const d = dataChaveBR(c.inicio);
+    canceladasPorDia.set(d, (canceladasPorDia.get(d) ?? 0) + 1);
+  }
   const bloqueiosPorDia = agrupar(bloqueios, (b) => dataChaveBR(b.inicio));
 
   // Domingo só aparece na grade se houver algo nele.
@@ -420,6 +427,7 @@ export default async function AgendaPage({
         <DiaLista
           semana={semana}
           dia={dia}
+          canceladasNoDia={canceladasPorDia.get(dia) ?? 0}
           hoje={hoje}
           agoraISO={agoraISO}
           consultasPorDia={consultasPorDia}

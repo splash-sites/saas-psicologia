@@ -23,6 +23,8 @@ const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julh
 type Props = {
   semana: string[];
   dia: string;
+  /** Canceladas do dia, mesmo quando ocultas. */
+  canceladasNoDia: number;
   hoje: string;
   agoraISO: string;
   consultasPorDia: Map<string, ItemConsulta[]>;
@@ -47,6 +49,7 @@ type Linha =
 export function DiaLista({
   semana,
   dia,
+  canceladasNoDia,
   hoje,
   agoraISO,
   consultasPorDia,
@@ -68,7 +71,8 @@ export function DiaLista({
   linhas.sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime());
 
   const ativas = cs.filter((c) => c.status !== "cancelada").length;
-  const canceladas = cs.length - ativas;
+  const canceladas = canceladasNoDia;
+  const ocultas = Boolean(params.ocultarCanceladas);
   const anivs = aniversarios.get(dia) ?? [];
   // "Terça, 24 de novembro" (canvas "Celular").
   const titulo = `${NOME_DIA[new Date(`${dia}T12:00:00Z`).getUTCDay()]}, ${Number(dia.slice(8))} de ${MESES[Number(dia.slice(5, 7)) - 1]}`;
@@ -122,7 +126,21 @@ export function DiaLista({
         </h2>
         <span className="whitespace-nowrap text-[13px] text-[#5B6E69]">
           {ativas > 0 && `${ativas} ${ativas === 1 ? "sessão" : "sessões"}`}
-          {canceladas > 0 && ` · ${canceladas} cancelada${canceladas === 1 ? "" : "s"}`}
+          {canceladas > 0 && (
+            <>
+              {ativas > 0 && " · "}
+              {canceladas} cancelada{canceladas === 1 ? "" : "s"}
+              {ocultas && (canceladas === 1 ? " oculta" : " ocultas")}
+              {" · "}
+              <Link
+                href={agendaHref({ ...params, consulta: undefined, ocultarCanceladas: !ocultas })}
+                scroll={false}
+                className="font-semibold text-[#0F766E] hover:text-[#12302B]"
+              >
+                {ocultas ? "Mostrar" : "Ocultar"}
+              </Link>
+            </>
+          )}
         </span>
       </div>
 
