@@ -207,8 +207,13 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriad
           name="observacoes"
           maxLength={LIMITES.consulta.observacoes}
           rows={2}
+          placeholder="Ex.: trazer o laudo, primeira sessão, sala 2"
+          aria-describedby="obs-dica"
           className="input"
         />
+        <span id="obs-dica" className="text-xs text-slate-500">
+          Aparece no card da consulta na agenda. Em sessões recorrentes, vale para todas.
+        </span>
       </label>
 
       <AvisoFeriado texto={aviso} />

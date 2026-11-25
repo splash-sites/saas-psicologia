@@ -17,7 +17,10 @@ import {
   gerarOcorrencias,
   horaBR,
   dataBR,
+  segundaDaSemana,
 } from "@/lib/agenda/datas";
+import { LIMITES } from "@/lib/limites";
+import { proximaSessaoDoPaciente, textoLevado } from "@/lib/prontuario/anotacoes";
 import { sobrepoe } from "@/lib/agenda/overlap";
 import {
   removerEventosDeBloqueios,
@@ -371,6 +374,86 @@ export async function dispensarAvisoFeriado(
   revalidatePath("/agenda");
   revalidatePath("/dashboard");
   redirect(destinoSeguro(voltar));
+}
+
+export type AnotacoesState = { error?: string; salvoEm?: number };
+
+/**
+ * "Anotações para a sessão" (0043): texto clínico da psicóloga na consulta.
+ * Editável sempre, inclusive depois da sessão (decisão do usuário). Nunca vai
+ * para o Google. Texto vazio apaga.
+ */
+export async function salvarAnotacoesSessao(
+  id: string,
+  _prev: AnotacoesState,
+  formData: FormData,
+): Promise<AnotacoesState> {
+  const { supabase } = await requirePsicologa();
+  const texto = String(formData.get("anotacoes_sessao") ?? "").trim();
+  if (texto.length > LIMITES.consulta.anotacoes) {
+    return { error: `Máximo de ${LIMITES.consulta.anotacoes} caracteres.` };
+  }
+
+  const { data, error } = await supabase
+    .from("consultas")
+    .update({ anotacoes_sessao: texto || null })
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id");
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível salvar as anotações.") };
+  if (!data?.length) return { error: "Consulta não encontrada." };
+
+  revalidatePath("/agenda");
+  revalidatePath(`/agenda/${id}`);
+  return { salvoEm: Date.now() };
+}
+
+/**
+ * Sessão cancelada ou falta com anotação: copia o texto para a próxima
+ * consulta marcada do paciente (o original fica) e abre a próxima na agenda.
+ */
+export async function levarAnotacaoParaProxima(
+  id: string,
+  _prev: AnotacoesState,
+  _formData: FormData,
+): Promise<AnotacoesState> {
+  const { supabase } = await requirePsicologa();
+  const { data: origem } = await supabase
+    .from("consultas")
+    .select("id, paciente_id, inicio, anotacoes_sessao")
+    .eq("id", id)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!origem) return { error: "Consulta não encontrada." };
+  if (!origem.anotacoes_sessao) return { error: "Esta sessão não tem anotações." };
+
+  const proxima = await proximaSessaoDoPaciente(supabase, origem.paciente_id as string, origem.inicio as string);
+  if (!proxima) return { error: "O paciente não tem uma próxima sessão marcada." };
+
+  const { data: destino } = await supabase
+    .from("consultas")
+    .select("anotacoes_sessao")
+    .eq("id", proxima.id)
+    .maybeSingle();
+  const texto = textoLevado(
+    { inicio: origem.inicio as string, texto: origem.anotacoes_sessao as string },
+    (destino?.anotacoes_sessao as string | null) ?? null,
+  );
+  if (texto === null) {
+    return { error: "A próxima sessão ficaria com anotações longas demais. Copie só o que precisar." };
+  }
+
+  const { data: alterados, error } = await supabase
+    .from("consultas")
+    .update({ anotacoes_sessao: texto })
+    .eq("id", proxima.id)
+    .is("deleted_at", null)
+    .select("id");
+  if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível levar as anotações.") };
+  if (!alterados?.length) return { error: "Próxima sessão não encontrada." };
+
+  revalidatePath("/agenda");
+  redirect(`/agenda?semana=${segundaDaSemana(new Date(proxima.inicio))}&consulta=${proxima.id}`);
 }
 
 export async function sincronizarConsultaAgora(

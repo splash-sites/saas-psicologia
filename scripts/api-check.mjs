@@ -314,6 +314,9 @@ const casos = [
   [ag, "criarConsulta", () => [vazio, fd({ paciente_id: A.paciente, data: dia(1), hora: "09:00", duracao_min: 50, modalidade: "online", recorrencia: "nenhuma", ocorrencias: 1 })], "conflito"],
   [ag, "atualizarConsulta", () => [A.consulta, vazio, fd({ data: dia(1), hora: "09:30", duracao_min: 50, modalidade: "presencial", status: "agendada" })], "ok"],
   [ag, "definirConfirmacao", () => [A.consulta, true, "/agenda", fd({})], "ok"],
+  [ag, "salvarAnotacoesSessao", () => [A.consulta, vazio, fd({ anotacoes_sessao: "retomar o tema do trabalho" })], "ok"],
+  [ag, "salvarAnotacoesSessao", () => [A.consulta, vazio, fd({ anotacoes_sessao: "a".repeat(20001) })], "validação"],
+  [ag, "levarAnotacaoParaProxima", () => [A.consulta, vazio, fd({})], "ok"],
   [ag, "definirStatusConsulta", () => [A.consultaPassada, "realizada", "/agenda", fd({})], "ok"],
   [ag, "sincronizarConsultaAgora", () => [A.consulta, fd({})], "ok (Google off)"],
   [ag, "criarBloqueio", () => [vazio, fd({ data: dia(6), hora_inicio: "08:00", hora_fim: "09:00", motivo: "x" })], "ok"],
@@ -432,6 +435,8 @@ const cruzadas = [
   [ag, "atualizarConsulta", () => [B.consulta, vazio, fd({ data: dia(1), hora: "16:00", duracao_min: 50, modalidade: "online", status: "agendada" })]],
   [ag, "cancelarConsulta", () => [B.consulta, "esta", fd({})]],
   [ag, "excluirBloqueio", () => [B.bloqueio, fd({})]],
+  [ag, "salvarAnotacoesSessao", () => [B.consulta, vazio, fd({ anotacoes_sessao: "HACK" })]],
+  [ag, "levarAnotacaoParaProxima", () => [B.consulta, vazio, fd({})]],
   [evo, "atualizarEvolucao", () => [B.paciente, B.evolucao, vazio, fd({ data_sessao: dia(-1), demanda: "HACK", procedimentos: "p", resultados: "r", encaminhamentos: "e" })]],
   [evo, "arquivarEvolucao", () => [B.paciente, B.evolucao, vazio, fd({ motivo: "HACK HACK" })]],
   [fin, "marcarComoPago", () => [B.pagamento, vazio, fd({ data_pagamento: dia(0) })]],
@@ -446,7 +451,7 @@ for (const [arq, nome, args] of cruzadas) {
   const r = await chamarAction(id, args(), { cookie: cA2 });
   // Formulários de edição/criação devem avisar; ações de 1 clique só voltam
   // pra lista (clique duplo legítimo também não altera nada).
-  const deveAvisar = ["atualizarPaciente", "salvarAnamnese", "atualizarConsulta", "marcarComoPago", "criarConsulta", "criarPagamento"].includes(nome);
+  const deveAvisar = ["atualizarPaciente", "salvarAnamnese", "atualizarConsulta", "marcarComoPago", "criarConsulta", "criarPagamento", "salvarAnotacoesSessao", "levarAnotacaoParaProxima"].includes(nome);
   registrar("ACTION A→B", nome, (x) => x.status < 500 && (!deveAvisar || /inválido|não encontrad/.test(x.retorno ?? "")), r);
 }
 

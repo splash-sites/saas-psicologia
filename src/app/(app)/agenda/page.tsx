@@ -15,8 +15,11 @@ import {
   diasDaSemana,
   addDias,
   dataChaveBR,
+  dataBR,
   BR_OFFSET,
 } from "@/lib/agenda/datas";
+import { registrarAcesso } from "@/lib/prontuario/acesso";
+import { proximaSessaoDoPaciente } from "@/lib/prontuario/anotacoes";
 import {
   estadoVisual,
   exigeEvolucao,
@@ -53,6 +56,7 @@ type ConsultaRow = Pick<
   | "meet_link"
   | "valor"
   | "cobrar"
+  | "tem_anotacoes"
 > & { pacientes: { id: string; nome: string } | { id: string; nome: string }[] | null };
 
 const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -71,6 +75,7 @@ export default async function AgendaPage({
     dia?: string;
     consulta?: string;
     canceladas?: string;
+    anotar?: string;
   }>;
 }) {
   const sp = await searchParams;
@@ -130,7 +135,7 @@ export default async function AgendaPage({
       supabase
         .from("consultas")
         .select(
-          "id, inicio, fim, modalidade, status, recorrencia, serie_id, confirmada_em, meet_link, valor, cobrar, pacientes(id, nome)",
+          "id, inicio, fim, modalidade, status, recorrencia, serie_id, confirmada_em, meet_link, valor, cobrar, tem_anotacoes, pacientes(id, nome)",
         )
         .is("deleted_at", null)
         .gte("inicio", inicioSemana)
@@ -168,7 +173,8 @@ export default async function AgendaPage({
 
   const linhaSel = consultaSel ? rows.find((r) => r.id === consultaSel) : undefined;
   await gerando;
-  const [{ data: pagamentosRaw }, { data: lembreteRaw }, proximas] = await Promise.all([
+  const pacienteSelId = linhaSel ? (unico(linhaSel.pacientes)?.id ?? null) : null;
+  const [{ data: pagamentosRaw }, { data: lembreteRaw }, proximas, anotacaoSel] = await Promise.all([
     ids.length
       ? supabase
           .from("pagamentos")
@@ -190,6 +196,8 @@ export default async function AgendaPage({
           { id: linhaSel.id, inicio: linhaSel.inicio, status: linhaSel.status, paciente_id: unico(linhaSel.pacientes)?.id ?? null },
         ])
       : Promise.resolve(new Map()),
+    // Anotações para a sessão (0043): texto só da consulta aberta.
+    linhaSel ? anotacoesDaConsulta(supabase, linhaSel, pacienteSelId) : Promise.resolve(null),
   ]);
 
   // Evolução da sessão: ligada à consulta, ou do mesmo paciente no mesmo dia
@@ -239,6 +247,7 @@ export default async function AgendaPage({
       evolucaoId,
       evolucaoPendente: !evolucaoId && exigeEvolucao(r, agora),
       pagamentoPendente: pagPorConsulta.get(r.id)?.status === "pendente",
+      temAnotacoes: r.tem_anotacoes,
     };
   });
 
@@ -461,6 +470,12 @@ export default async function AgendaPage({
           lembreteEnviadoEm={lembreteValido}
           avisoFeriado={avisoDaProxima(proximas.get(selecionada.id), psicologa)}
           aniversario={aniversarioDaSessao}
+          anotacoes={{
+            texto: anotacaoSel?.texto ?? null,
+            levarPara: anotacaoSel?.levarPara ?? null,
+            abrirEditando: sp.anotar === "1",
+          }}
+          observacoes={anotacaoSel?.observacoes ?? null}
           hoje={hoje}
           agoraISO={agoraISO}
           fecharHref={agendaHref({ ...params, consulta: undefined })}
@@ -469,6 +484,33 @@ export default async function AgendaPage({
       )}
     </div>
   );
+}
+
+/**
+ * Observações e anotações da consulta aberta (só dela, não da semana toda).
+ * Com anotação, registra o acesso ao prontuário; sessão cancelada/falta com
+ * anotação procura a próxima marcada ("Levar para a próxima sessão").
+ */
+async function anotacoesDaConsulta(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  linha: ConsultaRow,
+  pacienteId: string | null,
+): Promise<{ texto: string | null; levarPara: string | null; observacoes: string | null }> {
+  const { data } = await supabase
+    .from("consultas")
+    .select(linha.tem_anotacoes ? "observacoes, anotacoes_sessao" : "observacoes")
+    .eq("id", linha.id)
+    .maybeSingle();
+  const linhaDb = data as { observacoes: string | null; anotacoes_sessao?: string | null } | null;
+  const observacoes = linhaDb?.observacoes ?? null;
+  const texto = linhaDb?.anotacoes_sessao ?? null;
+  if (!texto || !pacienteId) return { texto: null, levarPara: null, observacoes };
+  const naoAconteceu = linha.status === "cancelada" || linha.status === "falta";
+  const [, proxima] = await Promise.all([
+    registrarAcesso(supabase, "anotacao", pacienteId),
+    naoAconteceu ? proximaSessaoDoPaciente(supabase, pacienteId, linha.inicio) : Promise.resolve(null),
+  ]);
+  return { texto, levarPara: proxima ? dataBR(proxima.inicio) : null, observacoes };
 }
 
 function Chip({ children }: { children: React.ReactNode }) {

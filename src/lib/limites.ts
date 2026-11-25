@@ -20,7 +20,8 @@ export const LIMITES = {
   /** Anamnese e os 4 campos da evolução + notas privadas. */
   textoClinico: 20000,
   evolucao: { motivoArquivamentoMin: 3, motivoArquivamento: 500 },
-  consulta: { observacoes: 2000, duracaoMin: 15, duracaoMax: 480, ocorrenciasMax: 52 },
+  /** anotacoes: "Anotações para a sessão" (0043), texto clínico. */
+  consulta: { observacoes: 2000, anotacoes: 20000, duracaoMin: 15, duracaoMax: 480, ocorrenciasMax: 52 },
   bloqueio: { motivo: 200 },
   pagamento: { valorMax: 100000, observacoes: 2000 },
   lembrete: { antecedenciaMin: 1, antecedenciaMax: 168, mensagem: 1000 },

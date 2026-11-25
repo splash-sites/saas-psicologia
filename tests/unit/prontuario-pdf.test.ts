@@ -64,6 +64,23 @@ describe("gerarProntuarioPdf", () => {
     expect(doc.getTitle()).toBe("Prontuário psicológico");
   });
 
+  it("inclui anotações para a sessão (na evolução e de sessões sem evolução)", async () => {
+    const sem = await gerarProntuarioPdf({ psicologa: { nome: "Ana", crp: null }, paciente, anamnese: null, evolucoes: [evolucao(1, "x")] });
+    const com = await gerarProntuarioPdf({
+      psicologa: { nome: "Ana", crp: null },
+      paciente,
+      anamnese: null,
+      evolucoes: [evolucao(1, "x")],
+      anotacoes: {
+        porEvolucao: new Map([["e1", "Retomar o tema do trabalho. ".repeat(20)]]),
+        soltas: [{ data: "2026-03-16", status: "Cancelada", texto: "Perguntar do sono 😴" }],
+      },
+    });
+    expect(Buffer.from(com.subarray(0, 5)).toString()).toBe("%PDF-");
+    // O texto entra: o arquivo cresce.
+    expect(com.length).toBeGreaterThan(sem.length);
+  });
+
   it("pagina quando há muitas evoluções longas", async () => {
     const longas = Array.from({ length: 30 }, (_, i) => evolucao(i, "Texto longo da sessão. ".repeat(40)));
     const doc = await PDFDocument.load(

@@ -10,7 +10,10 @@ import {
   RECORRENCIA_LABEL,
   SYNC_STATUS_LABEL,
 } from "@/lib/agenda/types";
-import { horaBR, dataLongaBR, dataChaveBR } from "@/lib/agenda/datas";
+import { horaBR, dataLongaBR, dataChaveBR, dataBR } from "@/lib/agenda/datas";
+import { registrarAcesso } from "@/lib/prontuario/acesso";
+import { proximaSessaoDoPaciente } from "@/lib/prontuario/anotacoes";
+import { AnotacoesSessao } from "../AnotacoesSessao";
 import { cancelarConsulta, sincronizarConsultaAgora } from "../actions";
 import { CopyButton } from "../CopyButton";
 import { linkDaConsulta } from "@/lib/agenda/linkOnline";
@@ -44,6 +47,18 @@ export default async function ConsultaDetailPage({
     .eq("id", user.id)
     .maybeSingle();
   const link = linkDaConsulta(c, psicologa?.link_atendimento_online);
+
+  // Anotações para a sessão (0043): registra o acesso quando há texto; sessão
+  // que não aconteceu oferece levar o texto para a próxima.
+  let levarPara: string | null = null;
+  if (c.anotacoes_sessao) {
+    const naoAconteceu = c.status === "cancelada" || c.status === "falta";
+    const [, proxima] = await Promise.all([
+      registrarAcesso(supabase, "anotacao", c.paciente_id),
+      naoAconteceu ? proximaSessaoDoPaciente(supabase, c.paciente_id, c.inicio) : Promise.resolve(null),
+    ]);
+    levarPara = proxima ? dataBR(proxima.inicio) : null;
+  }
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
@@ -99,6 +114,10 @@ export default async function ConsultaDetailPage({
           </Link>
         </div>
       )}
+
+      <div className="card !p-0 overflow-hidden">
+        <AnotacoesSessao consultaId={c.id} texto={c.anotacoes_sessao} levarPara={levarPara} />
+      </div>
 
       {c.observacoes && (
         <section className="flex flex-col gap-1 text-sm">

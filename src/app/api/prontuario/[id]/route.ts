@@ -4,6 +4,9 @@ import type { Anamnese, Paciente } from "@/lib/pacientes/types";
 import type { Evolucao } from "@/lib/prontuario/types";
 import { gerarProntuarioPdf, type DocumentoPdf } from "@/lib/exportacao/prontuarioPdf";
 import { TIPOS_DOCUMENTO, type TipoDocumento } from "@/lib/documentos/tipos";
+import { juntarAnotacoes, type AnotacaoSessao } from "@/lib/prontuario/anotacoes";
+import { dataChaveBR } from "@/lib/agenda/datas";
+import { CONSULTA_STATUS_LABEL, type ConsultaStatus } from "@/lib/agenda/types";
 import {
   MSG_DOWNLOAD_FALHOU,
   MSG_DOWNLOAD_NAO_ENCONTRADO,
@@ -41,7 +44,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const supabase = await createClient();
   if (!(await registrarExportacao(supabase, "prontuario", id))) return respostaLimiteExportacao();
 
-  const [{ data: paciente }, { data: psicologa }, { data: anamnese }, { data: evolucoes, error }] =
+  const [{ data: paciente }, { data: psicologa }, { data: anamnese }, { data: evolucoes, error }, { data: anotacoesRaw }] =
     await Promise.all([
       supabase.from("pacientes").select("*").eq("id", id).maybeSingle(),
       supabase.from("psicologas").select("nome, crp").eq("id", user.id).maybeSingle(),
@@ -53,6 +56,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         .is("deleted_at", null)
         .order("data_sessao")
         .order("created_at"),
+      // Anotações para a sessão (0043).
+      supabase
+        .from("consultas")
+        .select("id, inicio, status, anotacoes_sessao")
+        .eq("paciente_id", id)
+        .is("deleted_at", null)
+        .not("anotacoes_sessao", "is", null)
+        .order("inicio"),
     ]);
 
   if (!paciente) return respostaErroDownload(404, MSG_DOWNLOAD_NAO_ENCONTRADO);
@@ -78,12 +89,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     arquivoExcluidoEm: x.arquivo_excluido_em as string | null,
   }));
 
+  const juntas = juntarAnotacoes((evolucoes ?? []) as Evolucao[], (anotacoesRaw ?? []) as AnotacaoSessao[]);
   const pdf = await gerarProntuarioPdf({
     psicologa: { nome: psicologa?.nome ?? null, crp: psicologa?.crp ?? null },
     paciente: paciente as Paciente,
     anamnese: anamnese as Anamnese | null,
     evolucoes: (evolucoes ?? []) as Evolucao[],
     documentos,
+    anotacoes: {
+      porEvolucao: new Map([...juntas.porEvolucao].map(([evo, a]) => [evo, a.anotacoes_sessao])),
+      soltas: juntas.soltas.map((a) => ({
+        data: dataChaveBR(a.inicio),
+        status: CONSULTA_STATUS_LABEL[a.status as ConsultaStatus] ?? a.status,
+        texto: a.anotacoes_sessao,
+      })),
+    },
   });
 
   return new Response(new Blob([pdf as BlobPart], { type: "application/pdf" }), {

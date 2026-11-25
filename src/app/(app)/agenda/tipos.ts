@@ -23,6 +23,8 @@ export type ItemConsulta = {
   evolucaoId?: string;
   evolucaoPendente: boolean;
   pagamentoPendente: boolean;
+  /** Tem "Anotações para a sessão" (0043). */
+  temAnotacoes?: boolean;
 };
 
 export type ItemBloqueio = {
@@ -39,6 +41,8 @@ export type ParamsAgenda = {
   dia?: string;
   consulta?: string;
   ocultarCanceladas?: boolean;
+  /** Abre o painel já escrevendo as anotações para a sessão. */
+  anotar?: boolean;
 };
 
 export function agendaHref(p: ParamsAgenda): string {
@@ -46,6 +50,7 @@ export function agendaHref(p: ParamsAgenda): string {
   if (p.dia) q.set("dia", p.dia);
   if (p.ocultarCanceladas) q.set("canceladas", "0");
   if (p.consulta) q.set("consulta", p.consulta);
+  if (p.consulta && p.anotar) q.set("anotar", "1");
   return `/agenda?${q.toString()}`;
 }
 

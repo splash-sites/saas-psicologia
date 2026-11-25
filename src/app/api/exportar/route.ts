@@ -144,6 +144,7 @@ export async function GET() {
       { titulo: "Paciente confirmou em", valor: dataHora("confirmada_em") },
       { titulo: "Link do Meet", valor: txt("meet_link") },
       { titulo: "Observações", valor: txt("observacoes") },
+      { titulo: "Anotações para a sessão", valor: txt("anotacoes_sessao") },
       { titulo: "Arquivada em", valor: dataHora("deleted_at") },
     ],
     evolucoes: [

@@ -9,6 +9,11 @@ import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { registrarAcesso } from "@/lib/prontuario/acesso";
 import { buscarStatusAssinatura } from "@/lib/assinatura/guard";
 import { carregarDocumentos, DocumentosLista } from "../../documentos/DocumentosLista";
+import { NotebookPen } from "lucide-react";
+import { anotacaoDaSessao, proximaSessaoDoPaciente } from "@/lib/prontuario/anotacoes";
+import { dataBR as dataBRConsulta, segundaDaSemana } from "@/lib/agenda/datas";
+import { agendaHref } from "@/app/(app)/agenda/tipos";
+import { AnotacaoDaSessao } from "../AnotacaoDaSessao";
 
 function dataBR(iso: string): string {
   const [a, m, d] = iso.split("-");
@@ -43,12 +48,15 @@ export default async function EvolucaoDetailPage({
     .maybeSingle();
 
   if (!data) notFound();
-  const [, documentos, status] = await Promise.all([
+  const e = data as Evolucao;
+  const [, documentos, status, anotacao, proxima] = await Promise.all([
     registrarAcesso(supabase, "evolucao", id, evolucaoId),
     carregarDocumentos(supabase, id, evolucaoId),
     buscarStatusAssinatura(user.id),
+    anotacaoDaSessao(supabase, id, { consultaId: e.consulta_id, data: e.data_sessao }),
+    // "Anotar para a próxima sessão" (0043).
+    proximaSessaoDoPaciente(supabase, id, `${e.data_sessao}T23:59:59-03:00`),
   ]);
-  const e = data as Evolucao;
   const arquivada = Boolean(e.deleted_at);
   const editado = e.updated_at !== e.created_at;
 
@@ -78,6 +86,22 @@ export default async function EvolucaoDetailPage({
           {e.deleted_motivo && ` Motivo: ${e.deleted_motivo}`}
         </p>
       )}
+
+      {!arquivada && proxima && (
+        <Link
+          href={agendaHref({
+            semana: segundaDaSemana(new Date(proxima.inicio)),
+            consulta: proxima.id,
+            anotar: true,
+          })}
+          className="flex items-center gap-2 rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-900 hover:bg-teal-100"
+        >
+          <NotebookPen className="size-4" aria-hidden />
+          Anotar para a próxima sessão ({dataBRConsulta(proxima.inicio)})
+        </Link>
+      )}
+
+      {anotacao && <AnotacaoDaSessao anotacao={anotacao} rotulo="Anotações para a sessão" />}
 
       <div className="flex flex-col gap-5">
         {camposPreenchidos(e).map((campo) => (

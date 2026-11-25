@@ -19,7 +19,16 @@ export type DadosProntuario = {
   evolucoes: Evolucao[];
   /** Documentos anexados (0041): só a lista, os arquivos vão no ZIP do paciente. */
   documentos?: DocumentoPdf[];
+  /** Anotações para a sessão (0043): por evolução e as de sessões sem evolução. */
+  anotacoes?: AnotacoesPdf;
   emitidoEm?: Date;
+};
+
+export type AnotacoesPdf = {
+  /** id da evolução -> texto */
+  porEvolucao: Map<string, string>;
+  /** Sessões sem evolução (futura, cancelada, falta…), em ordem de data. */
+  soltas: { data: string; status: string; texto: string }[];
 };
 
 export type DocumentoPdf = {
@@ -198,6 +207,8 @@ export async function gerarProntuarioPdf(d: DadosProntuario): Promise<Uint8Array
     garantirEspaco(110);
     separador(10);
     escrever(`Sessão de ${dataBRCompleta(e.data_sessao)}`, { fonte: negrito, tamanho: 11, antes: 4 });
+    const anotacao = d.anotacoes?.porEvolucao.get(e.id);
+    if (anotacao) campo("Anotações para a sessão", anotacao);
     // Só os campos preenchidos (nenhum é obrigatório).
     for (const c of camposPreenchidos(e)) campo(c.rotulo, e[c.nome]);
     if (e.notas_privadas) campo("Notas privadas", e.notas_privadas);
@@ -205,6 +216,17 @@ export async function gerarProntuarioPdf(d: DadosProntuario): Promise<Uint8Array
       `Registrada em ${dataHoraBR(e.created_at)}${e.updated_at !== e.created_at ? ` · última edição em ${dataHoraBR(e.updated_at)}` : ""}`,
       { tamanho: 8, cor: CINZA, antes: 6 },
     );
+  }
+
+  const soltas = d.anotacoes?.soltas ?? [];
+  if (soltas.length > 0) {
+    titulo(`Anotações para sessões sem evolução (${soltas.length})`);
+    for (const a of soltas) {
+      garantirEspaco(60);
+      separador(8);
+      escrever(`Sessão de ${dataBRCompleta(a.data)} · ${a.status}`, { fonte: negrito, tamanho: 10, antes: 4 });
+      escrever(a.texto, { antes: 2 });
+    }
   }
 
   const docs = d.documentos ?? [];

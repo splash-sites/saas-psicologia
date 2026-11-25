@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type TipoAcesso = "ficha" | "evolucoes" | "evolucao" | "documento";
+/** anotacao: abriu as "Anotações para a sessão" de uma consulta (0043). */
+export type TipoAcesso = "ficha" | "evolucoes" | "evolucao" | "documento" | "anotacao";
 
 /**
  * Registra que a psicóloga abriu parte do prontuário de um paciente (tabela

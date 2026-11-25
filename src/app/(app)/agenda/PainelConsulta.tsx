@@ -45,6 +45,8 @@ import {
 import { devolverPagamento } from "../financeiro/actions";
 import { EstadoBadge } from "./estilos";
 import { FecharComEsc } from "./FecharComEsc";
+import { AnotacoesSessao } from "./AnotacoesSessao";
+import { ObservacaoConsulta } from "./ObservacaoConsulta";
 import { agendaHref, type ItemConsulta } from "./tipos";
 
 type Props = {
@@ -55,6 +57,10 @@ type Props = {
   avisoFeriado?: AvisoProxima | null;
   /** A sessão cai no aniversário do paciente (item H). */
   aniversario?: { nome: string; idade: number; hoje: boolean; whatsapp: string | null } | null;
+  /** Anotações para a sessão (0043). */
+  anotacoes: { texto: string | null; levarPara: string | null; abrirEditando: boolean };
+  /** Observações da consulta (logística: "trazer o laudo"), do formulário de marcar. */
+  observacoes: string | null;
   hoje: string;
   agoraISO: string;
   /** URL da agenda sem o painel aberto. */
@@ -70,6 +76,8 @@ export function PainelConsulta({
   lembreteEnviadoEm,
   avisoFeriado,
   aniversario,
+  anotacoes,
+  observacoes,
   hoje,
   agoraISO,
   fecharHref,
@@ -190,6 +198,7 @@ export function PainelConsulta({
               <Modal className="size-4 text-slate-500" aria-hidden />
               {c.modalidade === "online" ? "Online" : "Presencial"}
             </span>
+            {observacoes && <ObservacaoConsulta texto={observacoes} />}
           </div>
 
           {principal && (
@@ -320,6 +329,14 @@ export function PainelConsulta({
           </section>
         )}
 
+        <AnotacoesSessao
+          key={c.id}
+          consultaId={c.id}
+          texto={anotacoes.texto}
+          levarPara={anotacoes.levarPara}
+          abrirEditando={anotacoes.abrirEditando}
+        />
+
         <dl className="flex flex-col">
           <Linha icone={CircleDollarSign} rotulo="Pagamento">
             {pagamento && statusPag ? (
@@ -415,7 +432,7 @@ export function PainelConsulta({
             href={`/agenda/${c.id}`}
             className="text-center text-sm text-slate-600 hover:opacity-80"
           >
-            Mais detalhes (Google, observações)
+            Mais detalhes
           </Link>
         </div>
       </aside>

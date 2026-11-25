@@ -73,6 +73,10 @@ export type Consulta = {
   valor: number | null;
   /** Na falta: cobrar a sessão mesmo assim? */
   cobrar: boolean;
+  /** "Anotações para a sessão" (0043): texto clínico da psicóloga. */
+  anotacoes_sessao: string | null;
+  /** Coluna gerada: há anotação (a agenda mostra o ícone sem ler o texto). */
+  tem_anotacoes: boolean;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
