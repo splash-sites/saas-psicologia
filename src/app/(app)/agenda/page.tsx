@@ -57,6 +57,7 @@ type ConsultaRow = Pick<
   | "valor"
   | "cobrar"
   | "tem_anotacoes"
+  | "dispensa_evolucao"
 > & { pacientes: { id: string; nome: string } | { id: string; nome: string }[] | null };
 
 const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -135,7 +136,7 @@ export default async function AgendaPage({
       supabase
         .from("consultas")
         .select(
-          "id, inicio, fim, modalidade, status, recorrencia, serie_id, confirmada_em, meet_link, valor, cobrar, tem_anotacoes, pacientes(id, nome)",
+          "id, inicio, fim, modalidade, status, recorrencia, serie_id, confirmada_em, meet_link, valor, cobrar, tem_anotacoes, dispensa_evolucao, pacientes(id, nome)",
         )
         .is("deleted_at", null)
         .gte("inicio", inicioSemana)
@@ -248,6 +249,7 @@ export default async function AgendaPage({
       evolucaoPendente: !evolucaoId && exigeEvolucao(r, agora),
       pagamentoPendente: pagPorConsulta.get(r.id)?.status === "pendente",
       temAnotacoes: r.tem_anotacoes,
+      dispensa_evolucao: r.dispensa_evolucao,
     };
   });
 

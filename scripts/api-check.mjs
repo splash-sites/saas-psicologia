@@ -39,7 +39,7 @@ async function criarUsuario(email, nome) {
   if (antigo) {
     // limpa dados antigos (tabelas com FK restrict) antes de apagar o usuário.
     // Desde a 0016 a conta só sai depois do prontuário e da própria psicóloga.
-    for (const t of ["acessos_prontuario", "documentos", "exportacoes", "lembretes", "evolucoes", "pagamentos", "consultas", "bloqueios", "anamneses", "pacientes"]) {
+    for (const t of ["acessos_prontuario", "documentos", "exportacoes", "lembretes", "evolucoes", "pagamentos", "consultas", "bloqueios", "anamneses", "pacientes", "importacoes"]) {
       await admin.from(t).delete().eq("psicologa_id", antigo.id);
     }
     await admin.from("psicologas").delete().eq("id", antigo.id);
@@ -181,7 +181,7 @@ const rotasPrivadas = (x) => [
   `/pacientes/${x.paciente}/evolucoes`, `/pacientes/${x.paciente}/evolucoes/nova`,
   `/pacientes/${x.paciente}/evolucoes/${x.evolucao}`, `/pacientes/${x.paciente}/evolucoes/${x.evolucao}/editar`,
   `/pacientes/${x.paciente}/financeiro`, "/financeiro", "/financeiro/a-receber", "/financeiro/previsto", "/financeiro/novo", "/financeiro/historico", `/financeiro/${x.pagamento}`, `/financeiro/${x.pagamento}/editar`,
-  "/lembretes", "/assinatura", "/configuracoes", `/api/prontuario/${x.paciente}`,
+  "/lembretes", "/assinatura", "/configuracoes", "/configuracoes/importar", `/api/prontuario/${x.paciente}`,
 ];
 const curto = (p) => p.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/g, ":id");
 
@@ -430,6 +430,9 @@ for (const [arq, nome, args, tipo] of casos) {
 
 // 6. Actions de A mirando ids de B (deveriam não afetar B)
 const cA2 = await cookieHeader("teste-a@teste.local");
+// Importação da B (0045): A não grava sessões nela.
+const { data: impB } = await admin.from("importacoes").insert({ psicologa_id: B.pid, origem: "psicomanager" }).select("id").single();
+const sessaoImp = { origemId: "x|2021-01-04|10:00", pacienteId: B.paciente, inicio: "2021-01-04T13:00:00.000Z", fim: "2021-01-04T13:50:00.000Z", status: "realizada", futura: false, demanda: "HACK", anotacoesSessao: null, valorConsulta: null, pagamento: null };
 const cruzadas = [
   [pac, "atualizarPaciente", () => [B.paciente, vazio, fd({ nome: "HACK", status: "ativo" })]],
   [pac, "salvarAnamnese", () => [B.paciente, vazio, fd({ demanda: "HACK" })]],
@@ -446,6 +449,7 @@ const cruzadas = [
   ["lembretes/actions", "marcarLembreteEnviado", () => [B.consulta]],
   [ag, "criarConsulta", () => [vazio, fd({ paciente_id: B.paciente, data: dia(9), hora: "10:00", duracao_min: 50, modalidade: "presencial", recorrencia: "nenhuma", ocorrencias: 1 })]],
   [fin, "criarPagamento", () => [vazio, fd({ paciente_id: B.paciente, valor: "1", situacao: "recebido", data_referencia: dia(0), data_pagamento: dia(0) })]],
+  ["configuracoes/importar/actions", "importarSessoes", () => [impB.id, [sessaoImp]]],
 ];
 for (const [arq, nome, args] of cruzadas) {
   const id = actionId(mapa, arq, nome);
@@ -453,7 +457,7 @@ for (const [arq, nome, args] of cruzadas) {
   const r = await chamarAction(id, args(), { cookie: cA2 });
   // Formulários de edição/criação devem avisar; ações de 1 clique só voltam
   // pra lista (clique duplo legítimo também não altera nada).
-  const deveAvisar = ["atualizarPaciente", "salvarAnamnese", "atualizarConsulta", "marcarComoPago", "criarConsulta", "criarPagamento", "salvarAnotacoesSessao", "levarAnotacaoParaProxima"].includes(nome);
+  const deveAvisar = ["atualizarPaciente", "salvarAnamnese", "atualizarConsulta", "marcarComoPago", "criarConsulta", "criarPagamento", "salvarAnotacoesSessao", "levarAnotacaoParaProxima", "importarSessoes"].includes(nome);
   registrar("ACTION A→B", nome, (x) => x.status < 500 && (!deveAvisar || /inválido|não encontrad/.test(x.retorno ?? "")), r);
 }
 

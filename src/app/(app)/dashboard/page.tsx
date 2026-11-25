@@ -73,6 +73,8 @@ type ConsultaPainel = {
   status: ConsultaStatus;
   confirmada_em: string | null;
   meet_link: string | null;
+  /** Importada já passada: não vira evolução pendente (0045). */
+  dispensa_evolucao: boolean;
   pacientes:
     | (PacienteRef & { telefone: string | null; aceita_lembretes: boolean })
     | (PacienteRef & { telefone: string | null; aceita_lembretes: boolean })[]
@@ -146,7 +148,7 @@ export default async function DashboardPage() {
     supabase
       .from("consultas")
       .select(
-        "id, inicio, fim, modalidade, status, confirmada_em, meet_link, pacientes(id, nome, telefone, aceita_lembretes), lembretes(consulta_inicio)",
+        "id, inicio, fim, modalidade, status, confirmada_em, meet_link, dispensa_evolucao, pacientes(id, nome, telefone, aceita_lembretes), lembretes(consulta_inicio)",
       )
       .is("deleted_at", null)
       .gte("inicio", desdePendencias)
@@ -202,6 +204,8 @@ export default async function DashboardPage() {
     .filter(
       (c) =>
         (c.status === "agendada" || c.status === "realizada") &&
+        // Sessão passada importada de outro sistema (0045) não fica pendente.
+        !c.dispensa_evolucao &&
         new Date(c.fim) < agora,
     )
     .reverse();

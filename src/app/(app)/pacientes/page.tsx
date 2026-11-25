@@ -87,6 +87,9 @@ export default async function PacientesPage() {
             <Plus className="size-4" aria-hidden />
             Novo paciente
           </Link>
+          <Link href="/configuracoes/importar" className="btn btn-outline">
+            Importar de outro sistema
+          </Link>
         </EstadoVazio>
       </div>
     );

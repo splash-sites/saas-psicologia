@@ -163,6 +163,18 @@ export default async function ConfiguracoesPage({
       </section>
 
       <section className="flex flex-col gap-3 card">
+        <h2 className="font-medium">Importar dados de outro sistema</h2>
+        <p className="text-sm text-slate-600">
+          Vindo do PsicoManager? Traga pacientes, sessões, evoluções e pagamentos
+          a partir das planilhas exportadas de lá. Antes de gravar, você vê uma
+          prévia; importar de novo não duplica.
+        </p>
+        <Link href="/configuracoes/importar" className="btn btn-outline self-start">
+          Importar dados do consultório
+        </Link>
+      </section>
+
+      <section className="flex flex-col gap-3 card">
         <h2 className="font-medium">Exportar dados</h2>
         <p className="text-sm text-slate-600">
           Baixa tudo da sua conta (pacientes, anamneses, agenda, evoluções com

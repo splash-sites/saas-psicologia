@@ -77,6 +77,10 @@ export type Consulta = {
   anotacoes_sessao: string | null;
   /** Coluna gerada: há anotação (a agenda mostra o ícone sem ler o texto). */
   tem_anotacoes: boolean;
+  /** Importada já passada: não vira evolução pendente (0045). */
+  dispensa_evolucao: boolean;
+  importacao_id: string | null;
+  origem_id: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

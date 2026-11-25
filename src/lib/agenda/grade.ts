@@ -32,10 +32,12 @@ export function estadoVisual(
 
 /** Sessão que exige registro de evolução (aconteceu ou deveria ter acontecido). */
 export function exigeEvolucao(
-  c: { status: ConsultaStatus; fim: string },
+  c: { status: ConsultaStatus; fim: string; dispensa_evolucao?: boolean },
   agora: Date,
 ): boolean {
   if (c.status === "cancelada" || c.status === "falta") return false;
+  // Sessão passada importada de outro sistema (0045): não fica pendente.
+  if (c.dispensa_evolucao) return false;
   return new Date(c.fim).getTime() <= agora.getTime();
 }
 

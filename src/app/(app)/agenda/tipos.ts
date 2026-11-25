@@ -23,6 +23,8 @@ export type ItemConsulta = {
   evolucaoId?: string;
   evolucaoPendente: boolean;
   pagamentoPendente: boolean;
+  /** Sessão importada já passada: não exige evolução (0045). */
+  dispensa_evolucao?: boolean;
   /** Tem "Anotações para a sessão" (0043). */
   temAnotacoes?: boolean;
 };

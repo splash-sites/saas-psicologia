@@ -84,6 +84,7 @@ export async function sincronizarConsulta(
   supabase: SupabaseClient,
   psicologaId: string,
   consultaId: string,
+  opcoes: OpcoesSync = {},
 ): Promise<void> {
   if (!integracaoGoogleConfigurada()) {
     await marcar(supabase, consultaId, {
@@ -114,7 +115,11 @@ export async function sincronizarConsulta(
     .eq("psicologa_id", psicologaId)
     .maybeSingle();
   const conviteLigado = pref?.convite_google ?? true;
-  const { convidadoEmail, notificar } = conviteDoPaciente(c, pac, conviteLigado);
+  // Importação (sessões futuras do sistema antigo): evento com Meet, sem
+  // convidar o paciente (decisão do usuário: nada de dezenas de convites).
+  const { convidadoEmail, notificar } = opcoes.semConvite
+    ? { convidadoEmail: null, notificar: false }
+    : conviteDoPaciente(c, pac, conviteLigado);
 
   // O evento é visível ao convidado: sem observações da consulta nem nada
   // clínico. Só primeiro nome + inicial do paciente, horário e Meet.
@@ -212,14 +217,17 @@ export async function emParalelo<T>(
   );
 }
 
-/** Sincroniza várias consultas (usado para séries recorrentes). */
+export type OpcoesSync = { semConvite?: boolean };
+
+/** Sincroniza várias consultas (séries recorrentes, importação). */
 export async function sincronizarConsultas(
   supabase: SupabaseClient,
   psicologaId: string,
   ids: string[],
+  opcoes: OpcoesSync = {},
 ): Promise<void> {
   await emParalelo(ids, SYNC_EM_PARALELO, (id) =>
-    sincronizarConsulta(supabase, psicologaId, id),
+    sincronizarConsulta(supabase, psicologaId, id, opcoes),
   );
 }
 
