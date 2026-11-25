@@ -81,9 +81,9 @@ export default async function FinanceiroPage({
   const aReceber = previsto
     ? Number(previsto.a_receber)
     : lista.filter((l) => l.status === "pendente").reduce((s, l) => s + Number(l.valor), 0);
-  const atrasados = lista.filter(
-    (l) => statusExibicao(l, hoje) === "atrasado",
-  ).length;
+  // Atrasados do mês: lançamentos deste mês pendentes e já vencidos.
+  const atrasadosDoMes = lista.filter((l) => statusExibicao(l, hoje) === "atrasado");
+  const valorAtrasadoMes = atrasadosDoMes.reduce((s, l) => s + Number(l.valor), 0);
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
@@ -127,10 +127,11 @@ export default async function FinanceiroPage({
           />
         )}
         <Tile
-          rotulo="Atrasados"
-          valor={String(atrasados)}
+          rotulo={`Atrasados do mês${atrasadosDoMes.length ? ` (${atrasadosDoMes.length})` : ""}`}
+          valor={formatarBRL(valorAtrasadoMes)}
           tom="red"
           className={previsto ? "" : "col-span-2 sm:col-span-1"}
+          href={atrasadosDoMes.length ? `/financeiro/a-receber?mes=${mes}&ver=vencidos` : undefined}
         />
       </div>
 
