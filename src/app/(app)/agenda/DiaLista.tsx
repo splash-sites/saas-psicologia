@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Cake, FileText, Video } from "lucide-react";
 import { ESTADO_VISUAL_LABEL } from "@/lib/agenda/grade";
-import { horaBR, dataLongaBR, BR_OFFSET } from "@/lib/agenda/datas";
+import { horaBR } from "@/lib/agenda/datas";
 import { estadoSessao, meetEmDestaque } from "@/lib/agenda/estado";
 import { MODALIDADE_LABEL } from "@/lib/agenda/types";
 import { HoraAgora } from "@/components/Relogio";
@@ -18,6 +18,7 @@ import {
 
 const LETRA_DIA = ["D", "S", "T", "Q", "Q", "S", "S"];
 const NOME_DIA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 type Props = {
   semana: string[];
@@ -69,10 +70,12 @@ export function DiaLista({
   const ativas = cs.filter((c) => c.status !== "cancelada").length;
   const canceladas = cs.length - ativas;
   const anivs = aniversarios.get(dia) ?? [];
-  const titulo = dataLongaBR(`${dia}T12:00:00${BR_OFFSET}`);
+  // "Terça, 24 de novembro" (canvas "Celular").
+  const titulo = `${NOME_DIA[new Date(`${dia}T12:00:00Z`).getUTCDay()]}, ${Number(dia.slice(8))} de ${MESES[Number(dia.slice(5, 7)) - 1]}`;
 
   return (
-    <div className="flex flex-col gap-3">
+    // pb-20: o botão "+" flutuante não cobre a última consulta.
+    <div className="flex flex-col gap-3 pb-20">
       <nav aria-label="Dias da semana" className="grid grid-cols-7 gap-1 rounded-2xl border border-[#DFEBE7] bg-white p-1.5">
         {semana.map((d) => {
           const sel = d === dia;
@@ -112,11 +115,12 @@ export function DiaLista({
         })}
       </nav>
 
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-lg font-bold text-[#12302B] first-letter:uppercase">
+      {/* Contador desce para a linha de baixo quando não cabe ao lado do título. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+        <h2 className="whitespace-nowrap text-lg font-bold text-[#12302B]">
           {dia === hoje ? `Hoje · ${titulo}` : titulo}
         </h2>
-        <span className="text-[13px] text-[#5B6E69]">
+        <span className="whitespace-nowrap text-[13px] text-[#5B6E69]">
           {ativas > 0 && `${ativas} ${ativas === 1 ? "sessão" : "sessões"}`}
           {canceladas > 0 && ` · ${canceladas} cancelada${canceladas === 1 ? "" : "s"}`}
         </span>

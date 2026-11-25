@@ -6,7 +6,7 @@ import { avisoDaProxima, proximasSessoes } from "@/lib/agenda/feriadoProxima";
 import { aniversariantesPorDia, idadeNoAniversario, mensagemAniversario, type PacienteNascimento } from "@/lib/aniversario";
 import { whatsappLinkComTexto } from "@/lib/pacientes/whatsapp";
 import { redirect } from "next/navigation";
-import { Plus } from "lucide-react";
+import { CalendarOff, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Bloqueio, Consulta } from "@/lib/agenda/types";
@@ -302,6 +302,47 @@ export default async function AgendaPage({
     <div className="flex w-full flex-col gap-4">
       <AutoRefresh marcos={marcosDoDia(rows, hoje)} />
 
+      {/* Celular: topo enxuto (canvas "Celular"): título, eventos e a semana. */}
+      <div className="flex items-center justify-between gap-2 md:hidden">
+        <h1 className="text-[22px] font-bold tracking-tight text-[#12302B]">Agenda</h1>
+        <div className="flex items-center">
+          <Link
+            href="/agenda/eventos"
+            aria-label="Eventos (férias, compromissos)"
+            className="flex size-11 items-center justify-center rounded-[10px] text-[#3D524D] hover:bg-[#EEF3F1]"
+          >
+            <CalendarOff className="size-[18px]" aria-hidden />
+          </Link>
+          <Link
+            href={agendaHref({ semana: addDias(segunda, -7), ocultarCanceladas: params.ocultarCanceladas })}
+            aria-label="Semana anterior"
+            className="flex size-11 items-center justify-center rounded-[10px] hover:bg-[#EEF3F1]"
+          >
+            <ChevronLeft className="size-[18px] text-[#12302B]" aria-hidden />
+          </Link>
+          {semana.includes(hoje) ? (
+            <span className="text-sm font-semibold text-[#3D524D]">{rotuloSemanaCurto(semana)}</span>
+          ) : (
+            <Link
+              href={params.ocultarCanceladas ? "/agenda?canceladas=0" : "/agenda"}
+              aria-label="Voltar para hoje"
+              className="flex flex-col items-center rounded-lg px-1 text-sm font-semibold leading-tight text-[#3D524D]"
+            >
+              {rotuloSemanaCurto(semana)}
+              <span className="text-[11px] font-semibold text-[#0F766E]">Voltar para hoje</span>
+            </Link>
+          )}
+          <Link
+            href={agendaHref({ semana: addDias(segunda, 7), ocultarCanceladas: params.ocultarCanceladas })}
+            aria-label="Próxima semana"
+            className="flex size-11 items-center justify-center rounded-[10px] hover:bg-[#EEF3F1]"
+          >
+            <ChevronRight className="size-[18px] text-[#12302B]" aria-hidden />
+          </Link>
+        </div>
+      </div>
+
+      <div className="hidden md:flex md:flex-col md:gap-4">
       <CabecalhoPagina
         titulo="Agenda"
         periodo={
@@ -359,6 +400,7 @@ export default async function AgendaPage({
           </Link>
         )}
       </div>
+      </div>
 
       <div className="hidden md:block">
         <GradeSemana
@@ -388,6 +430,15 @@ export default async function AgendaPage({
           params={params}
         />
       </div>
+
+      {/* Celular: "Nova consulta" como botão flutuante (canvas "Celular"). */}
+      <Link
+        href="/agenda/nova"
+        aria-label="Nova consulta"
+        className="fixed bottom-5 right-4 z-30 flex size-14 items-center justify-center rounded-[18px] bg-[#0F766E] text-white shadow-[0_4px_12px_rgba(18,48,43,0.25)] md:hidden"
+      >
+        <Plus className="size-6" aria-hidden />
+      </Link>
 
       <Legenda />
 
@@ -447,6 +498,14 @@ const MESES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
+
+/** Celular: "23–29 nov" ou "30 nov – 6 dez". */
+function rotuloSemanaCurto(semana: string[]): string {
+  const [, ma, da] = semana[0].split("-").map(Number);
+  const [, mb, db] = semana[6].split("-").map(Number);
+  const mes = (m: number) => MESES[m - 1].slice(0, 3);
+  return ma === mb ? `${da}–${db} ${mes(mb)}` : `${da} ${mes(ma)} – ${db} ${mes(mb)}`;
+}
 
 /** "21 – 27 de setembro de 2026" ou "28 de setembro – 4 de outubro de 2026". */
 function rotuloSemana(semana: string[]): string {
