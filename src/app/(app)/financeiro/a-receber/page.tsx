@@ -1,101 +1,209 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CheckCheck, TriangleAlert } from "lucide-react";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
-import { EstadoVazio } from "@/components/EstadoVazio";
 import { NavegacaoPeriodo } from "@/components/NavegacaoPeriodo";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { hojeBR } from "@/lib/agenda/datas";
+import { formatarBRL } from "@/lib/financeiro/types";
 import { mesAtual, mesAnterior, mesSeguinte, primeiroDia, ultimoDia, rotuloMes } from "@/lib/financeiro/mes";
+import { situacaoLancamento } from "@/lib/financeiro/situacao";
 import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
-import { agrupar, pendentesAte, realizado, Secao } from "./lista";
+import { Pilula } from "../Pilula";
+import { pendentesAte, realizado, type Pendente } from "./lista";
+import { TabelaAReceber, type GrupoTabela } from "./TabelaAReceber";
 
 export const metadata = { title: "A receber" };
 
-// Detalhe do card "A receber (sessões realizadas)" (2026-11-24, decisão do
-// usuário): o que já aconteceu e não foi pago, por paciente — deste mês (mesma
-// regra do card, resumo_sessoes_mes da 0037). O que ficou de meses anteriores
-// abre em página própria pelo botão "Meses anteriores (N)"
-// (/financeiro/a-receber/meses-anteriores; antes trocava o conteúdo desta tela
-// e confundia — 2026-11-25). O card "Atrasados do mês" abre ?ver=vencidos: os
-// lançamentos deste mês pendentes e já vencidos (mesma conta do card).
-// "Dar baixa" abre a baixa em lote do paciente.
+// A receber (redesenho de 2026-11-25, canvas "Main"/"Celular" do usuário):
+// sessões que já aconteceram e não foram pagas, por paciente. Resumo no topo,
+// abas Este mês / Meses anteriores / Tudo (relativas ao mês escolhido, com as
+// setas de mês), "Só atrasados" (o card "Atrasados do mês" do Financeiro abre
+// aqui), ordenar por mais antigo ou maior valor e "Dar baixa" dentro da linha.
+// "Em aberto há N dias" conta do VENCIMENTO (cobrança mensal: "A vencer").
 
-export default async function AReceberPage({ searchParams }: { searchParams: Promise<{ mes?: string; ver?: string }> }) {
-  const { mes: mesParam, ver } = await searchParams;
+type Aba = "mes" | "anteriores" | "tudo";
+const um = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
+
+export default async function AReceberPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mes?: string; aba?: string; atrasados?: string; ver?: string }>;
+}) {
+  const sp = await searchParams;
   const supabase = await createClient();
   const user = await usuarioAtual();
   if (!user) redirect("/login");
 
-  const mes = /^\d{4}-\d{2}$/.test(mesParam ?? "") ? mesParam! : mesAtual();
-  // Link antigo (?ver=atrasados): a lista agora tem página própria.
-  if (ver === "atrasados") redirect(`/financeiro/a-receber/meses-anteriores?mes=${mes}`);
+  const mes = /^\d{4}-\d{2}$/.test(sp.mes ?? "") ? sp.mes! : mesAtual();
+  // Links antigos: ?ver=atrasados (meses anteriores) e ?ver=vencidos (atrasados do mês).
+  const aba: Aba = sp.ver === "atrasados" ? "anteriores" : sp.aba === "anteriores" || sp.aba === "tudo" ? sp.aba : "mes";
+  const soAtrasados = sp.atrasados === "1" || sp.ver === "vencidos";
   const inicio = primeiroDia(mes);
   const fim = ultimoDia(mes);
   const hoje = hojeBR();
   const agora = new Date().getTime();
 
   await gerarLancamentosDasSessoes(supabase);
-  const pendentes = await pendentesAte(supabase, fim);
-  const todos = pendentes.filter((p) => realizado(p, hoje, agora));
-  const desteMes = agrupar(todos.filter((p) => p.data_referencia >= inicio), hoje);
-  const nAnteriores = todos.filter((p) => p.data_referencia < inicio).length;
-  // Mesma regra do card "Atrasados do mês": deste mês, pendente, vencido.
-  const vencidosDoMes = agrupar(pendentes.filter((p) => p.data_referencia >= inicio && p.vencimento < hoje), hoje);
-  const verVencidos = ver === "vencidos";
+  const todos = (await pendentesAte(supabase, fim)).filter((p) => realizado(p, hoje, agora));
+  const doMes = todos.filter((p) => p.data_referencia >= inicio);
+  const anteriores = todos.filter((p) => p.data_referencia < inicio);
+  const daAba = aba === "mes" ? doMes : aba === "anteriores" ? anteriores : todos;
+  const visiveis = soAtrasados ? daAba.filter((p) => p.vencimento < hoje) : daAba;
+
+  const soma = (xs: Pendente[]) => xs.reduce((s, p) => s + Number(p.valor), 0);
+  const pacientes = (xs: Pendente[]) => new Set(xs.map((p) => p.paciente_id)).size;
+  const n = (x: number, um1: string, varios: string) => `${x} ${x === 1 ? um1 : varios}`;
+
+  // O mais antigo em aberto: o de vencimento mais velho (de todos os meses).
+  const maisAntigo = todos.reduce<Pendente | null>((m, p) => (!m || p.vencimento < m.vencimento ? p : m), null);
+
+  const grupos: GrupoTabela[] = agruparPorPaciente(visiveis, hoje);
+  const base = `/financeiro/a-receber?mes=${mes}`;
+  const href = (a: Aba, atrasados = soAtrasados) => `${base}${a === "mes" ? "" : `&aba=${a}`}${atrasados ? "&atrasados=1" : ""}`;
+  const nomeMes = rotuloMes(mes).split(" de ")[0].toLowerCase();
 
   return (
-    <div className="flex w-full max-w-3xl flex-col gap-6">
+    <div className="flex w-full max-w-5xl flex-col gap-5 text-[#12302B]">
       <CabecalhoPagina
         titulo="A receber"
         voltar={{ href: `/financeiro?mes=${mes}`, rotulo: "Financeiro" }}
         periodo={
           <NavegacaoPeriodo
-            anterior={{ href: `/financeiro/a-receber?mes=${mesAnterior(mes)}`, rotulo: "Mês anterior" }}
+            anterior={{ href: `/financeiro/a-receber?mes=${mesAnterior(mes)}${aba === "mes" ? "" : `&aba=${aba}`}`, rotulo: "Mês anterior" }}
             atual={{ href: "/financeiro/a-receber", rotulo: "Mês atual" }}
-            proximo={{ href: `/financeiro/a-receber?mes=${mesSeguinte(mes)}`, rotulo: "Próximo mês" }}
+            proximo={{ href: `/financeiro/a-receber?mes=${mesSeguinte(mes)}${aba === "mes" ? "" : `&aba=${aba}`}`, rotulo: "Próximo mês" }}
             periodo={rotuloMes(mes)}
           />
         }
-        acoes={
-          nAnteriores > 0 && (
-            <Link
-              href={`/financeiro/a-receber/meses-anteriores?mes=${mes}`}
-              className="relative inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 transition hover:bg-red-100"
-            >
-              <TriangleAlert className="size-4" aria-hidden />
-              Meses anteriores
-              <span
-                className="absolute -right-2 -top-2 flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold leading-5 text-white"
-                aria-label={`${nAnteriores} ${nAnteriores === 1 ? "sessão" : "sessões"}`}
-              >
-                {nAnteriores}
-              </span>
-            </Link>
-          )
-        }
-        descricao="Sessões que já aconteceram e ainda não foram pagas. Em cada paciente, “Dar baixa” marca várias como pagas de uma vez."
+        descricao="Sessões que já aconteceram e ainda não foram pagas."
       />
 
-      {verVencidos ? (
-        <>
-          <Secao
-            titulo={`Atrasados de ${rotuloMes(mes).toLowerCase()}`}
-            grupos={vencidosDoMes}
-            hoje={hoje}
-            vazio="Nenhum atrasado neste mês."
-            destaque
-          />
-          <Link href={`/financeiro/a-receber?mes=${mes}`} className="w-fit text-sm font-medium text-teal-700 hover:text-teal-800">
-            Ver tudo a receber de {rotuloMes(mes).toLowerCase()}
-          </Link>
-        </>
-      ) : desteMes.length === 0 && nAnteriores === 0 ? (
-        <EstadoVazio icon={CheckCheck} titulo="Nada a receber" texto="Todas as sessões realizadas estão pagas." />
-      ) : (
-        <Secao titulo={`De ${rotuloMes(mes).toLowerCase()}`} grupos={desteMes} hoje={hoje} vazio="Nada a receber deste mês." />
-      )}
+      {/* Resumo */}
+      <section aria-label="Resumo" className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <div className="col-span-2 flex flex-col gap-1 rounded-2xl bg-[#12302B] px-5 py-4 text-[#F4F7F6] lg:col-span-1">
+          <span className="text-[13px] text-[#C9DAD5]">Total em aberto</span>
+          <span className="text-[28px] font-bold tracking-tight" data-sensivel>
+            {formatarBRL(soma(todos))}
+          </span>
+          <span className="text-[13px] text-[#C9DAD5]">
+            {n(todos.length, "sessão", "sessões")} de {n(pacientes(todos), "paciente", "pacientes")}
+          </span>
+        </div>
+        <CardResumo rotulo={`De ${nomeMes}`} valor={formatarBRL(soma(doMes))} sub={n(pacientes(doMes), "paciente", "pacientes")} />
+        <CardResumo rotulo="De meses anteriores" valor={formatarBRL(soma(anteriores))} sub={n(pacientes(anteriores), "paciente", "pacientes")} />
+        <div className="col-span-2 flex flex-col gap-1.5 rounded-2xl border border-[#DFEBE7] bg-white px-4 py-3.5 lg:col-span-1">
+          <span className="text-[13px] text-[#4A5F5A]">Em aberto há mais tempo</span>
+          {maisAntigo ? (
+            <>
+              <Pilula situacao={situacaoLancamento(maisAntigo, hoje)} />
+              <span className="truncate text-[13px] text-[#4A5F5A]" data-sensivel>
+                {um(maisAntigo.pacientes)?.nome ?? "Paciente"}
+              </span>
+            </>
+          ) : (
+            <span className="text-lg font-bold">—</span>
+          )}
+        </div>
+      </section>
+
+      {/* Abas e filtro */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div role="group" aria-label="Período" className="grid grid-cols-3 gap-0.5 rounded-xl bg-[#E8EFEC] p-1 sm:flex">
+          <Aba href={href("mes")} ativa={aba === "mes"} rotulo="Este mês" n={pacientes(doMes)} />
+          <Aba href={href("anteriores")} ativa={aba === "anteriores"} rotulo="Meses anteriores" curto="Anteriores" n={pacientes(anteriores)} />
+          <Aba href={href("tudo")} ativa={aba === "tudo"} rotulo="Tudo" n={pacientes(todos)} />
+        </div>
+        <Link
+          href={href(aba, !soAtrasados)}
+          aria-pressed={soAtrasados}
+          className={`inline-flex min-h-10 items-center rounded-xl border px-3.5 text-[13px] font-semibold ${
+            soAtrasados ? "border-[#F1C2A8] bg-[#FCE6DA] text-[#7A2A0A]" : "border-[#DFEBE7] bg-white text-[#3D524D] hover:bg-[#F2FAF8]"
+          }`}
+        >
+          {soAtrasados ? "✓ " : ""}Só atrasados
+        </Link>
+      </div>
+
+      <TabelaAReceber
+        key={`${mes}-${aba}-${soAtrasados}`}
+        grupos={grupos}
+        hoje={hoje}
+        vazio={
+          soAtrasados
+            ? "Nada atrasado aqui."
+            : aba === "mes"
+              ? `Nada em aberto de ${nomeMes}.`
+              : aba === "anteriores"
+                ? "Nada em aberto de meses anteriores."
+                : "Nada em aberto. Todas as sessões realizadas estão pagas."
+        }
+      />
+
+      <div className="flex flex-wrap items-center gap-2 text-xs text-[#4A5F5A]">
+        <span>Atrasado há:</span>
+        <span className="rounded-full border border-[#EBD49A] bg-[#FBF2DC] px-2 py-0.5 font-semibold text-[#5C460F]">até 30 dias</span>
+        <span className="rounded-full border border-[#F1C2A8] bg-[#FCE6DA] px-2 py-0.5 font-semibold text-[#7A2A0A]">31 a 90 dias</span>
+        <span className="rounded-full border border-[#F5C6D7] bg-[#FCE7EF] px-2 py-0.5 font-semibold text-[#8A1F4C]">mais de 90 dias</span>
+        <span className="text-[#5B6E69]">· contado do vencimento</span>
+      </div>
     </div>
+  );
+}
+
+function agruparPorPaciente(itens: Pendente[], hoje: string): GrupoTabela[] {
+  const mapa = new Map<string, GrupoTabela>();
+  for (const p of itens) {
+    const g =
+      mapa.get(p.paciente_id) ??
+      ({ pacienteId: p.paciente_id, nome: um(p.pacientes)?.nome ?? "Paciente", sessoes: [], total: 0, situacao: situacaoLancamento(p, hoje), maisVelho: p.vencimento } satisfies GrupoTabela);
+    g.sessoes.push({
+      id: p.id,
+      data: p.data_referencia,
+      vencimento: p.vencimento,
+      valor: Number(p.valor),
+      sessao: Boolean(um(p.consultas)),
+    });
+    g.total += Number(p.valor);
+    if (p.vencimento < g.maisVelho) {
+      g.maisVelho = p.vencimento;
+      g.situacao = situacaoLancamento(p, hoje);
+    }
+    mapa.set(p.paciente_id, g);
+  }
+  return [...mapa.values()];
+}
+
+function CardResumo({ rotulo, valor, sub }: { rotulo: string; valor: string; sub: string }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-2xl border border-[#DFEBE7] bg-white px-4 py-3.5">
+      <span className="text-[13px] text-[#4A5F5A]">{rotulo}</span>
+      <span className="text-xl font-bold" data-sensivel>
+        {valor}
+      </span>
+      <span className="text-[13px] text-[#4A5F5A]">{sub}</span>
+    </div>
+  );
+}
+
+function Aba({ href, ativa, rotulo, curto, n }: { href: string; ativa: boolean; rotulo: string; curto?: string; n: number }) {
+  return (
+    <Link
+      href={href}
+      aria-current={ativa ? "page" : undefined}
+      className={`flex min-h-10 items-center justify-center whitespace-nowrap rounded-[9px] px-3 text-[13px] ${
+        ativa ? "bg-white font-semibold shadow-[0_1px_2px_rgba(18,48,43,0.12)]" : "font-medium text-[#3D524D] hover:text-[#12302B]"
+      }`}
+    >
+      {curto ? (
+        <>
+          <span className="sm:hidden">{curto}</span>
+          <span className="hidden sm:inline">{rotulo}</span>
+        </>
+      ) : (
+        rotulo
+      )}
+      <span className="ml-1.5 font-medium text-[#4A5F5A]">{n}</span>
+    </Link>
   );
 }

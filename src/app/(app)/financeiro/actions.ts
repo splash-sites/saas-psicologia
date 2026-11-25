@@ -10,6 +10,7 @@ import {
   pagamentoSchema,
   marcarPagoSchema,
 } from "@/lib/financeiro/schema";
+import { FORMAS_PAGAMENTO } from "@/lib/financeiro/types";
 
 export type FormState = {
   error?: string;
@@ -114,6 +115,9 @@ export async function marcarComoPago(
   }
   const v = parsed.data;
 
+  // Forma de antes: o "Desfazer" logo depois da baixa devolve o que era.
+  const { data: antes } = await supabase.from("pagamentos").select("forma_pagamento").eq("id", id).maybeSingle();
+
   const { data: alterados, error } = await supabase
     .from("pagamentos")
     .update({
@@ -127,6 +131,30 @@ export async function marcarComoPago(
 
   if (error) return { error: await mensagemErroEscrita(supabase, error, "Não foi possível confirmar o pagamento.") };
   if (!alterados?.length) return { error: "Lançamento não encontrado." };
+
+  revalidatePath("/financeiro");
+  revalidatePath(`/financeiro/${id}`);
+  redirect(`/financeiro/${id}?baixa=${encodeURIComponent(antes?.forma_pagamento ?? "")}`);
+}
+
+/**
+ * "Desfazer" logo depois de dar baixa: volta para em aberto, sem data de
+ * pagamento e com a forma de antes. Só mexe se ainda estiver pago.
+ */
+export async function desfazerBaixa(
+  id: string,
+  formaAnterior: string,
+  _formData: FormData,
+): Promise<void> {
+  const { supabase } = await requirePsicologa();
+  const forma = (FORMAS_PAGAMENTO as readonly string[]).includes(formaAnterior) ? formaAnterior : null;
+
+  await supabase
+    .from("pagamentos")
+    .update({ status: "pendente", data_pagamento: null, forma_pagamento: forma })
+    .eq("id", id)
+    .eq("status", "pago")
+    .is("deleted_at", null);
 
   revalidatePath("/financeiro");
   revalidatePath(`/financeiro/${id}`);
@@ -163,7 +191,30 @@ export async function arquivarPagamento(
     .is("deleted_at", null);
 
   revalidatePath("/financeiro");
-  redirect("/financeiro");
+  // A tela do Financeiro mostra "Lançamento arquivado · Desfazer".
+  redirect(`/financeiro?arquivado=${id}`);
+}
+
+/**
+ * "Desfazer" logo depois de arquivar. Não desarquiva o que a consulta
+ * arquivou sozinha (cancelada/falta sem cobrança, 0035): esse volta pela
+ * própria consulta.
+ */
+export async function desarquivarPagamento(
+  id: string,
+  _formData: FormData,
+): Promise<void> {
+  const { supabase } = await requirePsicologa();
+
+  await supabase
+    .from("pagamentos")
+    .update({ deleted_at: null })
+    .eq("id", id)
+    .eq("arquivado_pela_consulta", false)
+    .not("deleted_at", "is", null);
+
+  revalidatePath("/financeiro");
+  redirect(`/financeiro/${id}`);
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -212,6 +263,98 @@ export async function marcarVariosComoPagos(
   revalidatePath("/financeiro");
   revalidatePath("/financeiro/em-aberto");
   redirect(`/financeiro/em-aberto/${pacienteId}?baixa=${alterados.length}`);
+}
+
+export type ResultadoBaixa =
+  | { ok: false; error: string }
+  | {
+      ok: true;
+      quantidade: number;
+      total: number;
+      /** Para o "Desfazer": cada lançamento com a forma que tinha antes. */
+      desfazer: { id: string; forma: string | null }[];
+      data: string;
+    };
+
+/**
+ * Baixa dentro da linha do A receber (redesenho de 2026-11-25): as sessões
+ * marcadas do paciente, com a mesma data e forma. Devolve o necessário para o
+ * "Desfazer" em vez de redirecionar.
+ */
+export async function darBaixaEmLote(
+  pacienteId: string,
+  ids: string[],
+  dataPagamento: string,
+  formaPagamento: string,
+): Promise<ResultadoBaixa> {
+  const { supabase } = await requirePsicologa();
+  const validos = ids.filter((id) => UUID_RE.test(id)).slice(0, 500);
+  if (!UUID_RE.test(pacienteId) || validos.length === 0) return { ok: false, error: "Escolha pelo menos uma sessão." };
+
+  const parsed = marcarPagoSchema.safeParse({ data_pagamento: dataPagamento, forma_pagamento: formaPagamento || undefined });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Data de pagamento inválida." };
+  const v = parsed.data;
+
+  const { data: antes } = await supabase
+    .from("pagamentos")
+    .select("id, forma_pagamento")
+    .in("id", validos)
+    .eq("paciente_id", pacienteId)
+    .eq("status", "pendente")
+    .is("deleted_at", null);
+
+  const { data: alterados, error } = await supabase
+    .from("pagamentos")
+    .update({ status: "pago", data_pagamento: v.data_pagamento, forma_pagamento: v.forma_pagamento ?? null })
+    .in("id", validos)
+    .eq("paciente_id", pacienteId)
+    .eq("status", "pendente")
+    .is("deleted_at", null)
+    .select("id, valor");
+
+  if (error) return { ok: false, error: await mensagemErroEscrita(supabase, error, "Não foi possível confirmar os pagamentos.") };
+  if (!alterados?.length) return { ok: false, error: "Nenhum lançamento em aberto foi encontrado." };
+
+  const formaAntes = new Map((antes ?? []).map((a) => [a.id as string, (a.forma_pagamento as string | null) ?? null]));
+  revalidatePath("/financeiro", "layout");
+  return {
+    ok: true,
+    quantidade: alterados.length,
+    total: alterados.reduce((s, a) => s + Number(a.valor), 0),
+    desfazer: alterados.map((a) => ({ id: a.id as string, forma: formaAntes.get(a.id as string) ?? null })),
+    data: v.data_pagamento,
+  };
+}
+
+/**
+ * "Desfazer" da baixa em lote: volta para em aberto só o que ainda está pago
+ * com a data daquela baixa, com a forma de antes.
+ */
+export async function desfazerBaixaEmLote(
+  itens: { id: string; forma: string | null }[],
+  dataPagamento: string,
+): Promise<{ ok: boolean }> {
+  const { supabase } = await requirePsicologa();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataPagamento)) return { ok: false };
+  const formas = FORMAS_PAGAMENTO as readonly string[];
+  // Agrupa por forma anterior: um update por forma.
+  const porForma = new Map<string | null, string[]>();
+  for (const it of itens.slice(0, 500)) {
+    if (!UUID_RE.test(it.id)) continue;
+    const f = it.forma && formas.includes(it.forma) ? it.forma : null;
+    porForma.set(f, [...(porForma.get(f) ?? []), it.id]);
+  }
+  for (const [forma, ids] of porForma) {
+    await supabase
+      .from("pagamentos")
+      .update({ status: "pendente", data_pagamento: null, forma_pagamento: forma })
+      .in("id", ids)
+      .eq("status", "pago")
+      .eq("data_pagamento", dataPagamento)
+      .is("deleted_at", null);
+  }
+  revalidatePath("/financeiro", "layout");
+  return { ok: true };
 }
 
 // Para onde voltar depois de devolver (painel da agenda ou o lançamento).

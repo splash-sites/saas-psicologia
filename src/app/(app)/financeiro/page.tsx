@@ -15,6 +15,7 @@ import {
 import { mesAtual, mesAnterior, mesSeguinte, primeiroDia, ultimoDia, rotuloMes } from "@/lib/financeiro/mes";
 import { ListaLancamentos } from "./ListaLancamentos";
 import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
+import { desarquivarPagamento } from "./actions";
 
 export const metadata = { title: "Financeiro" };
 
@@ -32,9 +33,11 @@ type Linha = Pick<
 export default async function FinanceiroPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string }>;
+  searchParams: Promise<{ mes?: string; arquivado?: string }>;
 }) {
-  const { mes: mesParam } = await searchParams;
+  const { mes: mesParam, arquivado } = await searchParams;
+  // Acabou de arquivar um lançamento: oferece "Desfazer".
+  const arquivadoId = arquivado && /^[0-9a-f-]{36}$/i.test(arquivado) ? arquivado : null;
   const supabase = await createClient();
   const user = await usuarioAtual();
   if (!user) redirect("/login");
@@ -110,6 +113,17 @@ export default async function FinanceiroPage({
         }
       />
 
+      {arquivadoId && (
+        <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-[#DDE6E3] bg-[#EEF2F1] px-3.5 py-2.5 text-sm font-semibold text-[#3D524D]">
+          Lançamento arquivado. Ele não aparece mais nas listas nem nos totais.
+          <form action={desarquivarPagamento.bind(null, arquivadoId)}>
+            <button className="min-h-9 rounded-lg border border-[#C9D6D2] bg-white px-3 text-[13px] font-semibold text-[#12302B] hover:bg-[#F2FAF8]">
+              Desfazer
+            </button>
+          </form>
+        </div>
+      )}
+
       <div className={`grid grid-cols-2 gap-3 ${previsto ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
         <Tile rotulo="Recebido no mês" valor={formatarBRL(recebidoNoMes)} tom="green" />
         <Tile
@@ -131,7 +145,7 @@ export default async function FinanceiroPage({
           valor={formatarBRL(valorAtrasadoMes)}
           tom="red"
           className={previsto ? "" : "col-span-2 sm:col-span-1"}
-          href={atrasadosDoMes.length ? `/financeiro/a-receber?mes=${mes}&ver=vencidos` : undefined}
+          href={atrasadosDoMes.length ? `/financeiro/a-receber?mes=${mes}&atrasados=1` : undefined}
         />
       </div>
 

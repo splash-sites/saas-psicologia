@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, ChevronRight, MessageCircle, Plus, Search, Video } from "lucide-react";
 import type { Paciente, PacienteStatus } from "@/lib/pacientes/types";
 import { whatsappLink } from "@/lib/pacientes/whatsapp";
+import { corAvatar, iniciais } from "@/lib/pacientes/avatar";
 
 export type ItemPaciente = Pick<Paciente, "id" | "nome" | "telefone" | "status"> & {
   /** Próxima consulta agendada (0042). */
@@ -39,25 +40,6 @@ const DESCRICAO: Record<Filtro, string> = {
   evolucao: "quem tem evolução pendente",
   pagamento: "quem tem pagamento em aberto",
 };
-
-// Tons pastel do avatar; o mesmo paciente sempre cai no mesmo tom.
-const CORES_AVATAR = [
-  "bg-[#DCF0EC] text-[#0B3F3A]",
-  "bg-[#FBF2DC] text-[#5C460F]",
-  "bg-[#E7E4F6] text-[#3A2F73]",
-  "bg-[#FCE6DA] text-[#7A2A0A]",
-  "bg-[#E1ECF7] text-[#1E3A5F]",
-  "bg-[#FCE7EF] text-[#8A1F4C]",
-];
-function corAvatar(id: string): string {
-  let h = 0;
-  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return CORES_AVATAR[h % CORES_AVATAR.length];
-}
-function iniciais(nome: string): string {
-  const p = nome.trim().split(/\s+/);
-  return ((p[0]?.[0] ?? "") + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
-}
 
 const STATUS_ETIQUETA: Partial<Record<PacienteStatus, { rotulo: string; classe: string }>> = {
   inativo: { rotulo: "Inativo", classe: "bg-[#E4E9E8] text-[#3D524D]" },
