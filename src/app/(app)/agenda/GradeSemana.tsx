@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  Building2,
   Cake,
   CircleDollarSign,
   FileText,
@@ -15,7 +14,15 @@ import {
 } from "@/lib/agenda/grade";
 import { horaBR } from "@/lib/agenda/datas";
 import { NaAlturaDeAgora } from "@/components/Relogio";
-import { BLOCO_ESTADO, CLASSE_ANIVERSARIO, HACHURA_BLOQUEIO, classeFaixaFeriado, classeFundoFeriado } from "./estilos";
+import {
+  BLOCO_ESTADO,
+  CLASSE_ANIVERSARIO,
+  HACHURA_BLOQUEIO,
+  SUB_ESTADO,
+  classeFaixaFeriado,
+  classeFundoFeriado,
+  listaNomes,
+} from "./estilos";
 import { rotuloFeriado, type Feriado } from "@/lib/feriados";
 import {
   agendaHref,
@@ -25,8 +32,10 @@ import {
   type ParamsAgenda,
 } from "./tipos";
 
-const HORA_PX = 56;
+const HORA_PX = 60;
 const DIA_CURTO = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+// Linha de cada hora mais forte e de cada meia hora bem leve.
+const LINHAS_GRADE = `repeating-linear-gradient(to bottom, #E6EEEB 0, #E6EEEB 1px, transparent 1px, transparent ${HORA_PX}px), repeating-linear-gradient(to bottom, transparent 0, transparent ${HORA_PX / 2}px, #F2F6F5 ${HORA_PX / 2}px, #F2F6F5 ${HORA_PX / 2 + 1}px, transparent ${HORA_PX / 2 + 1}px, transparent ${HORA_PX}px)`;
 
 type Props = {
   dias: string[];
@@ -70,49 +79,57 @@ export function GradeSemana({
     const a = Math.max(minutosNoDiaBR(inicio), minIni);
     const duracao = (new Date(fim).getTime() - new Date(inicio).getTime()) / 60_000;
     const b = Math.min(minutosNoDiaBR(inicio) + duracao, minFim);
-    return { top: px(a) + 1, height: Math.max(px(b) - px(a) - 3, 22) };
+    return { top: px(a) + 1, height: Math.max(px(b) - px(a) - 3, 24) };
   };
 
   const cols = `3.5rem repeat(${dias.length}, minmax(0, 1fr))`;
+  const fundoDia = (dia: string) =>
+    dia === hoje ? "bg-[#F5FAF8]" : feriados.has(dia) ? classeFundoFeriado(feriados.get(dia)!.facultativo) : "bg-white";
 
   return (
-    <div className="card overflow-hidden p-0">
-      <div
-        className="grid border-b border-slate-200"
-        style={{ gridTemplateColumns: cols }}
-      >
+    <div className="overflow-hidden rounded-2xl border border-[#DFEBE7] bg-white">
+      <div className="grid border-b border-[#E6EEEB]" style={{ gridTemplateColumns: cols }}>
         <div />
         {dias.map((dia) => {
           const ehHoje = dia === hoje;
-          const n = (consultasPorDia.get(dia) ?? []).filter(
-            (c) => c.status !== "cancelada",
-          ).length;
+          const n = (consultasPorDia.get(dia) ?? []).filter((c) => c.status !== "cancelada").length;
           const dow = new Date(`${dia}T12:00:00Z`).getUTCDay();
+          const anivs = aniversarios.get(dia) ?? [];
           return (
-            <div
-              key={dia}
-              className={`flex h-14 items-center gap-2 border-l border-slate-100 px-3 ${
-                ehHoje ? "bg-teal-50/40" : ""
-              }`}
-            >
-              <span
-                className={`text-sm font-semibold ${
-                  ehHoje ? "text-teal-800" : "text-slate-600"
-                }`}
-              >
-                {DIA_CURTO[dow]}
+            <div key={dia} className={`flex min-w-0 flex-col gap-[3px] px-2.5 pb-2.5 pt-3 ${fundoDia(dia)}`}>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[13px] font-semibold text-[#4A5F5A]">{DIA_CURTO[dow]}</span>
+                <span
+                  className={`flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-[15px] font-bold ${
+                    ehHoje ? "bg-[#0F766E] text-white" : "text-[#12302B]"
+                  }`}
+                  aria-current={ehHoje ? "date" : undefined}
+                >
+                  {Number(dia.slice(8))}
+                </span>
+              </div>
+              <span className="min-h-4 text-xs text-[#5B6E69]">
+                {n > 0 && `${n} ${n === 1 ? "sessão" : "sessões"}`}
               </span>
-              <span
-                className={`flex size-8 items-center justify-center rounded-full text-base font-bold ${
-                  ehHoje ? "bg-teal-700 text-white" : "text-slate-900"
-                }`}
-                aria-current={ehHoje ? "date" : undefined}
-              >
-                {Number(dia.slice(8))}
-              </span>
-              {n > 0 && (
-                <span className="ml-auto hidden whitespace-nowrap text-xs text-slate-500 xl:inline">
-                  {n} {n === 1 ? "sessão" : "sessões"}
+              {anivs.length === 1 && (
+                <Link
+                  href={`/pacientes/${anivs[0].id}`}
+                  title={`Aniversário de ${anivs[0].nome}, ${anivs[0].idade} anos`}
+                  className={`inline-flex max-w-full items-center gap-1 self-start overflow-hidden whitespace-nowrap rounded-full border py-[3px] pl-[7px] pr-[9px] text-xs font-semibold hover:opacity-80 ${CLASSE_ANIVERSARIO}`}
+                >
+                  <Cake className="size-3.5 shrink-0" aria-label="Aniversário" />
+                  <span className="truncate" data-sensivel>
+                    {anivs[0].nome.split(" ")[0]}
+                  </span>
+                </Link>
+              )}
+              {anivs.length > 1 && (
+                <span
+                  title={`Aniversários: ${listaNomes(anivs.map((a) => `${a.nome} (${a.idade} anos)`))}`}
+                  className={`inline-flex max-w-full items-center gap-1 self-start overflow-hidden whitespace-nowrap rounded-full border py-[3px] pl-[7px] pr-[9px] text-xs font-semibold ${CLASSE_ANIVERSARIO}`}
+                >
+                  <Cake className="size-3.5 shrink-0" aria-label="Aniversário" />
+                  <span className="truncate">{anivs.length} aniversários</span>
                 </span>
               )}
             </div>
@@ -120,38 +137,25 @@ export function GradeSemana({
         })}
       </div>
 
-      {(diasBloqueados.size > 0 || feriados.size > 0 || aniversarios.size > 0) && (
-        <div className="grid border-b border-slate-200" style={{ gridTemplateColumns: cols }}>
+      {(diasBloqueados.size > 0 || feriados.size > 0) && (
+        <div className="grid border-b border-[#E6EEEB]" style={{ gridTemplateColumns: cols }}>
           <div />
           {dias.map((dia) => {
             const motivo = diasBloqueados.get(dia);
             const feriado = feriados.get(dia);
             return (
-              <div key={dia} className="flex min-w-0 flex-col gap-1 border-l border-slate-100 px-1 py-1">
+              <div key={dia} className="flex min-w-0 flex-col gap-1 border-l border-[#EEF3F1] px-1 py-1">
                 {feriado && (
                   <span
-                    className={`block truncate rounded-md border px-2 py-0.5 text-xs font-semibold ${classeFaixaFeriado(feriado.facultativo)}`}
+                    className={`block truncate rounded-lg border px-2 py-0.5 text-xs font-semibold ${classeFaixaFeriado(feriado.facultativo)}`}
                     title={rotuloFeriado(feriado)}
                   >
                     {feriado.nome}
                   </span>
                 )}
-                {(aniversarios.get(dia) ?? []).map((a) => (
-                  <Link
-                    key={a.id}
-                    href={`/pacientes/${a.id}`}
-                    className={`flex min-w-0 items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold hover:opacity-80 ${CLASSE_ANIVERSARIO}`}
-                    title={`Aniversário: ${a.nome}, ${a.idade} anos`}
-                  >
-                    <Cake className="size-3 shrink-0" aria-hidden />
-                    <span className="truncate" data-sensivel>
-                      {a.nome}
-                    </span>
-                  </Link>
-                ))}
                 {motivo && (
                   <span
-                    className="block truncate rounded-md border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600"
+                    className="block truncate rounded-lg px-2 py-0.5 text-xs font-semibold text-[#4A5F5A]"
                     style={HACHURA_BLOQUEIO}
                     title={`Dia inteiro: ${motivo}`}
                   >
@@ -169,7 +173,7 @@ export function GradeSemana({
           {horas.map((h) => (
             <span
               key={h}
-              className="absolute right-2 text-[11px] text-slate-500"
+              className="absolute right-2.5 text-[11px] text-[#5B6E69]"
               style={{ top: h === faixa.de ? 2 : px(h * 60) - 7 }}
             >
               {String(h).padStart(2, "0")}:00
@@ -183,7 +187,7 @@ export function GradeSemana({
               horaPx={HORA_PX}
               ajuste={-8}
               rotulo
-              className="absolute right-1 z-30 rounded bg-red-600 px-1 text-[11px] font-bold text-white"
+              className="absolute right-1 z-30 rounded bg-[#D92D20] px-1 text-[11px] font-bold text-white"
             />
           )}
         </div>
@@ -197,10 +201,8 @@ export function GradeSemana({
           return (
             <div
               key={dia}
-              className={`relative border-l border-slate-100 ${ehHoje ? "bg-teal-50/40" : feriados.has(dia) ? classeFundoFeriado(feriados.get(dia)!.facultativo) : ""}`}
-              style={{
-                backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${HORA_PX - 1}px, #eef1f4 ${HORA_PX - 1}px, #eef1f4 ${HORA_PX}px)`,
-              }}
+              className={`relative border-l border-[#EEF3F1] ${fundoDia(dia)}`}
+              style={{ backgroundImage: LINHAS_GRADE }}
             >
               {/* Horários vazios: atalho para agendar. Fora da ordem de Tab —
                   o botão "Nova consulta" cobre quem usa teclado. */}
@@ -213,7 +215,7 @@ export function GradeSemana({
                     tabIndex={-1}
                     prefetch={false}
                     aria-label={`Agendar em ${dia.split("-").reverse().join("/")} às ${hora}`}
-                    className="group absolute inset-x-1 flex items-center rounded-md px-2 text-xs font-semibold text-teal-800 hover:border hover:border-dashed hover:border-teal-600 hover:bg-teal-50"
+                    className="group absolute inset-x-1 flex items-center rounded-[10px] px-2 text-xs font-semibold text-[#0F766E] hover:bg-[#EAF5F2]"
                     style={{ top: px(h * 60) + 1, height: HORA_PX - 3 }}
                   >
                     <span className="hidden items-center gap-1 group-hover:inline-flex">
@@ -225,7 +227,7 @@ export function GradeSemana({
               })}
 
               {diasBloqueados.has(dia) && (
-                <div className="pointer-events-none absolute inset-0 z-[5] opacity-60" style={HACHURA_BLOQUEIO} aria-hidden />
+                <div className="pointer-events-none absolute inset-0 z-[5] opacity-70" style={HACHURA_BLOQUEIO} aria-hidden />
               )}
 
               {bs.map((b) => {
@@ -233,11 +235,11 @@ export function GradeSemana({
                 return (
                   <div
                     key={b.id}
-                    className="absolute inset-x-1 z-10 flex flex-col overflow-hidden rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600"
+                    className="absolute inset-x-1 z-10 flex flex-col gap-px overflow-hidden rounded-[10px] px-[9px] py-1.5"
                     style={{ ...pos, ...HACHURA_BLOQUEIO }}
                   >
-                    <span className="font-semibold">{b.motivo || "Evento"}</span>
-                    <span>
+                    <span className="truncate text-xs font-semibold text-[#4A5F5A]">{b.motivo || "Evento"}</span>
+                    <span className="text-[11px] text-[#5B6E69]">
                       {horaBR(b.inicio)}–{horaBR(b.fim)}
                     </span>
                   </div>
@@ -249,39 +251,39 @@ export function GradeSemana({
                 const col = colunas.get(c.id) ?? { coluna: 0, total: 1 };
                 const selecionada = params.consulta === c.id;
                 const compacto = pos.height < 40;
+                const nome = c.paciente?.nome ?? "Paciente";
+                // Lado a lado não cabe o nome inteiro: só o primeiro.
+                const nomeExibido = col.total > 1 ? nome.split(" ")[0] : nome;
                 return (
                   <Link
                     key={c.id}
                     href={agendaHref({ ...params, consulta: c.id })}
                     scroll={false}
                     prefetch={false}
-                    aria-label={`${horaBR(c.inicio)}–${horaBR(c.fim)}, ${
-                      c.paciente?.nome ?? "Paciente"
-                    }, ${ESTADO_VISUAL_LABEL[c.estado]}`}
-                    className={`absolute z-20 flex flex-col justify-center gap-px overflow-hidden rounded-md border px-2 py-0.5 text-xs leading-4 transition-shadow hover:shadow-md ${
+                    aria-label={`${horaBR(c.inicio)}–${horaBR(c.fim)}, ${nome}, ${ESTADO_VISUAL_LABEL[c.estado]}`}
+                    className={`absolute z-20 flex flex-col justify-center gap-0.5 overflow-hidden rounded-[10px] border px-[9px] py-1.5 transition-shadow hover:shadow-md ${
                       BLOCO_ESTADO[c.estado]
-                    } ${selecionada ? "shadow-md ring-2 ring-teal-700 ring-offset-1" : ""}`}
+                    } ${selecionada ? "ring-2 ring-[#0F766E] ring-offset-1" : ""}`}
                     style={{
                       ...pos,
                       left: `calc(${(col.coluna * 100) / col.total}% + 4px)`,
                       width: `calc(${100 / col.total}% - 8px)`,
                     }}
                   >
+                    <span
+                      className={`truncate text-[13px] font-bold leading-tight ${c.estado === "cancelada" ? "line-through" : ""}`}
+                      data-sensivel
+                    >
+                      {nomeExibido}
+                    </span>
                     {!compacto && (
-                      <span className="flex items-center gap-1 whitespace-nowrap">
-                        <span className="font-bold">{horaBR(c.inicio)}</span>
-                        <span className="truncate">· {ESTADO_VISUAL_LABEL[c.estado]}</span>
+                      <span className={`flex min-w-0 items-center gap-[5px] whitespace-nowrap text-[11.5px] font-medium ${SUB_ESTADO[c.estado]}`}>
+                        <span className="truncate">
+                          {horaBR(c.inicio)}–{horaBR(c.fim)}
+                        </span>
+                        <IconesConsulta c={c} />
                       </span>
                     )}
-                    <span className="flex min-w-0 items-center gap-1">
-                      {compacto && (
-                        <span className="shrink-0 font-bold">{horaBR(c.inicio)}</span>
-                      )}
-                      <span className="min-w-0 truncate font-medium" data-sensivel>
-                        {c.paciente?.nome ?? "Paciente"}
-                      </span>
-                      <IconesConsulta c={c} />
-                    </span>
                   </Link>
                 );
               })}
@@ -295,8 +297,8 @@ export function GradeSemana({
                   ajuste={-1}
                   className="pointer-events-none absolute inset-x-0 z-30"
                 >
-                  <div className="h-0.5 bg-red-600" />
-                  <div className="absolute -left-1 -top-1 size-2.5 rounded-full bg-red-600" />
+                  <div className="h-0.5 bg-[#D92D20]" />
+                  <div className="absolute -left-[5px] -top-1 size-2.5 rounded-full bg-[#D92D20]" />
                 </NaAlturaDeAgora>
               )}
             </div>
@@ -307,26 +309,16 @@ export function GradeSemana({
   );
 }
 
-export function IconesConsulta({ c }: { c: ItemConsulta }) {
-  const Modal = c.modalidade === "online" ? Video : Building2;
+/** Ícones pequenos da consulta: online, recorrente, pagamento e evolução pendentes. */
+export function IconesConsulta({ c, modalidade = true }: { c: ItemConsulta; /** false: a modalidade já está escrita ao lado. */ modalidade?: boolean }) {
   return (
-    <span className="ml-auto flex shrink-0 items-center gap-0.5">
-      <Modal
-        className="size-3"
-        aria-label={c.modalidade === "online" ? "Online" : "Presencial"}
-      />
-      {c.recorrencia !== "nenhuma" && (
-        <Repeat className="size-3" aria-label="Recorrente" />
-      )}
+    <span className="flex shrink-0 items-center gap-1">
+      {modalidade && c.modalidade === "online" && <Video className="size-[13px]" aria-label="Online" />}
+      {c.recorrencia !== "nenhuma" && <Repeat className="size-[13px]" aria-label="Recorrente" />}
       {c.pagamentoPendente && (
-        <CircleDollarSign
-          className="size-3 text-amber-700"
-          aria-label="Pagamento pendente"
-        />
+        <CircleDollarSign className="size-[13px] text-[#B45309]" aria-label="Pagamento pendente" />
       )}
-      {c.evolucaoPendente && (
-        <FileText className="size-3 text-orange-700" aria-label="Evolução pendente" />
-      )}
+      {c.evolucaoPendente && <FileText className="size-[13px] text-[#B45309]" aria-label="Evolução pendente" />}
     </span>
   );
 }

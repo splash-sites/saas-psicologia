@@ -30,7 +30,7 @@ import { GradeSemana } from "./GradeSemana";
 import { DiaLista } from "./DiaLista";
 import { linkDaConsulta } from "@/lib/agenda/linkOnline";
 import { PainelConsulta } from "./PainelConsulta";
-import { EstadoBadge, HACHURA_BLOQUEIO } from "./estilos";
+import { CLASSE_ANIVERSARIO, EstadoBadge, HACHURA_BLOQUEIO } from "./estilos";
 import {
   agendaHref,
   type ItemBloqueio,
@@ -425,8 +425,12 @@ function Legenda() {
       <EstadoBadge estado="falta" />
       <EstadoBadge estado="cancelada" />
       <span className="inline-flex items-center gap-1.5">
-        <span className="h-3 w-4 rounded border border-slate-200" style={HACHURA_BLOQUEIO} />
+        <span className="h-3.5 w-4 rounded" style={HACHURA_BLOQUEIO} />
         Evento
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className={`h-3.5 w-4 rounded-full border ${CLASSE_ANIVERSARIO}`} />
+        Aniversário
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-3 w-4 rounded border border-rose-200 bg-rose-100" />

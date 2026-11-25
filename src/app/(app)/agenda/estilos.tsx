@@ -1,25 +1,38 @@
 import { ESTADO_VISUAL_LABEL, type EstadoVisual } from "@/lib/agenda/grade";
 
-// Cores por estado da consulta. Confirmada (teal cheio) e a confirmar
-// (âmbar tracejado) diferem também em borda e claridade, não só no matiz.
+// Cores pastel por estado da consulta (redesenho de 2026-11-24, canvas
+// "Blocos-pastel" e "Celular"). Sem borda tracejada: os estados diferem pelo
+// fundo e pela borda fina; cancelada fica branca com o nome riscado.
 
-/** Bloco na grade semanal / item da lista do dia. */
+const SOMBRA = "shadow-[0_1px_2px_rgba(18,48,43,0.06),0_2px_6px_rgba(18,48,43,0.05)]";
+
+/** Bloco na grade semanal / cartão da lista do dia: fundo, borda e cor do nome. */
 export const BLOCO_ESTADO: Record<EstadoVisual, string> = {
-  confirmada: "border-teal-700 bg-teal-50 text-teal-950",
-  a_confirmar: "border-dashed border-amber-700 bg-white text-amber-950",
-  encerrada: "border-slate-300 bg-slate-100 text-slate-700",
-  realizada: "border-slate-300 bg-slate-100 text-slate-700",
-  falta: "border-orange-700 bg-orange-50 text-orange-950",
-  cancelada: "border-dashed border-slate-400 bg-slate-50 text-slate-600 opacity-75",
+  confirmada: `border-[#B9E0D8] bg-[#DCF0EC] text-[#0B3F3A] ${SOMBRA}`,
+  a_confirmar: `border-[#EBD49A] bg-[#FBF2DC] text-[#3B2F0E] ${SOMBRA}`,
+  encerrada: "border-[#DDE6E3] bg-[#EFF3F2] text-[#3D524D]",
+  realizada: "border-[#DDE6E3] bg-[#EFF3F2] text-[#3D524D]",
+  falta: `border-[#F1C2A8] bg-[#FCE6DA] text-[#7A2A0A] ${SOMBRA}`,
+  cancelada: "border-[#B9C8C4] bg-white text-[#5B6E69]",
+};
+
+/** Cor da segunda linha (hora, estado, modalidade) de cada estado. */
+export const SUB_ESTADO: Record<EstadoVisual, string> = {
+  confirmada: "text-[#2C6660]",
+  a_confirmar: "text-[#6B5520]",
+  encerrada: "text-[#5B6E69]",
+  realizada: "text-[#5B6E69]",
+  falta: "text-[#8F3A14]",
+  cancelada: "text-[#5B6E69]",
 };
 
 const BADGE_ESTADO: Record<EstadoVisual, string> = {
-  confirmada: "bg-teal-100 text-teal-900",
-  a_confirmar: "border border-dashed border-amber-700 bg-amber-50 text-amber-900",
-  encerrada: "bg-slate-200 text-slate-700",
-  realizada: "bg-slate-200 text-slate-800",
-  falta: "bg-orange-100 text-orange-900",
-  cancelada: "border border-dashed border-slate-400 bg-slate-50 text-slate-600",
+  confirmada: "border border-[#B9E0D8] bg-[#DCF0EC] text-[#0B3F3A]",
+  a_confirmar: "border border-[#EBD49A] bg-[#FBF2DC] text-[#3B2F0E]",
+  encerrada: "border border-[#DDE6E3] bg-[#EFF3F2] text-[#3D524D]",
+  realizada: "border border-[#DDE6E3] bg-[#EFF3F2] text-[#3D524D]",
+  falta: "border border-[#F1C2A8] bg-[#FCE6DA] text-[#7A2A0A]",
+  cancelada: "border border-[#B9C8C4] bg-white text-[#5B6E69] line-through",
 };
 
 export function EstadoBadge({ estado }: { estado: EstadoVisual }) {
@@ -32,10 +45,10 @@ export function EstadoBadge({ estado }: { estado: EstadoVisual }) {
   );
 }
 
-/** Fundo hachurado dos bloqueios de horário. */
+/** Fundo dos eventos (bloqueios): cinza-esverdeado com listras finas e suaves. */
 export const HACHURA_BLOQUEIO: React.CSSProperties = {
-  backgroundImage:
-    "repeating-linear-gradient(135deg, #f8fafc 0 6px, #e2e8f0 6px 8px)",
+  backgroundColor: "#F1F4F3",
+  backgroundImage: "repeating-linear-gradient(135deg, transparent 0, transparent 7px, #E7EDEB 7px, #E7EDEB 8px)",
 };
 
 /** Faixa do feriado no topo do dia (0038); ponto facultativo mais leve. */
@@ -50,5 +63,10 @@ export function classeFundoFeriado(facultativo: boolean): string {
   return facultativo ? "bg-rose-50/30" : "bg-rose-50/70";
 }
 
-/** Aniversário do paciente na faixa do topo do dia (item H). */
-export const CLASSE_ANIVERSARIO = "border-amber-200 bg-amber-50 text-amber-900";
+/** Etiqueta rosa de aniversário do paciente (item H). */
+export const CLASSE_ANIVERSARIO = "border-[#F5C6D7] bg-[#FCE7EF] text-[#8A1F4C]";
+
+/** "Ana", "Ana e Bia", "Ana, Bia e Caio". */
+export function listaNomes(nomes: string[]): string {
+  return nomes.length <= 1 ? (nomes[0] ?? "") : `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
+}
