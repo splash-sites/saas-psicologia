@@ -13,9 +13,12 @@ import { LinkAtendimentoProvider } from "./LinkAtendimentoContext";
 import { PreferenciasLembreteForm } from "./PreferenciasLembreteForm";
 import { FeriadosForm } from "./FeriadosForm";
 import { AniversarioForm } from "./AniversarioForm";
+import { HorarioAtendimentoForm } from "./HorarioAtendimentoForm";
+import { horarioDaConta } from "@/lib/agenda/horarioAtendimento";
 import {
   desconectarGoogle,
   salvarFeriados,
+  salvarHorarioAtendimento,
   salvarMensagemAniversario,
   salvarLinkAtendimento,
   salvarPreferenciasLembrete,
@@ -36,13 +39,18 @@ export default async function ConfiguracoesPage({
 
   // Uma consulta só (eram 3 em sequência): dados da psicóloga com o token do
   // Google e as preferências de lembrete embutidos.
-  const { data: contexto } = await supabase
-    .from("psicologas")
-    .select(
-      "link_atendimento_online, feriados_uf, mostrar_feriados, mensagem_aniversario, google_oauth_tokens(updated_at, escopo), preferencias_lembrete(antecedencia_horas, mensagem_template, convite_google)",
-    )
-    .eq("id", user.id)
-    .maybeSingle();
+  // Horário de atendimento (0044) em paralelo: sem a migration, dá erro e
+  // vale o padrão (não derruba a consulta principal).
+  const [{ data: contexto }, { data: horarioRaw }] = await Promise.all([
+    supabase
+      .from("psicologas")
+      .select(
+        "link_atendimento_online, feriados_uf, mostrar_feriados, mensagem_aniversario, google_oauth_tokens(updated_at, escopo), preferencias_lembrete(antecedencia_horas, mensagem_template, convite_google)",
+      )
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase.from("horarios_atendimento").select("dia_semana, ativo, inicio, fim"),
+  ]);
   const um = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
   const psicologa = contexto;
   const token = um(contexto?.google_oauth_tokens as { updated_at: string; escopo: string | null } | { updated_at: string; escopo: string | null }[] | null);
@@ -139,6 +147,20 @@ export default async function ConfiguracoesPage({
           )}
         </section>
       )}
+
+      <section id="horario-atendimento" className="flex scroll-mt-20 flex-col gap-3 card">
+        <h2 className="font-medium">Horário de atendimento</h2>
+        <p className="text-sm text-slate-600">
+          Os dias e horários em que você atende. Ao marcar uma consulta, a
+          prévia mostra só os horários livres dentro deles. Para almoço e
+          pausas, use os{" "}
+          <Link href="/agenda/eventos" className="font-medium text-teal-700 hover:text-teal-800">
+            eventos da agenda
+          </Link>
+          .
+        </p>
+        <HorarioAtendimentoForm action={salvarHorarioAtendimento} horario={horarioDaConta(horarioRaw)} />
+      </section>
 
       <section className="flex flex-col gap-3 card">
         <h2 className="font-medium">Exportar dados</h2>

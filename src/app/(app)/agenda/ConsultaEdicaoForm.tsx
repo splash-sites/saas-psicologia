@@ -50,6 +50,8 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref, consultaId, f
   const [status, setStatus] = useState(defaults.status);
   const [data, setData] = useState(defaults.data);
   const [hora, setHora] = useState(defaults.hora);
+  // Duração, para os horários livres da prévia caberem a consulta inteira.
+  const [duracao, setDuracao] = useState(defaults.duracao_min);
   const dataRef = useRef<HTMLInputElement>(null);
   const horaRef = useRef<HTMLInputElement>(null);
   const aviso = status === "agendada" ? avisoFeriados(feriadosDasSessoes(dataUtil(data) ? [data] : [], feriados), 1) : null;
@@ -96,6 +98,7 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref, consultaId, f
             data-obrigatorio="Informe a duração."
             type="number"
             defaultValue={defaults.duracao_min}
+            onChange={(e) => setDuracao(Number(e.target.value))}
             min={LIMITES.consulta.duracaoMin}
             max={LIMITES.consulta.duracaoMax}
             step={5}
@@ -111,6 +114,7 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref, consultaId, f
       <PreviaSemana
         data={dataUtil(data) ? data : defaults.data}
         hora={hora}
+        duracao={duracao}
         ignorarConsultaId={consultaId}
         abertoInicial={false}
         onEscolher={(d, h) => {

@@ -335,6 +335,8 @@ const casos = [
   ["lembretes/actions", "marcarLembreteEnviado", () => [A.consulta], "ok"],
   ["configuracoes/actions", "salvarPreferenciasLembrete", () => [vazio, fd({ antecedencia_horas: 24, mensagem_template: "Olá {nome}", convite_google: "on" })], "ok"],
   ["configuracoes/actions", "salvarPreferenciasLembrete", () => [vazio, fd({ antecedencia_horas: 999, mensagem_template: "" })], "validação"],
+  ["configuracoes/actions", "salvarHorarioAtendimento", () => [vazio, fd({ ativo_1: "on", inicio_1: "08:00", fim_1: "18:00", inicio_0: "08:00", fim_0: "20:00" })], "ok"],
+  ["configuracoes/actions", "salvarHorarioAtendimento", () => [vazio, fd({ ativo_1: "on", inicio_1: "18:00", fim_1: "08:00" })], "validação"],
   ["configuracoes/actions", "desconectarGoogle", () => [], "ok"],
   // assinatura (mock)
   ["assinatura/actions", "configurarAssinatura", () => [vazio, fd({ cpf_cnpj: "123", plano: "mensal" })], "validação"],

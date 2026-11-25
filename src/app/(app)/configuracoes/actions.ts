@@ -8,6 +8,7 @@ import { preferenciasLembreteSchema } from "@/lib/lembretes/schema";
 import { linkAtendimentoSchema } from "@/lib/agenda/linkOnline";
 import { ufValida } from "@/lib/feriados";
 import { LIMITES } from "@/lib/limites";
+import { lerHorarioDoFormulario } from "@/lib/agenda/horarioAtendimento";
 
 export type FormState = {
   ok?: boolean;
@@ -117,6 +118,35 @@ export async function salvarFeriados(
   revalidatePath("/configuracoes");
   revalidatePath("/agenda");
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Horário de atendimento (0044): os 7 dias de uma vez. Usado pela prévia de
+ * horários livres ao marcar consulta; não impede marcar fora dele.
+ */
+export async function salvarHorarioAtendimento(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const supabase = await createClient();
+  const user = await usuarioAtual();
+  if (!user) redirect("/login");
+
+  const { horario, erros } = lerHorarioDoFormulario((c) => {
+    const v = formData.get(c);
+    return typeof v === "string" ? v : null;
+  });
+  if (Object.keys(erros).length) return { fieldErrors: erros };
+
+  // RLS: só as linhas da própria conta.
+  const { error } = await supabase.from("horarios_atendimento").upsert(
+    horario.map((h) => ({ psicologa_id: user.id, dia_semana: h.dia, ativo: h.ativo, inicio: h.inicio, fim: h.fim })),
+    { onConflict: "psicologa_id,dia_semana" },
+  );
+  if (error) return { error: "Não foi possível salvar o horário de atendimento." };
+
+  revalidatePath("/configuracoes");
   return { ok: true };
 }
 

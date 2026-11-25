@@ -61,6 +61,8 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriad
   // Data e hora escolhidas, para a prévia da semana (e para ela preencher).
   const [dataSel, setDataSel] = useState(dataPadrao ?? "");
   const [horaSel, setHoraSel] = useState(horaPadrao ?? "");
+  // Duração, para os horários livres da prévia caberem a consulta inteira.
+  const [duracaoSel, setDuracaoSel] = useState(50);
   const dataRef = useRef<HTMLInputElement>(null);
   const horaRef = useRef<HTMLInputElement>(null);
 
@@ -72,6 +74,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriad
         setDatas(datasDoFormulario(e.currentTarget));
         setDataSel(dataRef.current?.value ?? "");
         setHoraSel(horaRef.current?.value ?? "");
+        setDuracaoSel(Number(new FormData(e.currentTarget).get("duracao_min")));
       }}
       onSubmit={enviarSemLimpar(formAction)}
       className="flex flex-col gap-4"
@@ -141,6 +144,7 @@ export function ConsultaForm({ action, pacientes, dataPadrao, horaPadrao, feriad
       <PreviaSemana
         data={dataUtil(dataSel) ? dataSel : hojeBR()}
         hora={horaSel}
+        duracao={duracaoSel}
         abertoInicial={false}
         onEscolher={(d, h) => {
           if (dataRef.current) dataRef.current.value = d;
