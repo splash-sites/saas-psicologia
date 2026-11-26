@@ -163,7 +163,8 @@ export default async function FinanceiroPage({
         <Tile
           rotulo={previsto ? "A receber" : "A receber no mês"}
           valor={formatarBRL(aReceber)}
-          sub={previsto ? `${n(nAReceber, "sessão realizada", "sessões realizadas")}, não pagas` : n(nAReceber, "lançamento", "lançamentos")}
+          // Conta cobranças de sessão e lançamentos manuais: "N em aberto" serve para os dois.
+          sub={`${nAReceber} em aberto`}
           href={`/financeiro/a-receber?mes=${mes}`}
           className={previsto ? "" : "col-span-2 lg:col-span-1"}
         />
