@@ -32,8 +32,8 @@ import {
 } from "@/lib/agenda/estado";
 import { RECORRENCIA_LABEL } from "@/lib/agenda/types";
 import {
-  STATUS_EXIBICAO_LABEL,
   formatarBRL,
+  rotuloFormaPagamento,
   statusExibicao,
 } from "@/lib/financeiro/types";
 import {
@@ -45,13 +45,22 @@ import {
 import { devolverPagamento } from "../financeiro/actions";
 import { EstadoBadge } from "./estilos";
 import { FecharComEsc } from "./FecharComEsc";
+import { PagamentoDaConsulta } from "./PagamentoDaConsulta";
+import { situacaoLancamento } from "@/lib/financeiro/situacao";
 import { AnotacoesSessao } from "./AnotacoesSessao";
 import { ObservacaoConsulta } from "./ObservacaoConsulta";
 import { agendaHref, type ItemConsulta } from "./tipos";
 
 type Props = {
   c: ItemConsulta;
-  pagamento: { id: string; valor: number; status: "pendente" | "pago"; vencimento: string } | null;
+  pagamento: {
+    id: string;
+    valor: number;
+    status: "pendente" | "pago";
+    vencimento: string;
+    data_pagamento: string | null;
+    forma_pagamento: string | null;
+  } | null;
   lembreteEnviadoEm: string | null;
   /** A próxima sessão do paciente cai em feriado (0039). */
   avisoFeriado?: AvisoProxima | null;
@@ -341,10 +350,19 @@ export function PainelConsulta({
           <Linha icone={CircleDollarSign} rotulo="Pagamento">
             {pagamento && statusPag ? (
               <>
-                <Link href={`/financeiro/${pagamento.id}`} className="hover:opacity-80">
-                  <span data-sensivel>{formatarBRL(pagamento.valor)}</span> ·{" "}
-                  {STATUS_EXIBICAO_LABEL[statusPag]}
-                </Link>
+                <PagamentoDaConsulta
+                  key={c.id}
+                  consultaId={c.id}
+                  acao={pagamento.status === "pendente" && c.status !== "cancelada" ? "Dar baixa" : null}
+                  resumo={
+                    <Link href={`/financeiro/${pagamento.id}`} className="hover:opacity-80">
+                      <span data-sensivel>{formatarBRL(pagamento.valor)}</span> ·{" "}
+                      {pagamento.status === "pago"
+                        ? `${situacaoLancamento(pagamento, hoje).texto}${pagamento.forma_pagamento ? ` · ${rotuloFormaPagamento(pagamento.forma_pagamento)}` : ""}`
+                        : situacaoLancamento(pagamento, hoje).texto}
+                    </Link>
+                  }
+                />
                 {c.status === "cancelada" && pagamento.status === "pago" && (
                   <span className="mt-2 flex flex-col gap-2 rounded-md bg-amber-50 p-2 text-xs font-normal text-amber-900">
                     Esta sessão já foi paga.
@@ -359,10 +377,12 @@ export function PainelConsulta({
             ) : c.status === "falta" && !c.cobrar ? (
               "Falta sem cobrança"
             ) : c.valor !== null ? (
-              <span>
-                <span data-sensivel>{formatarBRL(c.valor)}</span>
-                <span className="font-normal text-slate-500"> · entra como a receber depois da sessão</span>
-              </span>
+              <PagamentoDaConsulta
+                key={c.id}
+                consultaId={c.id}
+                acao={futura ? "Registrar pagamento adiantado" : "Registrar pagamento"}
+                resumo={<span data-sensivel>{formatarBRL(c.valor)}</span>}
+              />
             ) : pac ? (
               <Link
                 href={`/financeiro/novo?paciente=${pac.id}&consulta=${c.id}&data=${dataChaveBR(c.inicio)}`}

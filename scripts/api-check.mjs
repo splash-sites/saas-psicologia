@@ -334,6 +334,7 @@ const casos = [
   [fin, "darBaixaEmLote", () => [A.paciente, [A.pagamento], dia(0), "pix"], "ok"],
   [fin, "desfazerBaixaEmLote", () => [[{ id: A.pagamento, forma: null }], dia(0)], "ok"],
   [fin, "darBaixaEmLote", () => [A.paciente, [], dia(0), ""], "validação"],
+  [fin, "registrarPagamentoConsulta", () => [A.consulta, dia(0), "pix"], "validação"],
   [fin, "darBaixaEmLote", () => [A.paciente, [A.pagamento], "31/02/2026", ""], "validação"],
   [fin, "marcarComoPago", () => [A.pagamento, vazio, fd({ data_pagamento: dia(0), forma_pagamento: "pix" })], "ok"],
   [fin, "desmarcarComoPago", () => [A.pagamento, fd({})], "ok"],
@@ -457,6 +458,7 @@ const cruzadas = [
   [fin, "desfazerBaixaEmLote", () => [[{ id: B.pagamento, forma: "dinheiro" }], dia(0)]],
   [fin, "desfazerBaixa", () => [B.pagamento, "dinheiro", fd({})]],
   [fin, "desarquivarPagamento", () => [B.pagamento, fd({})]],
+  [fin, "registrarPagamentoConsulta", () => [B.consulta, dia(0), "pix"]],
   ["lembretes/actions", "marcarLembreteEnviado", () => [B.consulta]],
   [ag, "criarConsulta", () => [vazio, fd({ paciente_id: B.paciente, data: dia(9), hora: "10:00", duracao_min: 50, modalidade: "presencial", recorrencia: "nenhuma", ocorrencias: 1 })]],
   [fin, "criarPagamento", () => [vazio, fd({ paciente_id: B.paciente, valor: "1", situacao: "recebido", data_referencia: dia(0), data_pagamento: dia(0) })]],
@@ -468,7 +470,7 @@ for (const [arq, nome, args] of cruzadas) {
   const r = await chamarAction(id, args(), { cookie: cA2 });
   // Formulários de edição/criação devem avisar; ações de 1 clique só voltam
   // pra lista (clique duplo legítimo também não altera nada).
-  const deveAvisar = ["atualizarPaciente", "salvarAnamnese", "atualizarConsulta", "marcarComoPago", "criarConsulta", "criarPagamento", "salvarAnotacoesSessao", "levarAnotacaoParaProxima", "importarSessoes"].includes(nome);
+  const deveAvisar = ["atualizarPaciente", "salvarAnamnese", "atualizarConsulta", "marcarComoPago", "criarConsulta", "criarPagamento", "salvarAnotacoesSessao", "levarAnotacaoParaProxima", "importarSessoes", "registrarPagamentoConsulta"].includes(nome);
   registrar("ACTION A→B", nome, (x) => x.status < 500 && (!deveAvisar || /inválido|não encontrad/.test(x.retorno ?? "")), r);
 }
 

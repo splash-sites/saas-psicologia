@@ -327,6 +327,108 @@ export async function darBaixaEmLote(
 }
 
 /**
+ * Pagamento a partir do painel da consulta (2026-11-26, decisão do usuário: o
+ * que é de sessão se faz na sessão):
+ *   * sessão com cobrança em aberto → dá baixa nela;
+ *   * sessão sem cobrança (futura = pagamento adiantado, ou passada que ainda
+ *     não gerou) → cria o lançamento já pago, ligado à sessão (origem
+ *     'sessao', o mesmo que o app criaria; depois da sessão o app não cria
+ *     outro) — com o vencimento da regra do paciente (vencimento_da_sessao);
+ *   * já paga → recusa.
+ * Devolve o necessário para o "Desfazer" (desfazerBaixaEmLote), que deixa a
+ * sessão com a cobrança em aberto, igual à que o app criaria sozinho.
+ */
+export async function registrarPagamentoConsulta(
+  consultaId: string,
+  dataPagamento: string,
+  formaPagamento: string,
+): Promise<ResultadoBaixa> {
+  const { supabase, user } = await requirePsicologa();
+  if (!UUID_RE.test(consultaId)) return { ok: false, error: "Consulta não encontrada." };
+  const parsed = marcarPagoSchema.safeParse({ data_pagamento: dataPagamento, forma_pagamento: formaPagamento || undefined });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Data de pagamento inválida." };
+  const v = parsed.data;
+
+  const { data: c } = await supabase
+    .from("consultas")
+    .select("id, paciente_id, inicio, valor, status, pacientes(cobranca, cobranca_dia)")
+    .eq("id", consultaId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!c) return { ok: false, error: "Consulta não encontrada." };
+  if (c.status === "cancelada") return { ok: false, error: "Esta sessão foi cancelada." };
+
+  const { data: lancamentos } = await supabase
+    .from("pagamentos")
+    .select("id, status, forma_pagamento, origem, deleted_at, valor")
+    .eq("consulta_id", consultaId);
+  const ativo = (lancamentos ?? []).find((l) => !l.deleted_at);
+  if (ativo?.status === "pago") return { ok: false, error: "Esta sessão já está paga." };
+
+  const revalidar = () => {
+    revalidatePath("/agenda", "layout");
+    revalidatePath("/financeiro", "layout");
+  };
+
+  // Já tem cobrança em aberto: é uma baixa comum.
+  if (ativo) {
+    const { error } = await supabase
+      .from("pagamentos")
+      .update({ status: "pago", data_pagamento: v.data_pagamento, forma_pagamento: v.forma_pagamento ?? null })
+      .eq("id", ativo.id)
+      .eq("status", "pendente");
+    if (error) return { ok: false, error: await mensagemErroEscrita(supabase, error, "Não foi possível registrar o pagamento.") };
+    revalidar();
+    return {
+      ok: true,
+      quantidade: 1,
+      total: Number(ativo.valor),
+      desfazer: [{ id: ativo.id as string, forma: (ativo.forma_pagamento as string | null) ?? null }],
+      data: v.data_pagamento,
+    };
+  }
+
+  if (c.valor == null) return { ok: false, error: "Esta sessão não tem valor. Defina o valor da sessão para registrar o pagamento." };
+
+  const dia = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date(c.inicio as string));
+  const pac = (Array.isArray(c.pacientes) ? c.pacientes[0] : c.pacientes) as { cobranca: string; cobranca_dia: number } | null;
+  const { data: venc } = await supabase.rpc("vencimento_da_sessao", {
+    p_cobranca: pac?.cobranca ?? "sessao",
+    p_dia: pac?.cobranca_dia ?? 10,
+    p_data: dia,
+  });
+  const campos = {
+    valor: Number(c.valor),
+    status: "pago",
+    data_referencia: dia,
+    vencimento: (venc as string | null) ?? dia,
+    data_pagamento: v.data_pagamento,
+    forma_pagamento: v.forma_pagamento ?? null,
+  };
+
+  // A cobrança automática desta sessão pode estar arquivada pela própria
+  // consulta (remarcada para o futuro): reaproveita (só pode haver uma).
+  const arquivadaDaSessao = (lancamentos ?? []).find((l) => l.deleted_at && l.origem === "sessao");
+  const r = arquivadaDaSessao
+    ? await supabase
+        .from("pagamentos")
+        .update({ ...campos, deleted_at: null, arquivado_pela_consulta: false })
+        .eq("id", arquivadaDaSessao.id)
+        .select("id")
+        .single()
+    : await supabase
+        .from("pagamentos")
+        .insert({ ...campos, psicologa_id: user.id, paciente_id: c.paciente_id, consulta_id: consultaId, origem: "sessao" })
+        .select("id")
+        .single();
+  if (r.error || !r.data) {
+    return { ok: false, error: r.error ? await mensagemErroEscrita(supabase, r.error, "Não foi possível registrar o pagamento.") : "Não foi possível registrar o pagamento." };
+  }
+  revalidar();
+  return { ok: true, quantidade: 1, total: campos.valor, desfazer: [{ id: r.data.id as string, forma: null }], data: v.data_pagamento };
+}
+
+/**
  * "Desfazer" da baixa em lote: volta para em aberto só o que ainda está pago
  * com a data daquela baixa, com a forma de antes.
  */
@@ -354,6 +456,7 @@ export async function desfazerBaixaEmLote(
       .is("deleted_at", null);
   }
   revalidatePath("/financeiro", "layout");
+  revalidatePath("/agenda", "layout");
   return { ok: true };
 }
 

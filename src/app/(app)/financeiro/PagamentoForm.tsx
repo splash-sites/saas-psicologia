@@ -6,8 +6,7 @@ import { useValidacao } from "@/lib/form/validacao";
 import { ErroCampo } from "@/components/ErroCampo";
 import Link from "next/link";
 import type { Pagamento } from "@/lib/financeiro/types";
-import type { ConsultaDisponivel } from "@/lib/financeiro/consultasDisponiveis";
-import { dataBR, dataChaveBR, hojeBR, horaBR } from "@/lib/agenda/datas";
+import { dataBR, hojeBR, horaBR } from "@/lib/agenda/datas";
 import { PacienteSelect } from "@/components/PacienteSelect";
 import type { FormState } from "./actions";
 import { SelectFormaPagamento } from "./SelectFormaPagamento";
@@ -16,10 +15,14 @@ import { LIMITES } from "@/lib/limites";
 type Props = {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   pacientes: { id: string; nome: string }[];
-  consultas: ConsultaDisponivel[];
+  /**
+   * Sessão ligada a este lançamento (só leitura). O pagamento de uma sessão é
+   * feito no painel da consulta (2026-11-26, decisão do usuário); aqui ela só
+   * aparece quando o lançamento já é de uma sessão ou veio do painel.
+   */
+  consulta?: { id: string; inicio: string; pacienteNome: string } | null;
   pagamento?: Pagamento;
   pacienteIdPadrao?: string;
-  consultaIdPadrao?: string;
   dataPadrao?: string;
   /** Valor da consulta ou da sessão do paciente (0035). */
   valorPadrao?: number | null;
@@ -31,10 +34,9 @@ type Props = {
 export function PagamentoForm({
   action,
   pacientes,
-  consultas,
+  consulta,
   pagamento,
   pacienteIdPadrao,
-  consultaIdPadrao,
   dataPadrao,
   valorPadrao,
   submitLabel,
@@ -56,18 +58,8 @@ export function PagamentoForm({
   );
   const recebido = situacao === "recebido";
 
-  // Paciente e data de referência ficam controlados só pra poder autopreencher
-  // quando a psicóloga escolhe uma consulta vinculada (ela já diz o paciente e
-  // o dia — não faz sentido digitar de novo).
   const [pacienteId, setPacienteId] = useState(pagamento?.paciente_id ?? pacienteIdPadrao ?? "");
   const [dataRef, setDataRef] = useState(dataRefInicial);
-
-  function aoEscolherConsulta(consultaId: string) {
-    const c = consultas.find((c) => c.id === consultaId);
-    if (!c) return; // "Lançamento avulso": mantém o que já tinha.
-    setPacienteId(c.paciente_id);
-    setDataRef(dataChaveBR(c.inicio));
-  }
 
   return (
     <form {...formProps} onSubmit={enviarSemLimpar(formAction)} className="flex flex-col gap-4">
@@ -77,25 +69,16 @@ export function PagamentoForm({
         </p>
       )}
 
-      <label className="flex flex-col gap-1 text-sm">
-        Consulta vinculada
-        <select
-          name="consulta_id"
-          defaultValue={pagamento?.consulta_id ?? consultaIdPadrao ?? ""}
-          onChange={(e) => aoEscolherConsulta(e.target.value)}
-          className="input"
-        >
-          <option value="">Lançamento avulso</option>
-          {consultas.map((c) => (
-            <option key={c.id} value={c.id}>
-              {dataBR(c.inicio)} {horaBR(c.inicio)} · {c.pacienteNome}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-slate-500">
-          Só mostra consultas que ainda não têm nenhum lançamento.
-        </span>
-      </label>
+      {/* Mantém a ligação com a sessão (vazio = lançamento avulso). */}
+      <input type="hidden" name="consulta_id" value={consulta?.id ?? ""} />
+      {consulta && (
+        <div className="flex flex-col gap-0.5 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+          <span className="text-xs text-slate-500">Sessão</span>
+          <span>
+            {dataBR(consulta.inicio)} às {horaBR(consulta.inicio)} · <span data-sensivel>{consulta.pacienteNome}</span>
+          </span>
+        </div>
+      )}
 
       <div>
         <PacienteSelect pacientes={pacientes} value={pacienteId} onChange={setPacienteId} />

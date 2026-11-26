@@ -242,6 +242,51 @@ test("A receber: baixa de várias sessões na linha e desfazer", async () => {
   await expect(page.getByRole("button", { name: "Dar baixa" }).first()).toBeVisible();
 });
 
+test("painel da consulta: pagamento adiantado de sessão futura e desfazer", async () => {
+  // Sessão futura com valor (criada pelo admin, na conta A, do paciente do fluxo).
+  const pacienteId = pacienteUrl.split("/").pop()!;
+  const { data: dono } = await admin.from("pacientes").select("psicologa_id").eq("id", pacienteId).single();
+  const inicio = new Date(`${amanha}T19:00:00-03:00`);
+  const { data: c, error } = await admin
+    .from("consultas")
+    .insert({
+      psicologa_id: dono!.psicologa_id,
+      paciente_id: pacienteId,
+      inicio: inicio.toISOString(),
+      fim: new Date(inicio.getTime() + 50 * 60_000).toISOString(),
+      modalidade: "online",
+      valor: 220,
+    })
+    .select("id")
+    .single();
+  expect(error).toBeNull();
+
+  await page.goto(`/agenda?consulta=${c!.id}`);
+  const painel = page.getByRole("dialog");
+  await expect(painel).toContainText("R$ 220,00");
+  await expect(painel).not.toContainText("entra como a receber");
+  await painel.getByRole("button", { name: "Registrar pagamento adiantado" }).click();
+  await painel.locator("select").last().selectOption("pix");
+  await painel.getByRole("button", { name: "Confirmar" }).click();
+  await expect(painel.getByText("Pagamento registrado.")).toBeVisible();
+  await expect(painel).toContainText("Pago em");
+  await expect(painel).toContainText("Pix");
+  const { data: pago } = await admin.from("pagamentos").select("status, origem").eq("consulta_id", c!.id).single();
+  expect(pago).toEqual({ status: "pago", origem: "sessao" });
+
+  await painel.getByRole("button", { name: "Desfazer" }).click();
+  await expect(painel.getByText("Pagamento registrado.")).toHaveCount(0);
+  await expect(painel.getByRole("button", { name: "Dar baixa" })).toBeVisible();
+  const { data: voltou } = await admin.from("pagamentos").select("status, data_pagamento").eq("consulta_id", c!.id).single();
+  expect(voltou).toEqual({ status: "pendente", data_pagamento: null });
+});
+
+test("novo lançamento é avulso: sem lista de consultas", async () => {
+  await page.goto("/financeiro/novo");
+  await expect(page.locator('select[name="consulta_id"]')).toHaveCount(0);
+  await expect(page.locator("main")).not.toContainText("Consulta vinculada");
+});
+
 test("prontuário em PDF baixa direto da página do paciente", async () => {
   await page.goto(pacienteUrl);
   const download = page.waitForEvent("download");

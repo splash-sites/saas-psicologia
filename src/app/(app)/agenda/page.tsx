@@ -179,7 +179,7 @@ export default async function AgendaPage({
     ids.length
       ? supabase
           .from("pagamentos")
-          .select("id, consulta_id, valor, status, vencimento, created_at")
+          .select("id, consulta_id, valor, status, vencimento, data_pagamento, forma_pagamento, created_at")
           .is("deleted_at", null)
           .in("consulta_id", ids)
           .order("created_at", { ascending: false })
@@ -210,7 +210,14 @@ export default async function AgendaPage({
     evoPorPacienteDia.set(`${e.paciente_id}|${e.data_sessao}`, e.id as string);
   }
   // Mais recente primeiro: o primeiro visto por consulta é o que vale.
-  type Pag = { id: string; valor: number; status: "pendente" | "pago"; vencimento: string };
+  type Pag = {
+    id: string;
+    valor: number;
+    status: "pendente" | "pago";
+    vencimento: string;
+    data_pagamento: string | null;
+    forma_pagamento: string | null;
+  };
   const pagPorConsulta = new Map<string, Pag>();
   for (const p of pagamentosRaw ?? []) {
     const cid = p.consulta_id as string;
@@ -220,6 +227,8 @@ export default async function AgendaPage({
         valor: Number(p.valor),
         status: p.status as Pag["status"],
         vencimento: p.vencimento as string,
+        data_pagamento: (p.data_pagamento as string | null) ?? null,
+        forma_pagamento: (p.forma_pagamento as string | null) ?? null,
       });
     }
   }
