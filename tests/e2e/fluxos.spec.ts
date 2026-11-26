@@ -113,6 +113,15 @@ test("login por e-mail e senha", async () => {
   await expect(page.getByRole("link", { name: "Pacientes" })).toBeVisible();
 });
 
+test("já logada: Entrar e Criar conta vão direto ao Painel; link de cupom vai à Assinatura", async () => {
+  await page.goto("/login");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto("/cadastro");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto("/cadastro?cupom=PSICO30");
+  await expect(page).toHaveURL(/\/assinatura\?cupom=PSICO30$/);
+});
+
 test("cadastro de paciente recusa CPF e telefone inválidos sem perder o resto", async () => {
   await page.goto("/pacientes/novo");
   await page.locator('[name="nome"]').fill("maria   DA silva");

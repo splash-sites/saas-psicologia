@@ -206,6 +206,11 @@ for (const p of rotasPrivadas(A)) {
   r.resumo = resumoPagina(r);
   registrar("GET logado (A)", curto(p), (x) => (p === "/" ? x.status === 307 : x.status === 200 && !x.resumo), r);
 }
+// Já logada: "Entrar" e "Criar conta" vão direto ao Painel; link de cupom vai à Assinatura.
+for (const [p, destino] of [["/login", "/dashboard"], ["/cadastro", "/dashboard"], ["/cadastro?cupom=PSICO30", "/assinatura?cupom=PSICO30"]]) {
+  const r = await req(p, { cookie: cA });
+  registrar("GET logado (A)", p, (x) => x.status === 307 && x.destino === destino, r);
+}
 
 // 3. A tentando abrir ids de B
 for (const p of rotasPrivadas(B).filter((p) => /[0-9a-f]{8}-/.test(p))) {

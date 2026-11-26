@@ -53,5 +53,20 @@ export async function updateSession(
     return NextResponse.redirect(redirectUrl);
   }
 
+  // Já logada: "Entrar" (link da landing) e "Criar conta" levam direto ao
+  // Painel. Link de cupom (/cadastro?cupom=X) vai para a Assinatura, onde o
+  // código pode ser usado por quem já tem conta.
+  const caminho = request.nextUrl.pathname;
+  if (user && (caminho === "/login" || caminho === "/cadastro")) {
+    const destino = request.nextUrl.clone();
+    const cupom = caminho === "/cadastro" ? request.nextUrl.searchParams.get("cupom") : null;
+    destino.pathname = cupom ? "/assinatura" : "/dashboard";
+    destino.search = cupom ? `?cupom=${encodeURIComponent(cupom)}` : "";
+    const resposta = NextResponse.redirect(destino);
+    // Leva junto o token renovado agora (senão o próximo pedido renova de novo).
+    for (const c of supabaseResponse.cookies.getAll()) resposta.cookies.set(c);
+    return resposta;
+  }
+
   return supabaseResponse;
 }
