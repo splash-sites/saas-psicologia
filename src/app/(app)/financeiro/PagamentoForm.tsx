@@ -64,7 +64,7 @@ export function PagamentoForm({
 
   function aoEscolherConsulta(consultaId: string) {
     const c = consultas.find((c) => c.id === consultaId);
-    if (!c) return; // "Nenhuma (lançamento avulso)": mantém o que já tinha.
+    if (!c) return; // "Lançamento avulso": mantém o que já tinha.
     setPacienteId(c.paciente_id);
     setDataRef(dataChaveBR(c.inicio));
   }
@@ -78,14 +78,14 @@ export function PagamentoForm({
       )}
 
       <label className="flex flex-col gap-1 text-sm">
-        Consulta vinculada (opcional)
+        Consulta vinculada
         <select
           name="consulta_id"
           defaultValue={pagamento?.consulta_id ?? consultaIdPadrao ?? ""}
           onChange={(e) => aoEscolherConsulta(e.target.value)}
           className="input"
         >
-          <option value="">Nenhuma (lançamento avulso)</option>
+          <option value="">Lançamento avulso</option>
           {consultas.map((c) => (
             <option key={c.id} value={c.id}>
               {dataBR(c.inicio)} {horaBR(c.inicio)} · {c.pacienteNome}
