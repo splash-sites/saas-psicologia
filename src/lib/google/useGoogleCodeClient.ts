@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { COOKIE_STATE } from "./oauth";
+import { COOKIE_STATE } from "./compartilhado";
 
 // Popup do Google Identity Services ("code model"): o Google devolve um código
 // de uso único direto para esta página, sem redirect pelo Supabase. O código

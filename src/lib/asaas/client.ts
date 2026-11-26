@@ -1,3 +1,4 @@
+import "server-only";
 import { randomUUID } from "node:crypto";
 
 // Cliente HTTP fino para a API do Asaas. Fica dormente (modo simulado) até

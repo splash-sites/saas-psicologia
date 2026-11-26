@@ -7,7 +7,30 @@ import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { mensagemErroEscrita } from "@/lib/assinatura/guard";
 import { documentoDadosSchema, iniciarEnvioSchema, type IniciarEnvioInput } from "@/lib/documentos/schema";
-import { EXTENSAO, MSG_COTA } from "@/lib/documentos/tipos";
+import { EXTENSAO, MSG_COTA, type MimeDocumento } from "@/lib/documentos/tipos";
+import { BYTES_CONFERIDOS, conteudoConfere } from "@/lib/documentos/conteudo";
+
+const MSG_CONTEUDO_INVALIDO =
+  "O conteúdo do arquivo não é de um PDF, JPG, PNG ou Word (.docx). Confira o arquivo e anexe de novo.";
+
+/** Começo do arquivo no Storage (link assinado de 60 s + Range), ou null. */
+async function primeirosBytes(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  caminho: string,
+): Promise<Uint8Array | null> {
+  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(caminho, 60);
+  if (!data?.signedUrl) return null;
+  try {
+    const r = await fetch(data.signedUrl, {
+      headers: { Range: `bytes=0-${BYTES_CONFERIDOS - 1}` },
+      cache: "no-store",
+    });
+    if (!r.ok) return null;
+    return new Uint8Array(await r.arrayBuffer()).subarray(0, BYTES_CONFERIDOS);
+  } catch {
+    return null;
+  }
+}
 
 // Entrega G (0041). O arquivo vai do navegador direto para o Storage (a
 // Vercel recusa corpo acima de 4,5 MB): aqui só a linha do documento, antes
@@ -70,7 +93,7 @@ export async function confirmarEnvioDocumento(id: string): Promise<{ ok: true } 
   const { supabase } = await sessao();
   const { data: doc } = await supabase
     .from("documentos")
-    .select("id, paciente_id, evolucao_id, arquivo_path, enviado_em")
+    .select("id, paciente_id, evolucao_id, arquivo_path, mime, enviado_em")
     .eq("id", id)
     .maybeSingle();
   if (!doc) return { error: "Documento não encontrado." };
@@ -81,6 +104,18 @@ export async function confirmarEnvioDocumento(id: string): Promise<{ ok: true } 
   const objeto = (lista ?? []).find((o) => o.name === arquivo);
   if (!objeto) return { error: "O arquivo não chegou. Tente anexar de novo." };
   const tamanho = Number((objeto.metadata as { size?: number } | null)?.size ?? 0);
+
+  // O tipo foi declarado pelo navegador; confere os primeiros bytes de verdade.
+  const inicio = await primeirosBytes(supabase, doc.arquivo_path as string);
+  if (!inicio) return { error: "Não foi possível conferir o arquivo. Tente de novo." };
+  if (!conteudoConfere(doc.mime as MimeDocumento, inicio)) {
+    // Marca como enviado e excluído na mesma escrita (o banco só aceita a
+    // exclusão de documento enviado) e apaga o arquivo: some de tudo.
+    const agora = new Date().toISOString();
+    await supabase.from("documentos").update({ enviado_em: agora, arquivo_excluido_em: agora }).eq("id", id);
+    await supabase.storage.from(BUCKET).remove([doc.arquivo_path as string]);
+    return { error: MSG_CONTEUDO_INVALIDO };
+  }
 
   const { error } = await supabase
     .from("documentos")

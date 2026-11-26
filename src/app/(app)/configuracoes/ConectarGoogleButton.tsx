@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ESCOPO_AGENDA } from "@/lib/google/oauth";
+import { ESCOPO_AGENDA } from "@/lib/google/compartilhado";
 import { useGoogleCodeClient } from "@/lib/google/useGoogleCodeClient";
 
 // Conecta (ou reconecta) a Google Agenda à conta logada, seja qual for o jeito

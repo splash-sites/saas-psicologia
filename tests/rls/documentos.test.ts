@@ -86,6 +86,28 @@ describe.skipIf(!hasLocalSupabase)("Documentos (0041)", () => {
     expect(html.error).not.toBeNull();
   });
 
+  it("HTML declarado como PDF: o bucket aceita, o servidor confere os bytes e apaga (auditoria 2026-11-26)", async () => {
+    const { u, c, pacienteId } = await conta("doc-falso");
+    const { id, caminho } = await pendente(c, u.id, pacienteId);
+    const falso = Buffer.from("<!doctype html><script>alert(1)</script>");
+    expect((await c.storage.from("documentos").upload(caminho, falso, { contentType: "application/pdf" })).error).toBeNull();
+
+    // Como confirmarEnvioDocumento lê o começo: link assinado + Range.
+    const { data: link } = await c.storage.from("documentos").createSignedUrl(caminho, 60);
+    const r = await fetch(link!.signedUrl, { headers: { Range: "bytes=0-1023" } });
+    expect(r.ok).toBe(true);
+    const inicio = new Uint8Array(await r.arrayBuffer());
+    const { conteudoConfere } = await import("@/lib/documentos/conteudo");
+    expect(conteudoConfere("application/pdf", inicio)).toBe(false);
+
+    // Limpeza da action: enviado + excluído na mesma escrita, depois apaga o arquivo.
+    const agora = new Date().toISOString();
+    expect((await c.from("documentos").update({ enviado_em: agora, arquivo_excluido_em: agora }).eq("id", id)).error).toBeNull();
+    const rm = await c.storage.from("documentos").remove([caminho]);
+    expect(rm.data ?? []).toHaveLength(1);
+    expect((await c.storage.from("documentos").download(caminho)).error).not.toBeNull();
+  });
+
   it("isolamento: outra conta não lê, não baixa, não lista, não anexa e não altera", async () => {
     const a = await conta("doc3a");
     const b = await conta("doc3b");

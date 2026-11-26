@@ -1,3 +1,4 @@
+import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 // Client com service_role — ignora RLS. Uso EXCLUSIVO server-side, em fluxos

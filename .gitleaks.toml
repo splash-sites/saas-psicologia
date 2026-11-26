@@ -1,0 +1,8 @@
+# Scanner de segredos (gitleaks), rodado no GitHub a cada push
+# (.github/workflows/segredos.yml). Regras padrão + exceção abaixo.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Senhas das contas de teste do Supabase local (tests/, scripts/api-check)"
+regexes = ['''^senha-teste-[0-9]+$''']

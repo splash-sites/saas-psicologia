@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { COOKIE_STATE, pedidoGoogleValido, trocarCodigoGoogle } from "@/lib/google/oauth";
+import { COOKIE_STATE } from "@/lib/google/compartilhado";
+import { pedidoGoogleValido, trocarCodigoGoogle } from "@/lib/google/oauth";
 import { guardarRefreshTokenGoogle } from "@/lib/google/tokens";
 import { escopoTemCalendar } from "@/lib/google/calendar";
 import { createAdminClient } from "@/lib/supabase/admin";

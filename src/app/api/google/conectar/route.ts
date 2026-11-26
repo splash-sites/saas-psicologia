@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { usuarioAtual } from "@/lib/auth/usuario";
-import { COOKIE_STATE, pedidoGoogleValido, trocarCodigoGoogle } from "@/lib/google/oauth";
+import { COOKIE_STATE } from "@/lib/google/compartilhado";
+import { pedidoGoogleValido, trocarCodigoGoogle } from "@/lib/google/oauth";
 import { guardarRefreshTokenGoogle } from "@/lib/google/tokens";
 
 // "Conectar Google Agenda" em Configurações (exige sessão). Serve para quem

@@ -1,3 +1,4 @@
+import "server-only";
 import { randomUUID } from "node:crypto";
 import { createAdminClient, adminDisponivel } from "@/lib/supabase/admin";
 import { decrypt, cryptoDisponivel } from "@/lib/crypto";

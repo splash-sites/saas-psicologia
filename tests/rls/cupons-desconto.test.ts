@@ -137,6 +137,32 @@ describe.skipIf(!hasLocalSupabase || !hasAdmin)("Banco: cupons de desconto", () 
     expect(status).toEqual(["esgotado", "esgotado", "ok"]);
   });
 
+  it("reserva abandonada (sem assinatura, mais de 10 min) não ocupa vaga (0046)", async () => {
+    const admin = adminClient();
+    const unico = await criarDesconto({ limite_usos: 1 });
+    const [a, b] = await Promise.all([contaNova("aband-a"), contaNova("aband-b")]);
+
+    // A reserva pela API e nunca assina.
+    const r = await a.cliente.rpc("reservar_cupom_desconto", { p_codigo: unico });
+    expect(r.data.status).toBe("ok");
+    // Dentro dos 10 minutos a vaga continua dela.
+    expect((await b.cliente.rpc("consultar_cupom_desconto", { p_codigo: unico })).data.status).toBe("esgotado");
+
+    // Passados 10 minutos: B consegue e a reserva de A some.
+    const velha = new Date(Date.now() - 11 * 60_000).toISOString();
+    await admin.from("cupom_descontos").update({ created_at: velha }).eq("id", r.data.reserva_id);
+    expect((await b.cliente.rpc("consultar_cupom_desconto", { p_codigo: unico })).data.status).toBe("ok");
+    expect((await b.cliente.rpc("reservar_cupom_desconto", { p_codigo: unico })).data.status).toBe("ok");
+    const { data: restantes } = await admin.from("cupom_descontos").select("psicologa_id").eq("codigo", unico);
+    expect(restantes?.map((x) => x.psicologa_id)).toEqual([b.id]);
+
+    // Reserva que virou assinatura nunca expira: o cupom segue esgotado.
+    const sub = await assinarCom(await contaNova("aband-c"), await criarDesconto({ limite_usos: 1 }));
+    await admin.from("cupom_descontos").update({ created_at: velha }).eq("asaas_subscription_id", sub);
+    const { data: usado } = await admin.from("cupom_descontos").select("codigo").eq("asaas_subscription_id", sub).single();
+    expect((await a.cliente.rpc("consultar_cupom_desconto", { p_codigo: usado!.codigo })).data.status).toBe("esgotado");
+  });
+
   it("cupom de desconto no cadastro e em 'Tenho um cupom' não mexe no teste", async () => {
     const codigo = await criarDesconto();
     const a = await contaNova("dias");

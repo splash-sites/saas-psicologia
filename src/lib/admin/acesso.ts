@@ -1,3 +1,4 @@
+import "server-only";
 import { notFound } from "next/navigation";
 import { usuarioAtual, type UsuarioAtual } from "@/lib/auth/usuario";
 
