@@ -12,6 +12,7 @@ import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
 import { Pilula } from "../Pilula";
 import { pendentesAte, realizado, type Pendente } from "./lista";
 import { TabelaAReceber, type GrupoTabela } from "./TabelaAReceber";
+import { TopoCelular } from "../TopoCelular";
 
 export const metadata = { title: "A receber" };
 
@@ -65,19 +66,30 @@ export default async function AReceberPage({
 
   return (
     <div className="flex w-full max-w-5xl flex-col gap-5 text-[#12302B]">
-      <CabecalhoPagina
+      <TopoCelular
         titulo="A receber"
         voltar={{ href: `/financeiro?mes=${mes}`, rotulo: "Financeiro" }}
-        periodo={
-          <NavegacaoPeriodo
-            anterior={{ href: `/financeiro/a-receber?mes=${mesAnterior(mes)}${aba === "mes" ? "" : `&aba=${aba}`}`, rotulo: "Mês anterior" }}
-            atual={{ href: "/financeiro/a-receber", rotulo: "Mês atual" }}
-            proximo={{ href: `/financeiro/a-receber?mes=${mesSeguinte(mes)}${aba === "mes" ? "" : `&aba=${aba}`}`, rotulo: "Próximo mês" }}
-            periodo={rotuloMes(mes)}
-          />
-        }
+        periodo={rotuloMes(mes)}
+        anteriorHref={`/financeiro/a-receber?mes=${mesAnterior(mes)}${aba === "mes" ? "" : `&aba=${aba}`}`}
+        proximoHref={`/financeiro/a-receber?mes=${mesSeguinte(mes)}${aba === "mes" ? "" : `&aba=${aba}`}`}
+        mesAtualHref={mes === mesAtual() ? null : `/financeiro/a-receber${aba === "mes" ? "" : `?aba=${aba}`}`}
         descricao="Sessões que já aconteceram e ainda não foram pagas."
       />
+      <div className="hidden md:block">
+        <CabecalhoPagina
+          titulo="A receber"
+          voltar={{ href: `/financeiro?mes=${mes}`, rotulo: "Financeiro" }}
+          periodo={
+            <NavegacaoPeriodo
+              anterior={{ href: `/financeiro/a-receber?mes=${mesAnterior(mes)}${aba === "mes" ? "" : `&aba=${aba}`}`, rotulo: "Mês anterior" }}
+              atual={{ href: "/financeiro/a-receber", rotulo: "Mês atual" }}
+              proximo={{ href: `/financeiro/a-receber?mes=${mesSeguinte(mes)}${aba === "mes" ? "" : `&aba=${aba}`}`, rotulo: "Próximo mês" }}
+              periodo={rotuloMes(mes)}
+            />
+          }
+          descricao="Sessões que já aconteceram e ainda não foram pagas."
+        />
+      </div>
 
       {/* Resumo */}
       <section aria-label="Resumo" className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">

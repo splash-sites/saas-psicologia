@@ -17,6 +17,7 @@ import { mesAtual, mesAnterior, mesSeguinte, primeiroDia, ultimoDia, rotuloMes }
 import { ListaLancamentos } from "./ListaLancamentos";
 import { gerarLancamentosDasSessoes } from "@/lib/financeiro/gerar";
 import { desarquivarPagamento } from "./actions";
+import { TopoCelular } from "./TopoCelular";
 
 export const metadata = { title: "Financeiro" };
 
@@ -103,28 +104,38 @@ export default async function FinanceiroPage({
 
   return (
     <div className="flex w-full max-w-5xl flex-col gap-5 text-[#12302B]">
-      <CabecalhoPagina
+      <TopoCelular
         titulo="Financeiro"
-        periodo={
-          <NavegacaoPeriodo
-            anterior={{ href: `/financeiro?mes=${mesAnterior(mes)}`, rotulo: "Mês anterior" }}
-            atual={{ href: "/financeiro", rotulo: "Mês atual" }}
-            proximo={{ href: `/financeiro?mes=${mesSeguinte(mes)}`, rotulo: "Próximo mês" }}
-            periodo={rotuloMes(mes)}
-          />
-        }
-        acoes={
-          <>
-            <Link href="/financeiro/historico" className="btn btn-outline">
-              Histórico mensal
-            </Link>
-            <Link href="/financeiro/novo" className="btn btn-primary">
-              <Plus className="size-4" aria-hidden />
-              Novo lançamento
-            </Link>
-          </>
-        }
+        periodo={rotuloMes(mes)}
+        anteriorHref={`/financeiro?mes=${mesAnterior(mes)}`}
+        proximoHref={`/financeiro?mes=${mesSeguinte(mes)}`}
+        mesAtualHref={mes === mesAtual() ? null : "/financeiro"}
+        novo
       />
+      <div className="hidden md:block">
+        <CabecalhoPagina
+          titulo="Financeiro"
+          periodo={
+            <NavegacaoPeriodo
+              anterior={{ href: `/financeiro?mes=${mesAnterior(mes)}`, rotulo: "Mês anterior" }}
+              atual={{ href: "/financeiro", rotulo: "Mês atual" }}
+              proximo={{ href: `/financeiro?mes=${mesSeguinte(mes)}`, rotulo: "Próximo mês" }}
+              periodo={rotuloMes(mes)}
+            />
+          }
+          acoes={
+            <>
+              <Link href="/financeiro/historico" className="btn btn-outline">
+                Histórico mensal
+              </Link>
+              <Link href="/financeiro/novo" className="btn btn-primary">
+                <Plus className="size-4" aria-hidden />
+                Novo lançamento
+              </Link>
+            </>
+          }
+        />
+      </div>
 
       {arquivadoId && (
         <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-[#DDE6E3] bg-[#EEF2F1] px-3.5 py-2.5 text-sm font-semibold text-[#3D524D]">
@@ -171,6 +182,9 @@ export default async function FinanceiroPage({
           <Link href="/financeiro/novo" className="btn btn-primary">
             <Plus className="size-4" aria-hidden />
             Novo lançamento
+          </Link>
+          <Link href="/financeiro/historico" className="btn btn-outline md:hidden">
+            Ver histórico mensal
           </Link>
         </EstadoVazio>
       ) : (

@@ -11,6 +11,7 @@ import { formatarBRL } from "@/lib/financeiro/types";
 import { CLASSE_TOM } from "@/lib/financeiro/situacao";
 import { mesAtual, mesAnterior, mesSeguinte, primeiroDia, ultimoDia, rotuloMes } from "@/lib/financeiro/mes";
 import { corAvatar, iniciais } from "@/lib/pacientes/avatar";
+import { TopoCelular } from "../TopoCelular";
 
 export const metadata = { title: "Previsto" };
 
@@ -148,19 +149,30 @@ export default async function PrevistoPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="flex w-full max-w-5xl flex-col gap-5 text-[#12302B]">
-      <CabecalhoPagina
-        titulo="Previsto até o fim do mês"
+      <TopoCelular
+        titulo="Previsto"
         voltar={{ href: `/financeiro?mes=${mes}`, rotulo: "Financeiro" }}
-        periodo={
-          <NavegacaoPeriodo
-            anterior={{ href: `/financeiro/previsto?mes=${mesAnterior(mes)}`, rotulo: "Mês anterior" }}
-            atual={{ href: "/financeiro/previsto", rotulo: "Mês atual" }}
-            proximo={{ href: `/financeiro/previsto?mes=${mesSeguinte(mes)}`, rotulo: "Próximo mês" }}
-            periodo={rotuloMes(mes)}
-          />
-        }
-        descricao="Sessões marcadas com valor que ainda não aconteceram. Depois da sessão, o valor passa para “A receber”."
+        periodo={rotuloMes(mes)}
+        anteriorHref={`/financeiro/previsto?mes=${mesAnterior(mes)}`}
+        proximoHref={`/financeiro/previsto?mes=${mesSeguinte(mes)}`}
+        mesAtualHref={mes === mesAtual() ? null : "/financeiro/previsto"}
+        descricao="Sessões marcadas com valor que ainda não aconteceram."
       />
+      <div className="hidden md:block">
+        <CabecalhoPagina
+          titulo="Previsto até o fim do mês"
+          voltar={{ href: `/financeiro?mes=${mes}`, rotulo: "Financeiro" }}
+          periodo={
+            <NavegacaoPeriodo
+              anterior={{ href: `/financeiro/previsto?mes=${mesAnterior(mes)}`, rotulo: "Mês anterior" }}
+              atual={{ href: "/financeiro/previsto", rotulo: "Mês atual" }}
+              proximo={{ href: `/financeiro/previsto?mes=${mesSeguinte(mes)}`, rotulo: "Próximo mês" }}
+              periodo={rotuloMes(mes)}
+            />
+          }
+          descricao="Sessões marcadas com valor que ainda não aconteceram. Depois da sessão, o valor passa para “A receber”."
+        />
+      </div>
 
       {itens.length === 0 ? (
         <EstadoVazio icon={CalendarClock} titulo="Nada previsto" texto="Nenhuma sessão com valor marcada para o resto do mês." />
@@ -173,9 +185,7 @@ export default async function PrevistoPage({ searchParams }: { searchParams: Pro
               <span className="text-[28px] font-bold tracking-tight" data-sensivel>
                 {formatarBRL(total)}
               </span>
-              <span className="text-[13px] text-[#C9DAD5]">
-                {n(itens.length, "sessão", "sessões")} de {n(pacientes, "paciente", "pacientes")}
-              </span>
+              <span className="text-[13px] text-[#C9DAD5]">{n(pacientes, "paciente", "pacientes")}</span>
             </div>
             <div className="flex flex-col gap-1 rounded-2xl border border-[#DFEBE7] bg-white px-4 py-3.5">
               <span className="text-[13px] text-[#4A5F5A]">Próxima sessão</span>
@@ -188,9 +198,9 @@ export default async function PrevistoPage({ searchParams }: { searchParams: Pro
               </span>
             </div>
             <div className="flex flex-col gap-1 rounded-2xl border border-[#DFEBE7] bg-white px-4 py-3.5">
-              <span className="text-[13px] text-[#4A5F5A]">Dias com sessão</span>
-              <span className="text-xl font-bold">{dias.length}</span>
-              <span className="text-[13px] text-[#4A5F5A]">até {Number(fim.slice(8, 10))} de {nomeMes}</span>
+              <span className="text-[13px] text-[#4A5F5A]">Sessões até o fim do mês</span>
+              <span className="text-xl font-bold">{itens.length}</span>
+              <span className="text-[13px] text-[#4A5F5A]">em {n(dias.length, "dia", "dias")}, até {Number(fim.slice(8, 10))} de {nomeMes}</span>
             </div>
           </section>
 
