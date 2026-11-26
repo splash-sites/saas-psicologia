@@ -100,9 +100,6 @@ export default async function FinanceiroPage({
   };
   const nAReceber = lista.filter((l) => l.status === "pendente" && (!previsto || realizado(l))).length;
   const n = (x: number, um: string, varios: string) => `${x} ${x === 1 ? um : varios}`;
-  // Atrasados do mês: lançamentos deste mês pendentes e já vencidos.
-  const atrasadosDoMes = lista.filter((l) => statusExibicao(l, hoje) === "atrasado");
-  const valorAtrasadoMes = atrasadosDoMes.reduce((s, l) => s + Number(l.valor), 0);
 
   return (
     <div className="flex w-full max-w-5xl flex-col gap-5 text-[#12302B]">
@@ -141,7 +138,10 @@ export default async function FinanceiroPage({
       )}
 
       {/* Resumo do mês (canvas Financeiro) */}
-      <section aria-label="Resumo do mês" className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+      {/* Três números, decisão do usuário (2026-11-25): quanto já entrou, o que
+          já aconteceu e não foi pago, e o que ainda vem das sessões marcadas.
+          O atraso fica na aba "Atrasados" e no "Só atrasados" do A receber. */}
+      <section aria-label="Resumo do mês" className={`grid grid-cols-2 gap-2.5 ${previsto ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
         <div className="col-span-2 flex flex-col gap-1 rounded-2xl bg-[#12302B] px-5 py-4 text-[#F4F7F6] lg:col-span-1">
           <span className="text-[13px] text-[#C9DAD5]">Recebido em {nomeMes}</span>
           <span className="text-[28px] font-bold tracking-tight" data-sensivel>
@@ -152,8 +152,9 @@ export default async function FinanceiroPage({
         <Tile
           rotulo={previsto ? "A receber" : "A receber no mês"}
           valor={formatarBRL(aReceber)}
-          sub={previsto ? n(nAReceber, "sessão realizada", "sessões realizadas") : n(nAReceber, "lançamento", "lançamentos")}
+          sub={previsto ? `${n(nAReceber, "sessão realizada", "sessões realizadas")}, não pagas` : n(nAReceber, "lançamento", "lançamentos")}
           href={`/financeiro/a-receber?mes=${mes}`}
+          className={previsto ? "" : "col-span-2 lg:col-span-1"}
         />
         {previsto && (
           <Tile
@@ -163,14 +164,6 @@ export default async function FinanceiroPage({
             href={`/financeiro/previsto?mes=${mes}`}
           />
         )}
-        <Tile
-          rotulo="Atrasados do mês"
-          valor={formatarBRL(valorAtrasadoMes)}
-          sub={atrasadosDoMes.length ? n(atrasadosDoMes.length, "lançamento", "lançamentos") : "nada atrasado"}
-          tom={atrasadosDoMes.length ? "atraso" : undefined}
-          className="col-span-2 lg:col-span-1"
-          href={atrasadosDoMes.length ? `/financeiro/a-receber?mes=${mes}&atrasados=1` : undefined}
-        />
       </section>
 
       {lista.length === 0 ? (
@@ -214,15 +207,12 @@ function Tile({
   rotulo,
   valor,
   sub,
-  tom,
   className = "",
   href,
 }: {
   rotulo: string;
   valor: string;
   sub: string;
-  /** "atraso": valor em vermelho (há algo atrasado). */
-  tom?: "atraso";
   className?: string;
   /** Card clicável: abre o detalhe. */
   href?: string;
@@ -233,7 +223,7 @@ function Tile({
         {rotulo}
         {href && <ChevronRight className="size-4 shrink-0 text-[#0F766E]" aria-hidden />}
       </span>
-      <span className={`text-xl font-bold ${tom === "atraso" ? "text-[#A3261B]" : ""}`} data-sensivel>
+      <span className="text-xl font-bold" data-sensivel>
         {valor}
       </span>
       <span className={`text-[13px] ${href ? "text-[#0F766E]" : "text-[#4A5F5A]"}`}>{sub}</span>

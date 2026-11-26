@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, Video } from "lucide-react";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
 import { NavegacaoPeriodo } from "@/components/NavegacaoPeriodo";
@@ -8,18 +8,39 @@ import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { brWallTimeToDate, dataChaveBR, hojeBR, horaBR } from "@/lib/agenda/datas";
 import { formatarBRL } from "@/lib/financeiro/types";
+import { CLASSE_TOM } from "@/lib/financeiro/situacao";
 import { mesAtual, mesAnterior, mesSeguinte, primeiroDia, ultimoDia, rotuloMes } from "@/lib/financeiro/mes";
+import { corAvatar, iniciais } from "@/lib/pacientes/avatar";
 
 export const metadata = { title: "Previsto" };
 
-// Detalhe do card "Previsto até o fim do mês" (2026-11-24): sessões que ainda
-// não aconteceram, cada uma uma vez — mesma regra de resumo_sessoes_mes (0037):
-// com lançamento pendente vale o lançamento; sem lançamento, o valor da
-// consulta; paga adiantado fica de fora. Mais lançamentos sem sessão com data
-// futura. Só mês atual ou futuro.
+// Detalhe do card "Previsto até o fim do mês" (2026-11-24; visual do redesenho
+// do Financeiro em 2026-11-25): sessões que ainda não aconteceram, cada uma uma
+// vez — mesma regra de resumo_sessoes_mes (0037): com lançamento pendente vale
+// o lançamento; sem lançamento, o valor da consulta; paga adiantado fica de
+// fora. Mais lançamentos sem sessão com data futura. Só mês atual ou futuro.
 
-type Item = { chave: string; quando: string; hora: string | null; nome: string; valor: number; href: string; origem: string };
+type Item = {
+  chave: string;
+  quando: string;
+  hora: string | null;
+  pacienteId: string;
+  nome: string;
+  valor: number;
+  href: string;
+  /** "Sessão online", "Sessão presencial" ou "Lançamento". */
+  referente: string;
+  online: boolean;
+  /** Já tem lançamento pendente (lançado antes da sessão). */
+  lancado: boolean;
+};
+type Pac = { id: string; nome: string };
 const um = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
+const SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+const tituloDia = (iso: string, hoje: string) =>
+  `${iso === hoje ? "Hoje · " : ""}${SEMANA[new Date(`${iso}T12:00:00Z`).getUTCDay()]}, ${Number(iso.slice(8, 10))} de ${MESES[Number(iso.slice(5, 7)) - 1]}`;
+const n = (x: number, um1: string, varios: string) => `${x} ${x === 1 ? um1 : varios}`;
 
 export default async function PrevistoPage({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
   const { mes: mesParam } = await searchParams;
@@ -39,7 +60,7 @@ export default async function PrevistoPage({ searchParams }: { searchParams: Pro
   const [{ data: consultasRaw }, { data: pendentesRaw }] = await Promise.all([
     supabase
       .from("consultas")
-      .select("id, inicio, fim, valor, pacientes(nome)")
+      .select("id, inicio, fim, valor, modalidade, pacientes(id, nome)")
       .eq("status", "agendada")
       .is("deleted_at", null)
       .not("valor", "is", null)
@@ -50,7 +71,7 @@ export default async function PrevistoPage({ searchParams }: { searchParams: Pro
       .limit(1000),
     supabase
       .from("pagamentos")
-      .select("id, consulta_id, valor, data_referencia, consultas(inicio, fim), pacientes(nome)")
+      .select("id, consulta_id, valor, data_referencia, consultas(inicio, fim, modalidade), pacientes(id, nome)")
       .eq("status", "pendente")
       .is("deleted_at", null)
       .gte("data_referencia", inicio)
@@ -58,14 +79,15 @@ export default async function PrevistoPage({ searchParams }: { searchParams: Pro
       .limit(1000),
   ]);
 
-  type Consulta = { id: string; inicio: string; fim: string; valor: number; pacientes: { nome: string } | { nome: string }[] | null };
+  type Consulta = { id: string; inicio: string; fim: string; valor: number; modalidade: string; pacientes: Pac | Pac[] | null };
+  type ConsultaPend = { inicio: string; fim: string; modalidade: string };
   type Pend = {
     id: string;
     consulta_id: string | null;
     valor: number;
     data_referencia: string;
-    consultas: { inicio: string; fim: string } | { inicio: string; fim: string }[] | null;
-    pacientes: { nome: string } | { nome: string }[] | null;
+    consultas: ConsultaPend | ConsultaPend[] | null;
+    pacientes: Pac | Pac[] | null;
   };
   const consultas = (consultasRaw ?? []) as unknown as Consulta[];
   const pendentes = (pendentesRaw ?? []) as unknown as Pend[];
@@ -80,15 +102,21 @@ export default async function PrevistoPage({ searchParams }: { searchParams: Pro
   const itens: Item[] = [
     ...consultas
       .filter((c) => !lancadas.has(c.id))
-      .map((c) => ({
-        chave: `c-${c.id}`,
-        quando: dataChaveBR(c.inicio),
-        hora: horaBR(c.inicio),
-        nome: um(c.pacientes)?.nome ?? "Paciente",
-        valor: Number(c.valor),
-        href: `/agenda?consulta=${c.id}`,
-        origem: "Sessão marcada",
-      })),
+      .map((c) => {
+        const p = um(c.pacientes);
+        return {
+          chave: `c-${c.id}`,
+          quando: dataChaveBR(c.inicio),
+          hora: horaBR(c.inicio),
+          pacienteId: p?.id ?? c.id,
+          nome: p?.nome ?? "Paciente",
+          valor: Number(c.valor),
+          href: `/agenda?consulta=${c.id}`,
+          referente: `Sessão ${c.modalidade === "online" ? "online" : "presencial"}`,
+          online: c.modalidade === "online",
+          lancado: false,
+        };
+      }),
     ...pendentes
       .filter((p) => {
         const c = um(p.consultas);
@@ -96,21 +124,30 @@ export default async function PrevistoPage({ searchParams }: { searchParams: Pro
       })
       .map((p) => {
         const c = um(p.consultas);
+        const pac = um(p.pacientes);
         return {
           chave: `p-${p.id}`,
           quando: c ? dataChaveBR(c.inicio) : p.data_referencia,
           hora: c ? horaBR(c.inicio) : null,
-          nome: um(p.pacientes)?.nome ?? "Paciente",
+          pacienteId: pac?.id ?? p.id,
+          nome: pac?.nome ?? "Paciente",
           valor: Number(p.valor),
           href: `/financeiro/${p.id}`,
-          origem: c ? "Sessão com lançamento" : "Lançamento",
+          referente: c ? `Sessão ${c.modalidade === "online" ? "online" : "presencial"}` : "Lançamento",
+          online: c?.modalidade === "online",
+          lancado: true,
         };
       }),
   ].sort((a, b) => (a.quando + (a.hora ?? "")).localeCompare(b.quando + (b.hora ?? "")));
+
   const total = itens.reduce((s, i) => s + i.valor, 0);
+  const pacientes = new Set(itens.map((i) => i.pacienteId)).size;
+  const proxima = itens[0];
+  const dias = [...itens.reduce((m, i) => m.set(i.quando, [...(m.get(i.quando) ?? []), i]), new Map<string, Item[]>())];
+  const nomeMes = rotuloMes(mes).split(" de ")[0].toLowerCase();
 
   return (
-    <div className="flex w-full max-w-3xl flex-col gap-6">
+    <div className="flex w-full max-w-5xl flex-col gap-5 text-[#12302B]">
       <CabecalhoPagina
         titulo="Previsto até o fim do mês"
         voltar={{ href: `/financeiro?mes=${mes}`, rotulo: "Financeiro" }}
@@ -122,44 +159,123 @@ export default async function PrevistoPage({ searchParams }: { searchParams: Pro
             periodo={rotuloMes(mes)}
           />
         }
-        descricao="Sessões marcadas com valor que ainda não aconteceram (e lançamentos com data futura). Depois da sessão, o valor passa para “A receber”."
+        descricao="Sessões marcadas com valor que ainda não aconteceram. Depois da sessão, o valor passa para “A receber”."
       />
 
       {itens.length === 0 ? (
         <EstadoVazio icon={CalendarClock} titulo="Nada previsto" texto="Nenhuma sessão com valor marcada para o resto do mês." />
       ) : (
-        <section className="flex flex-col gap-2">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-sm font-semibold text-slate-700">
-              {itens.length} {itens.length === 1 ? "item" : "itens"}
-            </h2>
-            <span className="text-sm font-semibold text-slate-900" data-sensivel>
-              {formatarBRL(total)}
-            </span>
-          </div>
-          <ul className="divide-y rounded-lg border bg-white text-sm">
-            {itens.map((i) => (
-              <li key={i.chave}>
-                <Link href={i.href} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-slate-50">
-                  <span className="flex min-w-0 flex-col">
-                    <span className="font-medium" data-sensivel>
-                      {i.nome}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {i.quando.slice(8, 10)}/{i.quando.slice(5, 7)}
-                      {i.hora && ` às ${i.hora}`} · {i.origem}
-                    </span>
+        <>
+          {/* Resumo */}
+          <section aria-label="Resumo" className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+            <div className="col-span-2 flex flex-col gap-1 rounded-2xl bg-[#12302B] px-5 py-4 text-[#F4F7F6] lg:col-span-1">
+              <span className="text-[13px] text-[#C9DAD5]">Previsto até o fim de {nomeMes}</span>
+              <span className="text-[28px] font-bold tracking-tight" data-sensivel>
+                {formatarBRL(total)}
+              </span>
+              <span className="text-[13px] text-[#C9DAD5]">
+                {n(itens.length, "sessão", "sessões")} de {n(pacientes, "paciente", "pacientes")}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 rounded-2xl border border-[#DFEBE7] bg-white px-4 py-3.5">
+              <span className="text-[13px] text-[#4A5F5A]">Próxima sessão</span>
+              <span className="text-xl font-bold">
+                {proxima.quando.slice(8, 10)}/{proxima.quando.slice(5, 7)}
+                {proxima.hora && <span className="font-semibold text-[#3D524D]"> · {proxima.hora}</span>}
+              </span>
+              <span className="truncate text-[13px] text-[#4A5F5A]" data-sensivel>
+                {proxima.nome}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 rounded-2xl border border-[#DFEBE7] bg-white px-4 py-3.5">
+              <span className="text-[13px] text-[#4A5F5A]">Dias com sessão</span>
+              <span className="text-xl font-bold">{dias.length}</span>
+              <span className="text-[13px] text-[#4A5F5A]">até {Number(fim.slice(8, 10))} de {nomeMes}</span>
+            </div>
+          </section>
+
+          {/* Lista por dia */}
+          <div className="flex flex-col gap-3 lg:gap-0 lg:overflow-hidden lg:rounded-2xl lg:border lg:border-[#DFEBE7] lg:bg-white">
+            <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_120px] gap-4 border-b border-[#E6EEEB] bg-[#F7FAF9] px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-[#4A5F5A] lg:grid">
+              <span>Paciente</span>
+              <span>Referente a</span>
+              <span>Situação</span>
+              <span className="text-right">Valor</span>
+            </div>
+            {dias.map(([dia, itensDia]) => (
+              <section key={dia} className="flex flex-col gap-1.5 lg:gap-0">
+                <div className="flex justify-between px-0.5 pt-1 text-[13px] font-semibold text-[#3D524D] lg:border-b lg:border-[#EEF3F1] lg:bg-[#FBFDFC] lg:px-5 lg:py-2">
+                  <span>{tituloDia(dia, hoje)}</span>
+                  <span className="font-medium text-[#4A5F5A]" data-sensivel>
+                    {formatarBRL(itensDia.reduce((s, i) => s + i.valor, 0))}
                   </span>
-                  <span className="font-semibold text-slate-900" data-sensivel>
-                    {formatarBRL(i.valor)}
-                  </span>
-                </Link>
-              </li>
+                </div>
+                <ul className="overflow-hidden rounded-2xl border border-[#DFEBE7] bg-white lg:rounded-none lg:border-0">
+                  {itensDia.map((i) => (
+                    <li key={i.chave} className="border-t border-[#F1F5F4] first:border-t-0">
+                      <Linha i={i} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ))}
-          </ul>
-        </section>
+          </div>
+        </>
       )}
     </div>
   );
 }
 
+function Linha({ i }: { i: Item }) {
+  const avatar = (tam: string) => (
+    <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-full text-xs font-bold ${tam} ${corAvatar(i.pacienteId)}`} data-sensivel>
+      {iniciais(i.nome)}
+    </span>
+  );
+  const referente = (
+    <span className="flex items-center gap-1.5 text-[13px] text-[#4A5F5A]">
+      {i.online && <Video className="size-3.5" aria-hidden />}
+      {i.referente}
+      {i.hora && ` · ${i.hora}`}
+    </span>
+  );
+  const pilula = (
+    <span className={`inline-flex w-fit items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${CLASSE_TOM.neutro}`}>
+      {i.lancado ? "Lançado · a receber" : "Previsto"}
+    </span>
+  );
+  return (
+    <Link href={i.href} className="block hover:bg-[#F7FAF9]">
+      {/* Computador */}
+      <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_120px] items-center gap-4 px-5 py-3 lg:grid">
+        <span className="flex min-w-0 items-center gap-2.5">
+          {avatar("size-8")}
+          <span className="truncate text-[15px] font-semibold" data-sensivel>
+            {i.nome}
+          </span>
+        </span>
+        {referente}
+        {pilula}
+        <span className="text-right text-[15px] font-bold" data-sensivel>
+          {formatarBRL(i.valor)}
+        </span>
+      </div>
+      {/* Celular */}
+      <div className="flex flex-col gap-2 px-3 py-2.5 lg:hidden">
+        <span className="flex items-center gap-2.5">
+          {avatar("size-[34px]")}
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-[15px] font-semibold" data-sensivel>
+              {i.nome}
+            </span>
+            {referente}
+          </span>
+          <span className="text-[15px] font-bold" data-sensivel>
+            {formatarBRL(i.valor)}
+          </span>
+        </span>
+        <span className="pl-[44px]">{pilula}</span>
+      </div>
+    </Link>
+  );
+}
