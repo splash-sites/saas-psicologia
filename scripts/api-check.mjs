@@ -330,6 +330,12 @@ const casos = [
   [fin, "criarPagamento", () => [vazio, fd({ paciente_id: A.paciente, valor: "0", situacao: "a_receber", data_referencia: dia(0) })], "validação"],
   [fin, "atualizarPagamento", () => [A.pagamento, vazio, fd({ paciente_id: A.paciente, valor: "180", situacao: "a_receber", data_referencia: dia(0), vencimento: dia(7) })], "ok"],
   [fin, "marcarComoPago", () => [A.pagamento, vazio, fd({ data_pagamento: dia(0), forma_pagamento: "pix" })], "ok"],
+  [fin, "desfazerBaixa", () => [A.pagamento, "", fd({})], "ok"],
+  [fin, "darBaixaEmLote", () => [A.paciente, [A.pagamento], dia(0), "pix"], "ok"],
+  [fin, "desfazerBaixaEmLote", () => [[{ id: A.pagamento, forma: null }], dia(0)], "ok"],
+  [fin, "darBaixaEmLote", () => [A.paciente, [], dia(0), ""], "validação"],
+  [fin, "darBaixaEmLote", () => [A.paciente, [A.pagamento], "31/02/2026", ""], "validação"],
+  [fin, "marcarComoPago", () => [A.pagamento, vazio, fd({ data_pagamento: dia(0), forma_pagamento: "pix" })], "ok"],
   [fin, "desmarcarComoPago", () => [A.pagamento, fd({})], "ok"],
   // lembretes / configurações
   ["lembretes/actions", "marcarLembreteEnviado", () => [A.consulta], "ok"],
@@ -347,6 +353,7 @@ const casos = [
   // destrutivos por último
   [evo, "arquivarEvolucao", () => [A.paciente, A.evolucao, vazio, fd({ motivo: "teste de arquivamento" })], "ok"],
   [fin, "arquivarPagamento", () => [A.pagamento, fd({})], "ok"],
+  [fin, "desarquivarPagamento", () => [A.pagamento, fd({})], "ok"],
   [ag, "cancelarConsulta", () => [A.consulta, "esta", fd({})], "ok"],
   [pac, "excluirPaciente", () => [A.paciente, fd({})], "ok"],
   // painel /admin (A é a administradora)
@@ -446,6 +453,10 @@ const cruzadas = [
   [evo, "arquivarEvolucao", () => [B.paciente, B.evolucao, vazio, fd({ motivo: "HACK HACK" })]],
   [fin, "marcarComoPago", () => [B.pagamento, vazio, fd({ data_pagamento: dia(0) })]],
   [fin, "arquivarPagamento", () => [B.pagamento, fd({})]],
+  [fin, "darBaixaEmLote", () => [B.paciente, [B.pagamento], dia(0), "pix"]],
+  [fin, "desfazerBaixaEmLote", () => [[{ id: B.pagamento, forma: "dinheiro" }], dia(0)]],
+  [fin, "desfazerBaixa", () => [B.pagamento, "dinheiro", fd({})]],
+  [fin, "desarquivarPagamento", () => [B.pagamento, fd({})]],
   ["lembretes/actions", "marcarLembreteEnviado", () => [B.consulta]],
   [ag, "criarConsulta", () => [vazio, fd({ paciente_id: B.paciente, data: dia(9), hora: "10:00", duracao_min: 50, modalidade: "presencial", recorrencia: "nenhuma", ocorrencias: 1 })]],
   [fin, "criarPagamento", () => [vazio, fd({ paciente_id: B.paciente, valor: "1", situacao: "recebido", data_referencia: dia(0), data_pagamento: dia(0) })]],
@@ -491,7 +502,7 @@ const { data: anB } = await admin.from("anamneses").select("id").eq("paciente_id
 const { data: cB } = await admin.from("consultas").select("inicio, status, deleted_at").eq("id", B.consulta).single();
 const { data: bB } = await admin.from("bloqueios").select("id").eq("id", B.bloqueio);
 const { data: eB } = await admin.from("evolucoes").select("demanda, deleted_at").eq("id", B.evolucao).single();
-const { data: gB } = await admin.from("pagamentos").select("status, deleted_at").eq("id", B.pagamento).single();
+const { data: gB } = await admin.from("pagamentos").select("status, deleted_at, data_pagamento, forma_pagamento").eq("id", B.pagamento).single();
 const { data: lB } = await admin.from("lembretes").select("psicologa_id").eq("consulta_id", B.consulta);
 const { data: refsCruzadas } = await admin.from("consultas").select("id").eq("psicologa_id", A.pid).eq("paciente_id", B.paciente);
 const { data: pagCruzados } = await admin.from("pagamentos").select("id").eq("psicologa_id", A.pid).eq("paciente_id", B.paciente);
@@ -501,7 +512,7 @@ const integridade = [
   ["consulta B intacta", cB.status === "agendada" && !cB.deleted_at && new Date(cB.inicio).getTime() === new Date(slot(dia(1), "15:00").inicio).getTime()],
   ["bloqueio B intacto", (bB ?? []).length === 1],
   ["evolução B intacta", eB.demanda === "d" && !eB.deleted_at],
-  ["pagamento B intacto", gB.status === "pendente" && !gB.deleted_at],
+  ["pagamento B intacto", gB.status === "pendente" && !gB.deleted_at && gB.data_pagamento === null && gB.forma_pagamento === null],
   ["lembrete na consulta B por A", (lB ?? []).length === 0],
   ["consulta de A com paciente de B", (refsCruzadas ?? []).length === 0],
   ["pagamento de A com paciente de B", (pagCruzados ?? []).length === 0],

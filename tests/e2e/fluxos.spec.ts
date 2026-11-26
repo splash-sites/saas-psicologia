@@ -194,10 +194,52 @@ test("lançar pagamento a receber e marcar como pago", async () => {
   await page.waitForURL("**/financeiro");
   await expect(page.locator("main")).toContainText("R$ 180,50");
 
-  await page.getByRole("button", { name: "Marcar como pago" }).first().click();
-  await enviar(page, "data_pagamento");
+  // Lista do Financeiro (redesenho de 2026-11-25): "Dar baixa" abre data e
+  // forma na própria linha; depois aparece o aviso com "Desfazer".
+  await page.getByRole("button", { name: "Dar baixa" }).first().click();
+  await page.getByRole("button", { name: "Confirmar baixa" }).click();
+  await expect(page.getByRole("status")).toContainText("Baixa de R$ 180,50");
+  await page.getByRole("button", { name: "Desfazer" }).click();
+  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Dar baixa" }).first()).toBeVisible();
+});
+
+test("lançamento: dar baixa com forma, desfazer, arquivar e desfazer", async () => {
+  await page.goto("/financeiro");
+  await page.getByRole("link", { name: /Maria da Silva/ }).first().click();
   await page.waitForURL(/\/financeiro\/[0-9a-f-]{36}$/);
-  await expect(page.locator("main")).toContainText("Pago");
+  await expect(page.locator("main")).toContainText("Linha do tempo");
+
+  await page.getByRole("button", { name: "Dar baixa" }).click();
+  await page.locator('select[name="forma_pagamento"]').selectOption("pix");
+  await page.getByRole("button", { name: "Confirmar baixa" }).click();
+  await expect(page.getByText("Baixa registrada.")).toBeVisible();
+  await expect(page.locator("main")).toContainText(/Pago em/);
+  await expect(page.locator("main")).toContainText("Pix");
+
+  await page.getByRole("button", { name: "Desfazer" }).click();
+  await expect(page.getByRole("button", { name: "Dar baixa" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Mais ações" }).click();
+  await page.getByRole("button", { name: "Arquivar lançamento" }).click();
+  await page.getByRole("button", { name: "Arquivar", exact: true }).click();
+  await page.waitForURL(/\/financeiro\?arquivado=/);
+  await expect(page.getByText("Lançamento arquivado.")).toBeVisible();
+  await page.getByRole("button", { name: "Desfazer" }).click();
+  await page.waitForURL(/\/financeiro\/[0-9a-f-]{36}$/);
+  await expect(page.locator("main")).toContainText("Linha do tempo");
+});
+
+test("A receber: baixa de várias sessões na linha e desfazer", async () => {
+  await page.goto("/financeiro/a-receber");
+  await expect(page.locator("main")).toContainText("Total em aberto");
+  await page.getByRole("button", { name: "Dar baixa" }).first().click();
+  await expect(page.getByText("Quais sessões foram pagas?")).toBeVisible();
+  await page.getByRole("button", { name: "Confirmar baixa" }).click();
+  await expect(page.getByRole("status")).toContainText("Baixa de");
+  await page.getByRole("button", { name: "Desfazer" }).click();
+  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Dar baixa" }).first()).toBeVisible();
 });
 
 test("prontuário em PDF baixa direto da página do paciente", async () => {
