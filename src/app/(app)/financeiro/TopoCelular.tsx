@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChartColumn, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
 /**
  * Topo enxuto das telas do Financeiro no celular (2026-11-25, decisão do
@@ -44,13 +44,23 @@ export function TopoCelular({
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-[22px] font-bold tracking-tight text-[#12302B]">{titulo}</h1>
         {novo && (
-          <Link
-            href="/financeiro/novo"
-            aria-label="Novo lançamento"
-            className="flex size-11 items-center justify-center rounded-xl bg-[#0F766E] text-white shadow-[0_2px_6px_rgba(18,48,43,0.2)]"
-          >
-            <Plus className="size-5" aria-hidden />
-          </Link>
+          <span className="flex items-center gap-2">
+            {/* Histórico perto do topo (decisão do usuário: no fim da página ninguém via). */}
+            <Link
+              href="/financeiro/historico"
+              className="flex h-11 items-center gap-1.5 rounded-xl border border-[#DFEBE7] bg-white px-3 text-[13px] font-semibold text-[#12302B] hover:bg-[#F2FAF8]"
+            >
+              <ChartColumn className="size-4 text-[#0F766E]" aria-hidden />
+              Histórico
+            </Link>
+            <Link
+              href="/financeiro/novo"
+              aria-label="Novo lançamento"
+              className="flex size-11 items-center justify-center rounded-xl bg-[#0F766E] text-white shadow-[0_2px_6px_rgba(18,48,43,0.2)]"
+            >
+              <Plus className="size-5" aria-hidden />
+            </Link>
+          </span>
         )}
       </div>
       <div className="flex items-center justify-between gap-2">

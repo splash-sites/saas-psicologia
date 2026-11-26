@@ -183,9 +183,6 @@ export default async function FinanceiroPage({
             <Plus className="size-4" aria-hidden />
             Novo lançamento
           </Link>
-          <Link href="/financeiro/historico" className="btn btn-outline md:hidden">
-            Ver histórico mensal
-          </Link>
         </EstadoVazio>
       ) : (
         <>
@@ -208,9 +205,6 @@ export default async function FinanceiroPage({
               };
             })}
           />
-          <Link href="/financeiro/historico" className="self-center text-sm font-semibold text-[#0F766E] hover:text-[#12302B] lg:hidden">
-            Ver histórico mensal
-          </Link>
         </>
       )}
     </div>
