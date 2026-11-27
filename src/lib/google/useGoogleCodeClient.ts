@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { COOKIE_STATE } from "./compartilhado";
+import { carregarGis, gravarCookieState, valorAleatorio } from "./gis";
 
 // Popup do Google Identity Services ("code model"): o Google devolve um código
 // de uso único direto para esta página, sem redirect pelo Supabase. O código
 // vai para /api/google/*, que troca pelo token no servidor. Ver lib/google/oauth.ts.
-
-const SCRIPT_GIS = "https://accounts.google.com/gsi/client";
 
 type RespostaCodigo = { code?: string; state?: string; error?: string };
 type CodeClient = { requestCode: () => void };
@@ -26,24 +25,6 @@ type Gis = {
   };
 };
 
-let carregando: Promise<void> | null = null;
-
-function carregarGis(): Promise<void> {
-  if ((window as unknown as { google?: Gis }).google?.accounts?.oauth2) return Promise.resolve();
-  carregando ??= new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = SCRIPT_GIS;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => {
-      carregando = null;
-      reject(new Error("Não foi possível carregar o login do Google."));
-    };
-    document.head.appendChild(s);
-  });
-  return carregando;
-}
-
 export function useGoogleCodeClient(clientId: string, escopo: string) {
   const [pronto, setPronto] = useState(false);
 
@@ -59,9 +40,8 @@ export function useGoogleCodeClient(clientId: string, escopo: string) {
       const google = (window as unknown as { google?: Gis }).google;
       if (!google) return reject(new Error("Login do Google ainda carregando."));
 
-      const state = crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "");
-      const seguro = window.location.protocol === "https:" ? "; Secure" : "";
-      document.cookie = `${COOKIE_STATE}=${state}; Path=/api/google; Max-Age=600; SameSite=Strict${seguro}`;
+      const state = valorAleatorio();
+      gravarCookieState(COOKIE_STATE, state);
 
       google.accounts.oauth2
         .initCodeClient({
