@@ -470,11 +470,78 @@ export async function sincronizarConsultaAgora(
 /** Consulta que o bloqueio cancelaria (mostrada antes de confirmar). */
 export type ConflitoBloqueio = { id: string; quando: string; paciente: string };
 
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
 /**
- * Bloqueio (entrega D, 0036): horário, dia inteiro (um ou vários dias) ou
- * recorrente até uma data. Consultas ainda marcadas no período: primeiro
- * devolve a lista; só cancela quando a psicóloga confirma
- * ("Bloquear e cancelar essas consultas"). Vai para o Google Agenda dela.
+ * Consultas ainda marcadas e outros eventos no período dos slots. Consultas
+ * passadas no período não impedem. `ignorar`: o próprio evento (edição).
+ */
+async function conferirPeriodoDoEvento(
+  supabase: Supabase,
+  slots: { inicio: Date; fim: Date }[],
+  ignorar?: string,
+) {
+  const min = new Date(Math.min(...slots.map((s) => s.inicio.getTime()))).toISOString();
+  const max = new Date(Math.max(...slots.map((s) => s.fim.getTime()))).toISOString();
+  const agoraISO = new Date().toISOString();
+
+  const [{ data: outros }, { data: consultas }] = await Promise.all([
+    supabase.from("bloqueios").select("id, inicio, fim, motivo, dia_inteiro").lt("inicio", max).gt("fim", min).order("inicio"),
+    supabase
+      .from("consultas")
+      .select("id, inicio, fim, pacientes(nome)")
+      .eq("status", "agendada")
+      .is("deleted_at", null)
+      .lt("inicio", max)
+      .gt("fim", min)
+      .gt("fim", agoraISO)
+      .order("inicio"),
+  ]);
+
+  // Eventos podem se sobrepor (férias por cima do futevôlei de terça): só avisa.
+  const sobrepostos = (outros ?? []).filter(
+    (o) => o.id !== ignorar && slots.some((x) => sobrepoe(x.inicio, x.fim, o.inicio, o.fim)),
+  );
+  const afetadas = (consultas ?? []).filter((c) => slots.some((x) => sobrepoe(x.inicio, x.fim, c.inicio, c.fim)));
+  const aviso: FormState = {
+    conflitos: afetadas.map((c) => {
+      const p = c.pacientes as { nome: string } | { nome: string }[] | null;
+      const nome = (Array.isArray(p) ? p[0]?.nome : p?.nome) ?? "Paciente";
+      return { id: c.id as string, quando: `${dataBR(c.inicio as string)} ${horaBR(c.inicio as string)}`, paciente: nome };
+    }),
+    sobrepostos: sobrepostos.map((o) => ({
+      id: o.id as string,
+      quando: `${dataBR(o.inicio as string)} · ${horarioDoBloqueio(o as { inicio: string; fim: string; dia_inteiro: boolean })}`,
+      motivo: (o.motivo as string | null) ?? "Sem motivo",
+    })),
+  };
+  return { afetadas: afetadas.map((c) => c.id as string), temAviso: afetadas.length > 0 || sobrepostos.length > 0, aviso };
+}
+
+/** Cancela as consultas do período (o paciente convidado recebe o aviso pelo Google). */
+async function cancelarConsultasDoEvento(supabase: Supabase, psicologaId: string, ids: string[]) {
+  if (ids.length === 0) return;
+  const { data: canceladas } = await supabase
+    .from("consultas")
+    .update({ status: "cancelada" })
+    .in("id", ids)
+    .eq("status", "agendada")
+    .select("id");
+  await sincronizarConsultas(supabase, psicologaId, (canceladas ?? []).map((r) => r.id));
+}
+
+/** Volta para a agenda (vindo dela) ou para a lista de eventos. */
+function destinoDoEvento(formData: FormData, padrao: string): string {
+  const voltar = formData.get("voltar");
+  return typeof voltar === "string" && /^\/agenda(\/|\?|$)/.test(voltar) && !voltar.includes("//") ? voltar : padrao;
+}
+
+/**
+ * Evento (entrega D, 0036; Meet em 0047): horário, dia inteiro (um ou vários
+ * dias) ou recorrente até uma data. Consultas ainda marcadas no período:
+ * primeiro devolve a lista; só cancela quando a psicóloga confirma. Vai para
+ * o Google Agenda dela, com Meet se ela ligou "Gerar link do Meet" (cada
+ * ocorrência da série ganha o seu link).
  */
 export async function criarBloqueio(
   _prev: FormState,
@@ -488,41 +555,8 @@ export async function criarBloqueio(
   }
   const v = parsed.data;
   const slots = intervalosDoBloqueio(v);
-  const min = new Date(Math.min(...slots.map((s) => s.inicio.getTime()))).toISOString();
-  const max = new Date(Math.max(...slots.map((s) => s.fim.getTime()))).toISOString();
-  const agoraISO = new Date().toISOString();
-
-  const [{ data: outros }, { data: consultas }] = await Promise.all([
-    supabase.from("bloqueios").select("id, inicio, fim, motivo, dia_inteiro").lt("inicio", max).gt("fim", min).order("inicio"),
-    // Só as que ainda vão acontecer: sessão passada no período não impede.
-    supabase
-      .from("consultas")
-      .select("id, inicio, fim, pacientes(nome)")
-      .eq("status", "agendada")
-      .is("deleted_at", null)
-      .lt("inicio", max)
-      .gt("fim", min)
-      .gt("fim", agoraISO)
-      .order("inicio"),
-  ]);
-
-  // Bloqueios podem se sobrepor (férias por cima do futevôlei de terça): só avisa.
-  const sobrepostos = (outros ?? []).filter((o) => slots.some((x) => sobrepoe(x.inicio, x.fim, o.inicio, o.fim)));
-  const afetadas = (consultas ?? []).filter((c) => slots.some((x) => sobrepoe(x.inicio, x.fim, c.inicio, c.fim)));
-  if ((afetadas.length > 0 || sobrepostos.length > 0) && !v.cancelar_consultas) {
-    return {
-      conflitos: afetadas.map((c) => {
-        const p = c.pacientes as { nome: string } | { nome: string }[] | null;
-        const nome = (Array.isArray(p) ? p[0]?.nome : p?.nome) ?? "Paciente";
-        return { id: c.id as string, quando: `${dataBR(c.inicio as string)} ${horaBR(c.inicio as string)}`, paciente: nome };
-      }),
-      sobrepostos: sobrepostos.map((o) => ({
-        id: o.id as string,
-        quando: `${dataBR(o.inicio as string)} · ${horarioDoBloqueio(o as { inicio: string; fim: string; dia_inteiro: boolean })}`,
-        motivo: (o.motivo as string | null) ?? "Sem motivo",
-      })),
-    };
-  }
+  const periodo = await conferirPeriodoDoEvento(supabase, slots);
+  if (periodo.temAviso && !v.cancelar_consultas) return periodo.aviso;
 
   const serieId = v.recorrencia === "nenhuma" ? null : randomUUID();
   const { data: inseridos, error } = await supabase
@@ -534,6 +568,7 @@ export async function criarBloqueio(
         fim: s.fim.toISOString(),
         motivo: v.motivo,
         dia_inteiro: v.dia_inteiro,
+        online: v.online && !v.dia_inteiro,
         recorrencia: v.recorrencia,
         serie_id: serieId,
       })),
@@ -544,27 +579,88 @@ export async function criarBloqueio(
     return { error: await mensagemErroEscrita(supabase, error, "Não foi possível criar o evento.") };
   }
 
-  if (afetadas.length > 0) {
-    const { data: canceladas } = await supabase
-      .from("consultas")
-      .update({ status: "cancelada" })
-      .in("id", afetadas.map((c) => c.id as string))
-      .eq("status", "agendada")
-      .select("id");
-    // O paciente convidado recebe o cancelamento pelo Google, como no "Cancelar".
-    await sincronizarConsultas(supabase, user.id, (canceladas ?? []).map((r) => r.id));
-  }
+  await cancelarConsultasDoEvento(supabase, user.id, periodo.afetadas);
   await sincronizarBloqueios(supabase, user.id, (inseridos ?? []).map((r) => r.id));
 
   revalidatePath("/agenda");
   revalidatePath("/dashboard");
-  redirect("/agenda/eventos");
+  redirect(destinoDoEvento(formData, "/agenda/eventos"));
 }
 
-/** Remove um bloqueio; numa série, só este ou este e os próximos. */
+/**
+ * Edita um evento (0047): nome, data, horário, dia inteiro e Meet. Numa
+ * série, só esta ocorrência (sem mudar a recorrência). O evento no Google é
+ * atualizado e o link do Meet continua o mesmo; trocar entre "dia inteiro" e
+ * horário recria o evento lá (o Google não converte um no outro).
+ */
+export async function atualizarBloqueio(
+  id: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { supabase, user } = await requirePsicologa();
+
+  const { data: atual } = await supabase
+    .from("bloqueios")
+    .select("id, serie_id, dia_inteiro, google_event_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!atual) return { error: "Evento não encontrado." };
+
+  const entrada = Object.fromEntries(formData);
+  // Uma ocorrência só: sem recorrência; numa série, dia inteiro é um dia só.
+  const parsed = bloqueioSchema.safeParse({
+    ...entrada,
+    recorrencia: "nenhuma",
+    repetir_ate: "",
+    ...(atual.serie_id ? { data_fim: "" } : {}),
+  });
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+  const v = parsed.data;
+  const [slot] = intervalosDoBloqueio(v);
+  const periodo = await conferirPeriodoDoEvento(supabase, [slot], id);
+  if (periodo.temAviso && !v.cancelar_consultas) return periodo.aviso;
+
+  const online = v.online && !v.dia_inteiro;
+  const trocouTipo = atual.dia_inteiro !== v.dia_inteiro;
+  if (trocouTipo && atual.google_event_id) {
+    await removerEventosDeBloqueios(user.id, [atual.google_event_id as string]);
+  }
+
+  const { error } = await supabase
+    .from("bloqueios")
+    .update({
+      inicio: slot.inicio.toISOString(),
+      fim: slot.fim.toISOString(),
+      motivo: v.motivo,
+      dia_inteiro: v.dia_inteiro,
+      online,
+      ...(online ? {} : { meet_link: null }),
+      ...(trocouTipo ? { google_event_id: null, meet_link: null } : {}),
+    })
+    .eq("id", id);
+  if (error) {
+    return { error: await mensagemErroEscrita(supabase, error, "Não foi possível salvar o evento.") };
+  }
+
+  await cancelarConsultasDoEvento(supabase, user.id, periodo.afetadas);
+  await sincronizarBloqueios(supabase, user.id, [id]);
+
+  revalidatePath("/agenda");
+  revalidatePath("/dashboard");
+  redirect(destinoDoEvento(formData, "/agenda/eventos"));
+}
+
+/**
+ * Remove um evento; numa série, só este ou este e os próximos. `voltar`:
+ * caminho da agenda quando vem do painel do evento (padrão: lista de eventos).
+ */
 export async function excluirBloqueio(
   id: string,
   escopo: "este" | "proximos" | FormData,
+  voltar?: string | FormData,
   _formData?: FormData,
 ): Promise<void> {
   const { supabase, user } = await requirePsicologa();
@@ -582,5 +678,7 @@ export async function excluirBloqueio(
     );
   }
   revalidatePath("/agenda");
-  redirect("/agenda/eventos");
+  const destino =
+    typeof voltar === "string" && /^\/agenda(\/|\?|$)/.test(voltar) && !voltar.includes("//") ? voltar : "/agenda/eventos";
+  redirect(destino);
 }

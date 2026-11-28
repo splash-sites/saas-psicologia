@@ -135,6 +135,9 @@ export type EventoInput = {
   // Bloqueio de dia inteiro (0036): evento de dia inteiro no Google (datas,
   // com o fim exclusivo, como a própria API pede).
   diaInteiro?: boolean;
+  // Evento (0047): sem online, tira o Meet que o evento tinha (o PATCH mantém
+  // a conferência se conferenceData não vier). Consultas não usam.
+  tirarMeet?: boolean;
 };
 
 function sendUpdates(ev: { notificar?: boolean }): "all" | "none" {
@@ -155,6 +158,7 @@ export function corpoEvento(ev: EventoInput, comConference: boolean) {
     guestsCanModify: false,
     guestsCanSeeOtherGuests: false,
   };
+  if (comConference && !ev.online && ev.tirarMeet) body.conferenceData = null;
   if (comConference && ev.online) {
     body.conferenceData = {
       createRequest: {

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { bloqueioSchema } from "@/lib/agenda/schema";
 import { datasRecorrentes, diasDoBloqueio, horarioDoBloqueio, intervalosDoBloqueio } from "@/lib/agenda/bloqueios";
 import { corpoEvento } from "@/lib/google/calendar";
+import { linkDoEvento } from "@/lib/agenda/linkOnline";
 
 // Entrega D (0036): bloqueio de horário, dia inteiro, vários dias e recorrente.
 
@@ -96,5 +97,36 @@ describe("evento do bloqueio no Google", () => {
     expect(corpo.end).toEqual({ date: "2027-01-06" });
     expect(corpo.attendees).toEqual([]);
     expect(corpo.conferenceData).toBeUndefined();
+  });
+});
+
+describe("Meet no evento (0047)", () => {
+  const base = { titulo: "Supervisão", inicio: "2027-04-05T13:00:00.000Z", fim: "2027-04-05T14:00:00.000Z", convidadoEmail: null, notificar: false };
+
+  it("ligado: pede o Meet ao Google, sem convidados", () => {
+    const corpo = corpoEvento({ ...base, online: true, tirarMeet: true }, true);
+    expect(corpo.conferenceData).toMatchObject({ createRequest: { conferenceSolutionKey: { type: "hangoutsMeet" } } });
+    expect(corpo.attendees).toEqual([]);
+  });
+
+  it("desligado: tira o Meet que o evento tinha (conferenceData null)", () => {
+    expect(corpoEvento({ ...base, online: false, tirarMeet: true }, true).conferenceData).toBeNull();
+    // Consultas não mandam tirarMeet: nada muda para elas.
+    expect(corpoEvento({ ...base, online: false }, true).conferenceData).toBeUndefined();
+  });
+
+  it("link: o do Google, senão o fixo; nada sem online ou em dia inteiro", () => {
+    const fixo = "https://zoom.us/j/123";
+    expect(linkDoEvento({ online: true, meet_link: "https://meet.google.com/a-b-c" }, fixo)).toBe("https://meet.google.com/a-b-c");
+    expect(linkDoEvento({ online: true, meet_link: null }, fixo)).toBe(fixo);
+    expect(linkDoEvento({ online: true, meet_link: null }, null)).toBeNull();
+    expect(linkDoEvento({ online: false, meet_link: "https://meet.google.com/a-b-c" }, fixo)).toBeNull();
+    expect(linkDoEvento({ online: true, dia_inteiro: true, meet_link: null }, fixo)).toBeNull();
+  });
+
+  it("schema: lê a caixa \"Gerar link do Meet\"", () => {
+    const v = bloqueioSchema.parse({ data: "2027-04-05", hora_inicio: "10:00", hora_fim: "11:00", motivo: "Supervisão", online: "on" });
+    expect(v.online).toBe(true);
+    expect(bloqueioSchema.parse({ data: "2027-04-05", hora_inicio: "10:00", hora_fim: "11:00", motivo: "x" }).online).toBe(false);
   });
 });

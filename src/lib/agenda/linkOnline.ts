@@ -11,6 +11,15 @@ export function linkDaConsulta(
   return c.meet_link ?? linkFixo ?? null;
 }
 
+// Link de um evento com "Gerar link do Meet" (0047): mesma regra das consultas.
+export function linkDoEvento(
+  e: { online?: boolean; meet_link?: string | null; dia_inteiro?: boolean },
+  linkFixo: string | null | undefined,
+): string | null {
+  if (!e.online || e.dia_inteiro) return null;
+  return e.meet_link ?? linkFixo ?? null;
+}
+
 // Mesma regra do CHECK psicologas_link_online_valido (migration 0018).
 export const linkAtendimentoSchema = z.object({
   link_atendimento_online: z

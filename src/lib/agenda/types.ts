@@ -97,6 +97,9 @@ export type Bloqueio = {
   dia_inteiro: boolean;
   recorrencia: Recorrencia;
   serie_id: string | null;
+  // Migration 0047: "Gerar link do Meet" (nunca em dia inteiro) e o link do Google.
+  online: boolean;
+  meet_link: string | null;
   google_event_id: string | null;
   sync_status: SyncStatus;
   sync_erro: string | null;

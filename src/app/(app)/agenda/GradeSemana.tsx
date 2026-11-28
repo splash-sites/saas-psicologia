@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Cake, Plus } from "lucide-react";
+import { Cake, Video } from "lucide-react";
 import {
   ESTADO_VISUAL_LABEL,
   colunasSobrepostas,
@@ -25,6 +25,7 @@ import {
   type ParamsAgenda,
 } from "./tipos";
 import { IconesConsulta } from "./IconesConsulta";
+import { HorarioVago } from "./MenuNovo";
 
 const HORA_PX = 60;
 const DIA_CURTO = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -37,8 +38,8 @@ type Props = {
   agoraISO: string;
   consultasPorDia: Map<string, ItemConsulta[]>;
   bloqueiosPorDia: Map<string, ItemBloqueio[]>;
-  /** Dias com bloqueio de dia inteiro → motivo (0036). */
-  diasBloqueados: Map<string, string>;
+  /** Dias com evento de dia inteiro → o evento (0036). */
+  diasBloqueados: Map<string, { id: string; motivo: string }>;
   /** Feriados e pontos facultativos da semana (vazio se desligado). */
   feriados: Map<string, Feriado>;
   /** Aniversários de pacientes da semana (item H). */
@@ -49,7 +50,8 @@ type Props = {
 
 // Grade semanal (tablet/desktop): horas no eixo vertical, um bloco por
 // consulta com altura proporcional à duração. Clique num horário vazio abre
-// "Nova consulta" já com data e hora; clique numa consulta abre o painel.
+// o menu "Nova consulta"/"Novo evento" (já com data e hora); clique numa
+// consulta ou num evento abre o painel dele.
 export function GradeSemana({
   dias,
   hoje,
@@ -135,7 +137,7 @@ export function GradeSemana({
         <div className="grid border-b border-[#E6EEEB]" style={{ gridTemplateColumns: cols }}>
           <div />
           {dias.map((dia) => {
-            const motivo = diasBloqueados.get(dia);
+            const diaTodo = diasBloqueados.get(dia);
             const feriado = feriados.get(dia);
             return (
               <div key={dia} className="flex min-w-0 flex-col gap-1 border-l border-[#EEF3F1] px-1 py-1">
@@ -147,14 +149,17 @@ export function GradeSemana({
                     {feriado.nome}
                   </span>
                 )}
-                {motivo && (
-                  <span
-                    className="block truncate rounded-lg px-2 py-0.5 text-xs font-semibold text-[#4A5F5A]"
+                {diaTodo && (
+                  <Link
+                    href={agendaHref({ ...params, consulta: undefined, evento: diaTodo.id })}
+                    scroll={false}
+                    prefetch={false}
+                    className="block truncate rounded-lg px-2 py-0.5 text-xs font-semibold text-[#4A5F5A] hover:opacity-80"
                     style={HACHURA_BLOQUEIO}
-                    title={`Dia inteiro: ${motivo}`}
+                    title={`Dia inteiro: ${diaTodo.motivo}`}
                   >
-                    {motivo}
-                  </span>
+                    {diaTodo.motivo}
+                  </Link>
                 )}
               </div>
             );
@@ -198,25 +203,19 @@ export function GradeSemana({
               className={`relative border-l border-[#EEF3F1] ${fundoDia(dia)}`}
               style={{ backgroundImage: LINHAS_GRADE }}
             >
-              {/* Horários vazios: atalho para agendar. Fora da ordem de Tab —
-                  o botão "Nova consulta" cobre quem usa teclado. */}
+              {/* Horários vazios: menu "Nova consulta" / "Novo evento". */}
               {horas.map((h) => {
                 const hora = `${String(h).padStart(2, "0")}:00`;
                 return (
-                  <Link
+                  <HorarioVago
                     key={h}
-                    href={`/agenda/nova?data=${dia}&hora=${hora}`}
-                    tabIndex={-1}
-                    prefetch={false}
-                    aria-label={`Agendar em ${dia.split("-").reverse().join("/")} às ${hora}`}
-                    className="group absolute inset-x-1 flex items-center rounded-[10px] px-2 text-xs font-semibold text-[#0F766E] hover:bg-[#EAF5F2]"
-                    style={{ top: px(h * 60) + 1, height: HORA_PX - 3 }}
-                  >
-                    <span className="hidden items-center gap-1 group-hover:inline-flex">
-                      <Plus className="size-3.5" aria-hidden />
-                      {hora}
-                    </span>
-                  </Link>
+                    data={dia}
+                    hora={hora}
+                    voltar={agendaHref({ ...params, consulta: undefined, evento: undefined })}
+                    top={px(h * 60) + 1}
+                    height={HORA_PX - 3}
+                    abrirAcima={h >= faixa.ate - 2}
+                  />
                 );
               })}
 
@@ -226,17 +225,25 @@ export function GradeSemana({
 
               {bs.map((b) => {
                 const pos = posicao(b.inicio, b.fim);
+                const aberto = params.evento === b.id;
                 return (
-                  <div
+                  <Link
                     key={b.id}
-                    className="absolute inset-x-1 z-10 flex flex-col gap-px overflow-hidden rounded-[10px] px-[9px] py-1.5"
+                    href={agendaHref({ ...params, consulta: undefined, evento: b.id })}
+                    scroll={false}
+                    prefetch={false}
+                    aria-label={`${horaBR(b.inicio)}–${horaBR(b.fim)}, ${b.motivo || "Evento"}${b.online ? ", com link de chamada" : ""}`}
+                    className={`absolute inset-x-1 z-10 flex flex-col gap-px overflow-hidden rounded-[10px] px-[9px] py-1.5 hover:shadow-md ${aberto ? "ring-2 ring-[#0F766E] ring-offset-1" : ""}`}
                     style={{ ...pos, ...HACHURA_BLOQUEIO }}
                   >
-                    <span className="truncate text-xs font-semibold text-[#4A5F5A]">{b.motivo || "Evento"}</span>
+                    <span className="flex items-center gap-1 truncate text-xs font-semibold text-[#4A5F5A]">
+                      {b.online && <Video className="size-3.5 shrink-0" aria-hidden />}
+                      <span className="truncate">{b.motivo || "Evento"}</span>
+                    </span>
                     <span className="text-[11px] text-[#5B6E69]">
                       {horaBR(b.inicio)}–{horaBR(b.fim)}
                     </span>
-                  </div>
+                  </Link>
                 );
               })}
 

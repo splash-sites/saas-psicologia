@@ -125,10 +125,14 @@ function resumoPagina(r) {
 }
 
 // ---------- server actions ----------
-// Só o manifest consolidado do `next dev`: os de `next build` (.next/server) e
-// os por página têm ids de outra compilação e dão 404 no dev server.
+// Manifest consolidado do `next dev`. Com API_CHECK_BUILD=1, o do `next build`
+// (.next/server), para rodar contra `next start` quando já há um `next dev`
+// aberto na pasta (o Next só deixa um). Os dois não se misturam: ids de outra
+// compilação dão 404.
 function acharManifest() {
-  return [join(".next", "dev", "server", "server-reference-manifest.json")];
+  return process.env.API_CHECK_BUILD
+    ? [join(".next", "server", "server-reference-manifest.json")]
+    : [join(".next", "dev", "server", "server-reference-manifest.json")];
 }
 
 function idsDasActions() {
@@ -177,6 +181,7 @@ const rotasLegais = { "/termos": "https://gradatim.com.br/termos", "/privacidade
 const rotasPrivadas = (x) => [
   "/", "/dashboard", "/agenda", `/agenda?consulta=${x.consulta}`, "/agenda/nova",
   `/agenda/${x.consulta}`, `/agenda/${x.consulta}/editar`, "/agenda/eventos", "/agenda/eventos/novo",
+  `/agenda?evento=${x.bloqueio}`, `/agenda/eventos/${x.bloqueio}/editar`, "/agenda/eventos/novo?data=2027-01-04&hora=14:00&voltar=/agenda",
   "/pacientes", "/pacientes/novo", `/pacientes/${x.paciente}`, `/pacientes/${x.paciente}/editar`,
   `/pacientes/${x.paciente}/evolucoes`, `/pacientes/${x.paciente}/evolucoes/nova`,
   `/pacientes/${x.paciente}/evolucoes/${x.evolucao}`, `/pacientes/${x.paciente}/evolucoes/${x.evolucao}/editar`,
@@ -216,11 +221,12 @@ for (const [p, destino] of [["/login", "/dashboard"], ["/cadastro", "/dashboard"
 for (const p of rotasPrivadas(B).filter((p) => /[0-9a-f]{8}-/.test(p))) {
   const r = await req(p, { cookie: cA });
   r.resumo = resumoPagina(r);
-  const vazou = r.texto.includes("Paciente de Psico B");
+  // ?evento=<id de B>: o painel de B não pode abrir (o link "Editar" levaria o id).
+  const vazou = r.texto.includes("Paciente de Psico B") || (p.includes("?evento=") && r.texto.includes(`/agenda/eventos/${B.bloqueio}/editar`));
   if (vazou) r.resumo = "VAZOU dado de B";
   // ?consulta=<id> é só o painel lateral da agenda: com id alheio, a página
   // abre normal sem o painel. Basta não vazar.
-  const soPainel = p.includes("?consulta=");
+  const soPainel = p.includes("?consulta=") || p.includes("?evento=");
   registrar("GET A→ids de B", curto(p), (x) => !vazou && (soPainel || naoEncontrado(x) || (x.status >= 300 && x.status < 400)), r);
 }
 
@@ -325,6 +331,8 @@ const casos = [
   [ag, "definirStatusConsulta", () => [A.consultaPassada, "realizada", "/agenda", fd({})], "ok"],
   [ag, "sincronizarConsultaAgora", () => [A.consulta, fd({})], "ok (Google off)"],
   [ag, "criarBloqueio", () => [vazio, fd({ data: dia(6), hora_inicio: "08:00", hora_fim: "09:00", motivo: "x" })], "ok"],
+  [ag, "criarBloqueio", () => [vazio, fd({ data: dia(6), hora_inicio: "10:00", hora_fim: "11:00", motivo: "Supervisão", online: "on", voltar: "/agenda" })], "ok (com Meet)"],
+  [ag, "atualizarBloqueio", () => [A.bloqueio, vazio, fd({ data: dia(2), hora_inicio: "12:00", hora_fim: "13:00", motivo: "Almoço longo", online: "on", cancelar_consultas: "on" })], "ok"],
   [ag, "excluirBloqueio", () => [A.bloqueio, fd({})], "ok"],
   // evoluções
   [evo, "criarEvolucao", () => [A.paciente, vazio, fd({ data_sessao: dia(0), demanda: "d", procedimentos: "p", resultados: "r", encaminhamentos: "e" })], "ok"],
@@ -452,6 +460,7 @@ const cruzadas = [
   [pac, "excluirPaciente", () => [B.paciente, fd({})]],
   [ag, "atualizarConsulta", () => [B.consulta, vazio, fd({ data: dia(1), hora: "16:00", duracao_min: 50, modalidade: "online", status: "agendada" })]],
   [ag, "cancelarConsulta", () => [B.consulta, "esta", fd({})]],
+  [ag, "atualizarBloqueio", () => [B.bloqueio, vazio, fd({ data: dia(2), hora_inicio: "12:00", hora_fim: "13:00", motivo: "HACK", online: "on", cancelar_consultas: "on" })]],
   [ag, "excluirBloqueio", () => [B.bloqueio, fd({})]],
   [ag, "salvarAnotacoesSessao", () => [B.consulta, vazio, fd({ anotacoes_sessao: "HACK" })]],
   [ag, "levarAnotacaoParaProxima", () => [B.consulta, vazio, fd({})]],
@@ -507,7 +516,7 @@ for (const [arq, nome, args] of cruzadas) {
 const { data: pB } = await admin.from("pacientes").select("nome, deleted_at").eq("id", B.paciente).single();
 const { data: anB } = await admin.from("anamneses").select("id").eq("paciente_id", B.paciente);
 const { data: cB } = await admin.from("consultas").select("inicio, status, deleted_at").eq("id", B.consulta).single();
-const { data: bB } = await admin.from("bloqueios").select("id").eq("id", B.bloqueio);
+const { data: bB } = await admin.from("bloqueios").select("id, motivo, online").eq("id", B.bloqueio);
 const { data: eB } = await admin.from("evolucoes").select("demanda, deleted_at").eq("id", B.evolucao).single();
 const { data: gB } = await admin.from("pagamentos").select("status, deleted_at, data_pagamento, forma_pagamento").eq("id", B.pagamento).single();
 const { data: lB } = await admin.from("lembretes").select("psicologa_id").eq("consulta_id", B.consulta);
@@ -517,7 +526,7 @@ const integridade = [
   ["paciente B intacto", pB.nome === "Paciente de Psico B" && !pB.deleted_at],
   ["anamnese de A no paciente de B", (anB ?? []).length === 0],
   ["consulta B intacta", cB.status === "agendada" && !cB.deleted_at && new Date(cB.inicio).getTime() === new Date(slot(dia(1), "15:00").inicio).getTime()],
-  ["bloqueio B intacto", (bB ?? []).length === 1],
+  ["bloqueio B intacto", (bB ?? []).length === 1 && bB[0].motivo === "Almoço" && bB[0].online === false],
   ["evolução B intacta", eB.demanda === "d" && !eB.deleted_at],
   ["pagamento B intacto", gB.status === "pendente" && !gB.deleted_at && gB.data_pagamento === null && gB.forma_pagamento === null],
   ["lembrete na consulta B por A", (lB ?? []).length === 0],

@@ -296,6 +296,55 @@ test("novo lançamento é avulso: sem lista de consultas", async () => {
   await expect(page.locator("main")).not.toContainText("Consulta vinculada");
 });
 
+test("horário vago: menu com Novo evento; evento com link, painel, editar e remover", async () => {
+  // Link fixo (sem Google no e2e): o evento usa ele quando "Gerar link do Meet" está ligado.
+  const pacienteId = pacienteUrl.split("/").pop()!;
+  const { data: dono } = await admin.from("pacientes").select("psicologa_id").eq("id", pacienteId).single();
+  await admin.from("psicologas").update({ link_atendimento_online: "https://zoom.us/j/123456" }).eq("id", dono!.psicologa_id);
+
+  // Segunda-feira da semana de amanhã (a agenda abre por semana).
+  const d = new Date(`${amanha}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  await page.goto(`/agenda?semana=${d.toISOString().slice(0, 10)}`);
+  const rotulo = `Agendar em ${amanha.split("-").reverse().join("/")} às 15:00`;
+  await page.getByRole("button", { name: rotulo }).click();
+  const menu = page.getByRole("menu");
+  await expect(menu.getByRole("menuitem", { name: "Nova consulta" })).toBeVisible();
+  await menu.getByRole("menuitem", { name: "Novo evento" }).click();
+
+  await page.waitForURL("**/agenda/eventos/novo?**");
+  await expect(page.locator('[name="data"]')).toHaveValue(amanha);
+  await expect(page.locator('[name="hora_inicio"]')).toHaveValue("15:00");
+  await expect(page.locator('[name="hora_fim"]')).toHaveValue("16:00");
+  const meet = page.getByRole("checkbox", { name: "Gerar link do Meet" });
+  await expect(meet).not.toBeChecked();
+  await meet.check();
+  await page.locator('[name="motivo"]').fill("Supervisão");
+  await page.getByRole("button", { name: "Salvar evento" }).click();
+  await page.waitForURL("**/agenda?semana=**");
+
+  const { data: ev } = await admin.from("bloqueios").select("id, online").eq("psicologa_id", dono!.psicologa_id).eq("motivo", "Supervisão").single();
+  expect(ev!.online).toBe(true);
+  await page.getByRole("link", { name: /Supervisão, com link de chamada/ }).click();
+  const painel = page.getByRole("dialog");
+  await expect(painel).toContainText("Supervisão");
+  await expect(painel.getByRole("link", { name: "Entrar na chamada" })).toHaveAttribute("href", "https://zoom.us/j/123456");
+
+  await painel.getByRole("link", { name: "Editar" }).click();
+  await page.waitForURL("**/agenda/eventos/*/editar?**");
+  await expect(page.getByRole("checkbox", { name: "Gerar link do Meet" })).toBeChecked();
+  await page.locator('[name="motivo"]').fill("Supervisão clínica");
+  await page.getByRole("button", { name: "Salvar alterações" }).click();
+  await page.waitForURL("**/agenda?**evento=**");
+  await expect(page.getByRole("dialog")).toContainText("Supervisão clínica");
+
+  await page.getByRole("dialog").getByRole("button", { name: "Remover evento" }).click();
+  await page.waitForURL((u) => u.pathname === "/agenda" && !u.searchParams.has("evento"));
+  const { data: sobrou } = await admin.from("bloqueios").select("id").eq("id", ev!.id);
+  expect(sobrou).toHaveLength(0);
+  await admin.from("psicologas").update({ link_atendimento_online: null }).eq("id", dono!.psicologa_id);
+});
+
 test("prontuário em PDF baixa direto da página do paciente", async () => {
   await page.goto(pacienteUrl);
   const download = page.waitForEvent("download");

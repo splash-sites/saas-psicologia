@@ -35,6 +35,8 @@ export type ItemBloqueio = {
   fim: string;
   motivo: string | null;
   dia_inteiro?: boolean;
+  /** "Gerar link do Meet" (0047). */
+  online?: boolean;
 };
 
 /** Estado da tela da agenda que vive na URL. */
@@ -42,6 +44,8 @@ export type ParamsAgenda = {
   semana: string;
   dia?: string;
   consulta?: string;
+  /** Painel de um evento aberto (0047). */
+  evento?: string;
   ocultarCanceladas?: boolean;
   /** Abre o painel já escrevendo as anotações para a sessão. */
   anotar?: boolean;
@@ -52,6 +56,7 @@ export function agendaHref(p: ParamsAgenda): string {
   if (p.dia) q.set("dia", p.dia);
   if (p.ocultarCanceladas) q.set("canceladas", "0");
   if (p.consulta) q.set("consulta", p.consulta);
+  else if (p.evento) q.set("evento", p.evento);
   if (p.consulta && p.anotar) q.set("anotar", "1");
   return `/agenda?${q.toString()}`;
 }

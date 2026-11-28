@@ -7,6 +7,8 @@ import { aniversariantesPorDia, idadeNoAniversario, mensagemAniversario, type Pa
 import { whatsappLinkComTexto } from "@/lib/pacientes/whatsapp";
 import { redirect } from "next/navigation";
 import { CalendarOff, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { BotaoNovoFlutuante } from "./MenuNovo";
+import { PainelEvento, type EventoDoPainel } from "./PainelEvento";
 import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import type { Bloqueio, Consulta } from "@/lib/agenda/types";
@@ -31,7 +33,7 @@ import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { NavegacaoPeriodo } from "@/components/NavegacaoPeriodo";
 import { GradeSemana } from "./GradeSemana";
 import { DiaLista } from "./DiaLista";
-import { linkDaConsulta } from "@/lib/agenda/linkOnline";
+import { linkDaConsulta, linkDoEvento } from "@/lib/agenda/linkOnline";
 import { PainelConsulta } from "./PainelConsulta";
 import { CLASSE_ANIVERSARIO, EstadoBadge, HACHURA_BLOQUEIO } from "./estilos";
 import {
@@ -75,6 +77,7 @@ export default async function AgendaPage({
     semana?: string;
     dia?: string;
     consulta?: string;
+    evento?: string;
     canceladas?: string;
     anotar?: string;
   }>;
@@ -88,6 +91,7 @@ export default async function AgendaPage({
   const agoraISO = agora.toISOString();
   const hoje = dataChaveBR(agoraISO);
   const consultaSel = sp.consulta && UUID_RE.test(sp.consulta) ? sp.consulta : undefined;
+  const eventoSel = !consultaSel && sp.evento && UUID_RE.test(sp.evento) ? sp.evento : undefined;
 
   // Link direto para uma consulta (?consulta=) sem semana: abre a semana dela.
   let segunda = sp.semana && DATA_RE.test(sp.semana) ? sp.semana : undefined;
@@ -104,6 +108,14 @@ export default async function AgendaPage({
       diaPadrao = dataChaveBR(alvo.inicio);
     }
   }
+  // Mesmo para um evento (?evento=) sem semana.
+  if (!segunda && eventoSel) {
+    const { data: alvo } = await supabase.from("bloqueios").select("inicio").eq("id", eventoSel).maybeSingle();
+    if (alvo) {
+      segunda = segundaDaSemana(new Date(alvo.inicio));
+      diaPadrao = dataChaveBR(alvo.inicio);
+    }
+  }
   segunda ??= segundaDaSemana(agora);
 
   const semana = diasDaSemana(segunda);
@@ -115,6 +127,7 @@ export default async function AgendaPage({
     semana: segunda,
     dia: sp.dia && semana.includes(sp.dia) ? sp.dia : undefined,
     consulta: consultaSel,
+    evento: eventoSel,
     ocultarCanceladas: sp.canceladas === "0",
   };
 
@@ -132,6 +145,7 @@ export default async function AgendaPage({
     { data: evolucoesRaw },
     { data: psicologa },
     { data: nascimentosRaw },
+    { data: eventoRaw },
   ] = await Promise.all([
       supabase
         .from("consultas")
@@ -144,7 +158,7 @@ export default async function AgendaPage({
         .order("inicio"),
       supabase
         .from("bloqueios")
-        .select("id, inicio, fim, motivo, dia_inteiro")
+        .select("id, inicio, fim, motivo, dia_inteiro, online")
         // Por sobreposição: férias que começaram na semana anterior também entram.
         .lt("inicio", fimSemana)
         .gt("fim", inicioSemana)
@@ -167,6 +181,14 @@ export default async function AgendaPage({
         .is("deleted_at", null)
         .not("data_nascimento", "is", null)
         .limit(1000),
+      // Evento aberto no painel (0047).
+      eventoSel
+        ? supabase
+            .from("bloqueios")
+            .select("id, inicio, fim, motivo, dia_inteiro, online, meet_link, serie_id, recorrencia, sync_status, sync_erro")
+            .eq("id", eventoSel)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
   const rows = (consultasRaw ?? []) as unknown as ConsultaRow[];
@@ -267,14 +289,14 @@ export default async function AgendaPage({
     : todas;
   const todosBloqueios = (bloqueiosRaw ?? []) as Pick<
     Bloqueio,
-    "id" | "inicio" | "fim" | "motivo" | "dia_inteiro"
+    "id" | "inicio" | "fim" | "motivo" | "dia_inteiro" | "online"
   >[] as ItemBloqueio[];
   // Dia inteiro vira faixa no topo do dia (não estica a grade de horários).
   const bloqueios = todosBloqueios.filter((b) => !b.dia_inteiro);
-  const diasBloqueados = new Map<string, string>();
+  const diasBloqueados = new Map<string, { id: string; motivo: string }>();
   for (const b of todosBloqueios.filter((x) => x.dia_inteiro)) {
     for (const d of diasDoBloqueio(b)) {
-      if (semana.includes(d)) diasBloqueados.set(d, b.motivo || "Evento");
+      if (semana.includes(d)) diasBloqueados.set(d, { id: b.id, motivo: b.motivo || "Evento" });
     }
   }
 
@@ -308,6 +330,8 @@ export default async function AgendaPage({
   };
 
   const selecionada = consultaSel ? todas.find((c) => c.id === consultaSel) : undefined;
+  const ev = eventoRaw as Omit<EventoDoPainel, "link"> | null;
+  const eventoDoPainel: EventoDoPainel | null = ev ? { ...ev, link: linkDoEvento(ev, psicologa?.link_atendimento_online) } : null;
   // A sessão cai no aniversário do paciente?
   const pacSel = selecionada?.paciente ? nascimentos.find((p) => p.id === selecionada.paciente!.id) : undefined;
   const idadeSel = pacSel && selecionada ? idadeNoAniversario(pacSel.data_nascimento, dataChaveBR(selecionada.inicio)) : null;
@@ -463,14 +487,8 @@ export default async function AgendaPage({
         />
       </div>
 
-      {/* Celular: "Nova consulta" como botão flutuante (canvas "Celular"). */}
-      <Link
-        href="/agenda/nova"
-        aria-label="Nova consulta"
-        className="fixed bottom-5 right-4 z-30 flex size-14 items-center justify-center rounded-[18px] bg-[#0F766E] text-white shadow-[0_4px_12px_rgba(18,48,43,0.25)] md:hidden"
-      >
-        <Plus className="size-6" aria-hidden />
-      </Link>
+      {/* Celular: "+" flutuante (canvas "Celular") com "Nova consulta"/"Novo evento". */}
+      <BotaoNovoFlutuante voltar={agendaHref({ ...params, consulta: undefined, evento: undefined })} />
 
       <Legenda />
 
@@ -490,6 +508,15 @@ export default async function AgendaPage({
           hoje={hoje}
           agoraISO={agoraISO}
           fecharHref={agendaHref({ ...params, consulta: undefined })}
+          aquiHref={agendaHref(params)}
+        />
+      )}
+
+      {eventoDoPainel && (
+        <PainelEvento
+          e={eventoDoPainel}
+          fecharHref={agendaHref({ ...params, evento: undefined })}
+          voltarHref={agendaHref({ ...params, evento: undefined })}
           aquiHref={agendaHref(params)}
         />
       )}

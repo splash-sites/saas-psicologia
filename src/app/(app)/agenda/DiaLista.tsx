@@ -33,8 +33,8 @@ type Props = {
   agoraISO: string;
   consultasPorDia: Map<string, ItemConsulta[]>;
   bloqueiosPorDia: Map<string, ItemBloqueio[]>;
-  /** Dias com bloqueio de dia inteiro → motivo (0036). */
-  diasBloqueados: Map<string, string>;
+  /** Dias com evento de dia inteiro → o evento (0036). */
+  diasBloqueados: Map<string, { id: string; motivo: string }>;
   /** Feriados e pontos facultativos da semana (vazio se desligado). */
   feriados: Map<string, Feriado>;
   /** Aniversários de pacientes da semana (item H). */
@@ -179,17 +179,31 @@ export function DiaLista({
       )}
 
       {diasBloqueados.has(dia) && (
-        <div className="rounded-xl px-3 py-2 text-sm font-semibold text-[#3D524D]" style={HACHURA_BLOQUEIO}>
-          Dia inteiro · {diasBloqueados.get(dia)}
-        </div>
+        <Link
+          href={agendaHref({ ...p, consulta: undefined, evento: diasBloqueados.get(dia)!.id })}
+          scroll={false}
+          prefetch={false}
+          className="rounded-xl px-3 py-2 text-sm font-semibold text-[#3D524D]"
+          style={HACHURA_BLOQUEIO}
+        >
+          Dia inteiro · {diasBloqueados.get(dia)!.motivo}
+        </Link>
       )}
 
       {cs.length === 0 && bs.length === 0 && diasBloqueados.has(dia) ? null : cs.length === 0 && bs.length === 0 ? (
         <div className="mt-2 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-[#B9C8C4] bg-white px-5 py-7 text-center">
           <span className="text-[15px] font-semibold text-[#12302B]">Nenhuma consulta neste dia</span>
-          <Link href={`/agenda/nova?data=${dia}`} className="btn btn-primary">
-            Agendar consulta
-          </Link>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link href={`/agenda/nova?data=${dia}`} className="btn btn-primary">
+              Agendar consulta
+            </Link>
+            <Link
+              href={`/agenda/eventos/novo?${new URLSearchParams({ data: dia, voltar: agendaHref({ ...p, consulta: undefined, evento: undefined }) })}`}
+              className="btn btn-outline"
+            >
+              Novo evento
+            </Link>
+          </div>
         </div>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -212,10 +226,19 @@ export function DiaLista({
                     <span className="text-sm font-bold text-[#4A5F5A]">{horaBR(l.b.inicio)}</span>
                     <span className="text-xs text-[#5B6E69]">{horaBR(l.b.fim)}</span>
                   </span>
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-xl px-3 py-2.5" style={HACHURA_BLOQUEIO}>
-                    <span className="text-[15px] font-semibold text-[#3D524D]">{l.b.motivo || "Evento"}</span>
-                    <span className="text-[13px] text-[#5B6E69]">Horário bloqueado</span>
-                  </div>
+                  <Link
+                    href={agendaHref({ ...p, consulta: undefined, evento: l.b.id })}
+                    scroll={false}
+                    prefetch={false}
+                    className="flex min-h-10 min-w-0 flex-1 flex-col gap-0.5 rounded-xl px-3 py-2.5"
+                    style={HACHURA_BLOQUEIO}
+                  >
+                    <span className="flex items-center gap-1.5 text-[15px] font-semibold text-[#3D524D]">
+                      {l.b.online && <Video className="size-4 shrink-0" aria-hidden />}
+                      {l.b.motivo || "Evento"}
+                    </span>
+                    <span className="text-[13px] text-[#5B6E69]">{l.b.online ? "Com link de chamada" : "Horário bloqueado"}</span>
+                  </Link>
                 </li>
               );
             }

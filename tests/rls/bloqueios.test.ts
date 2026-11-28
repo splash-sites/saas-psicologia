@@ -71,4 +71,31 @@ describe.skipIf(!hasLocalSupabase)("Bloqueios (0036)", () => {
     expect(alheio.error).not.toBeNull();
     expect((await a.c.from("bloqueios").select("motivo").eq("id", blq!.id).single()).data?.motivo).toBe("Pessoal");
   });
+
+  it("Meet no evento (0047): link só do Meet, sem Meet em dia inteiro; outra conta não liga", async () => {
+    const { u, c } = await conta("bloq-meet");
+    const { u: u2, c: c2 } = await conta("bloq-meet-b");
+    const linha = { psicologa_id: u.id, inicio: dia("2027-04-05", "10:00"), fim: dia("2027-04-05", "11:00"), motivo: "Supervisão" };
+    const { data: ev, error } = await c.from("bloqueios").insert({ ...linha, online: true }).select("id, online, meet_link").single();
+    expect(error).toBeNull();
+    expect(ev).toMatchObject({ online: true, meet_link: null });
+
+    const ok = await c.from("bloqueios").update({ meet_link: "https://meet.google.com/abc-defg-hij" }).eq("id", ev!.id);
+    expect(ok.error).toBeNull();
+    expect((await c.from("bloqueios").update({ meet_link: "https://evil.example/x" }).eq("id", ev!.id)).error?.code).toBe("23514");
+    expect((await c.from("bloqueios").update({ meet_link: "javascript:alert(1)" }).eq("id", ev!.id)).error?.code).toBe("23514");
+
+    const diaTodo = await c.from("bloqueios").insert({
+      psicologa_id: u.id, inicio: dia("2027-04-06"), fim: dia("2027-04-07"), motivo: "Curso", dia_inteiro: true, online: true,
+    });
+    expect(diaTodo.error?.code).toBe("23514");
+
+    // B não vê nem altera o evento de A.
+    expect((await c2.from("bloqueios").select("id").eq("id", ev!.id)).data).toHaveLength(0);
+    const alheio = await c2.from("bloqueios").update({ online: false, meet_link: null }).eq("id", ev!.id).select("id");
+    expect(alheio.data ?? []).toHaveLength(0);
+    const depois = await c.from("bloqueios").select("online, meet_link").eq("id", ev!.id).single();
+    expect(depois.data).toEqual({ online: true, meet_link: "https://meet.google.com/abc-defg-hij" });
+    void u2;
+  });
 });

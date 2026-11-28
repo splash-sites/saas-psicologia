@@ -255,7 +255,7 @@ export async function sincronizarBloqueio(
   }
   const { data: b } = await supabase
     .from("bloqueios")
-    .select("id, inicio, fim, motivo, dia_inteiro, google_event_id")
+    .select("id, inicio, fim, motivo, dia_inteiro, online, google_event_id")
     .eq("id", bloqueioId)
     .maybeSingle();
   if (!b) return;
@@ -264,7 +264,9 @@ export async function sincronizarBloqueio(
     titulo: tituloDoBloqueio(b.motivo as string | null),
     inicio: b.inicio as string,
     fim: b.fim as string,
-    online: false,
+    // Meet só se a psicóloga pediu (0047); ninguém é convidado.
+    online: Boolean(b.online) && !b.dia_inteiro,
+    tirarMeet: true,
     convidadoEmail: null,
     notificar: false,
     diaInteiro: b.dia_inteiro as boolean,
@@ -273,7 +275,12 @@ export async function sincronizarBloqueio(
     const r = b.google_event_id
       ? await atualizarEvento(psicologaId, b.google_event_id as string, evento)
       : await criarEvento(psicologaId, evento);
-    await marcarBloqueio({ google_event_id: r.googleEventId, sync_status: "sincronizada", sync_erro: null });
+    await marcarBloqueio({
+      google_event_id: r.googleEventId,
+      meet_link: evento.online ? r.meetLink : null,
+      sync_status: "sincronizada",
+      sync_erro: null,
+    });
   } catch (err) {
     const mensagem = String(err instanceof Error ? err.message : err);
     if (err instanceof GoogleNaoConectada || ehErroDeEscopo(mensagem)) {

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { usuarioAtual } from "@/lib/auth/usuario";
 import { CabecalhoPagina } from "@/components/CabecalhoPagina";
 import { EstadoVazio } from "@/components/EstadoVazio";
-import { Plus, CalendarOff, Repeat } from "lucide-react";
+import { Plus, CalendarOff, Repeat, Video } from "lucide-react";
 import { RECORRENCIA_LABEL, type Bloqueio } from "@/lib/agenda/types";
 import { dataLongaBR, dataBR } from "@/lib/agenda/datas";
 import { horarioDoBloqueio } from "@/lib/agenda/bloqueios";
@@ -81,6 +81,12 @@ export default async function BloqueiosPage() {
                     <span className="inline-block font-medium first-letter:uppercase">{dataLongaBR(b.inicio)}</span>{" "}
                     · {horarioDoBloqueio(b)}
                     <span className="text-slate-500"> · {b.motivo ?? "Evento"}</span>
+                    {b.online && (
+                      <span className="ml-1.5 inline-flex items-center gap-1 text-xs text-teal-800">
+                        <Video className="size-3.5" aria-hidden />
+                        Meet
+                      </span>
+                    )}
                     {serie && (
                       <span className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
                         <Repeat className="size-3.5" aria-hidden />
@@ -90,6 +96,9 @@ export default async function BloqueiosPage() {
                     )}
                   </span>
                   <span className="flex flex-wrap gap-3">
+                    <Link href={`/agenda/eventos/${b.id}/editar`} className="text-teal-800 hover:opacity-80">
+                      {serie ? "Editar só este" : "Editar"}
+                    </Link>
                     <form action={excluirBloqueio.bind(null, b.id, "este")}>
                       <button className="text-red-600 hover:opacity-80">{serie ? "Remover só este" : "Remover"}</button>
                     </form>
@@ -110,6 +119,9 @@ export default async function BloqueiosPage() {
                             {dataLongaBR(o.inicio)} · {horarioDoBloqueio(o)}
                           </span>
                           <span className="flex gap-3">
+                            <Link href={`/agenda/eventos/${o.id}/editar`} className="text-teal-800 hover:opacity-80">
+                              Editar
+                            </Link>
                             <form action={excluirBloqueio.bind(null, o.id, "este")}>
                               <button className="text-red-600 hover:opacity-80">Remover só este</button>
                             </form>

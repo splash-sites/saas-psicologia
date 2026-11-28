@@ -92,6 +92,8 @@ export const bloqueioSchema = z
       .max(LIMITES.bloqueio.motivo, `Máximo de ${LIMITES.bloqueio.motivo} caracteres`),
     recorrencia: z.enum(RECORRENCIAS, { error: "Escolha uma recorrência da lista" }).default("nenhuma"),
     repetir_ate: z.preprocess(vazioIndefinido, dataStr.optional()),
+    // "Gerar link do Meet" (0047). Dia inteiro nunca tem Meet (a action ignora).
+    online: marcado,
     // Segunda chamada, depois de ver a lista: cancelar as consultas do período.
     cancelar_consultas: marcado,
   })
