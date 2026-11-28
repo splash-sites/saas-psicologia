@@ -17,7 +17,12 @@ import {
   MAX_DIAS_BLOQUEIO,
   SUGESTOES_MOTIVO_BLOQUEIO,
 } from "@/lib/agenda/bloqueios";
-import { addDias, hojeBR } from "@/lib/agenda/datas";
+import { addDias, dataUtil, hojeBR } from "@/lib/agenda/datas";
+import { paraHora, paraMinutos } from "@/lib/agenda/horarioAtendimento";
+import { PreviaSemana } from "./PreviaSemana";
+
+/** "HH:MM" em minutos; campo vazio ou incompleto = NaN. */
+const paraMin = (h: string) => (/^\d{2}:\d{2}$/.test(h) ? paraMinutos(h) : NaN);
 
 /** Valores do formulário (edição, ou data/hora do clique na agenda). */
 export type EventoInicial = {
@@ -39,6 +44,8 @@ type Props = {
   voltar?: string;
   /** De onde vem o link do Meet: Google Agenda, link fixo ou nenhum (0047). */
   meet: "google" | "fixo" | null;
+  /** Edição: o próprio evento não aparece como ocupado na prévia da semana. */
+  eventoId?: string;
 };
 
 export function BloqueioForm({
@@ -47,6 +54,7 @@ export function BloqueioForm({
   edicao,
   voltar,
   meet,
+  eventoId,
 }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
@@ -58,6 +66,11 @@ export function BloqueioForm({
   const [diaInteiro, setDiaInteiro] = useState(inicial.dia_inteiro ?? false);
   const [recorrencia, setRecorrencia] = useState<Recorrencia>("nenhuma");
   const [data, setData] = useState(inicial.data ?? hojeBR());
+  const [horaInicio, setHoraInicio] = useState(inicial.hora_inicio ?? "");
+  const [horaFim, setHoraFim] = useState(inicial.hora_fim ?? "");
+  // Duração para a prévia da semana: a do formulário, ou 1 hora.
+  const duracaoForm = paraMin(horaFim) - paraMin(horaInicio);
+  const duracao = duracaoForm > 0 ? duracaoForm : 60;
   // "Gerar link do Meet": desligado por padrão (decisão do usuário, 2026-11-28).
   const [online, setOnline] = useState(Boolean(inicial.online && meet));
   const variosDias = !edicao?.serie;
@@ -140,7 +153,8 @@ export function BloqueioForm({
               name="hora_inicio"
               type="time"
               required
-              defaultValue={inicial.hora_inicio}
+              value={horaInicio}
+              onChange={(e) => setHoraInicio(e.target.value)}
               className="input"
             />
             <ErroCampo
@@ -155,12 +169,31 @@ export function BloqueioForm({
               name="hora_fim"
               type="time"
               required
-              defaultValue={inicial.hora_fim}
+              value={horaFim}
+              onChange={(e) => setHoraFim(e.target.value)}
               className="input"
             />
             <ErroCampo nome="hora_fim" cliente={erros} servidor={fe.hora_fim} />
           </label>
         </div>
+      )}
+
+      {/* Prévia da semana, como em Nova consulta: fechada; abre com um clique.
+          Escolher um horário preenche data, início e fim (mesma duração). */}
+      {!diaInteiro && (
+        <PreviaSemana
+          data={dataUtil(data) ? data : hojeBR()}
+          hora={horaInicio}
+          duracao={duracao}
+          abertoInicial={false}
+          ignorarId={eventoId}
+          evento
+          onEscolher={(d, h) => {
+            setData(d);
+            setHoraInicio(h);
+            setHoraFim(paraHora(Math.min(paraMin(h) + duracao, 23 * 60 + 59)));
+          }}
+        />
       )}
 
       <label className="flex flex-col gap-1 text-sm">

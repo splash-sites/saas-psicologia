@@ -49,6 +49,7 @@ export default async function EditarEventoPage({
       <BloqueioForm
         action={atualizarBloqueio.bind(null, b.id)}
         meet={meet}
+        eventoId={b.id}
         voltar={voltarAgenda}
         edicao={{ serie: Boolean(b.serie_id) }}
         inicial={{

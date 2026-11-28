@@ -27,8 +27,10 @@ type Props = {
   duracao: number;
   /** Clicou num horário: preenche data e hora no formulário. */
   onEscolher: (data: string, hora: string) => void;
-  /** Na edição: não mostrar a própria consulta como ocupada. */
-  ignorarConsultaId?: string;
+  /** Na edição: não mostrar a própria consulta (ou o próprio evento) como ocupada. */
+  ignorarId?: string;
+  /** Formulário de evento: "eventos de 60 min" em vez de "sessões". */
+  evento?: boolean;
   abertoInicial: boolean;
 };
 
@@ -53,7 +55,7 @@ type DiaPrevia = {
  * consulta, os horários do dia escolhido por período e o que vem antes e
  * depois. Escolher um horário preenche data e hora no formulário.
  */
-export function PreviaSemana({ data, hora, duracao, onEscolher, ignorarConsultaId, abertoInicial }: Props) {
+export function PreviaSemana({ data, hora, duracao, onEscolher, ignorarId, evento, abertoInicial }: Props) {
   const [aberto, setAberto] = useState(abertoInicial);
   // Deslocamento em semanas a partir da semana da data escolhida.
   const [deslocamento, setDeslocamento] = useState(0);
@@ -73,7 +75,7 @@ export function PreviaSemana({ data, hora, duracao, onEscolher, ignorarConsultaI
   useEffect(() => {
     if (!aberto || !alvo) return;
     let ativo = true;
-    semanaParaPrevia(alvo, ignorarConsultaId)
+    semanaParaPrevia(alvo, ignorarId)
       .then((s) => {
         if (ativo) setSemana(s);
       })
@@ -86,7 +88,7 @@ export function PreviaSemana({ data, hora, duracao, onEscolher, ignorarConsultaI
     return () => {
       ativo = false;
     };
-  }, [aberto, alvo, ignorarConsultaId]);
+  }, [aberto, alvo, ignorarId]);
 
   const mudarSemana = (passo: number) => {
     setCarregando(true);
@@ -247,7 +249,7 @@ export function PreviaSemana({ data, hora, duracao, onEscolher, ignorarConsultaI
                   <span className="text-[15px] font-bold text-[#12302B] md:text-sm">Horários livres</span>
                   <span className="text-xs text-[#4A5F5A]">
                     <span className="md:hidden">{semanaTxt} · </span>
-                    {dur ? `sessões de ${dur} min` : "informe a duração"}
+                    {dur ? `${evento ? "eventos" : "sessões"} de ${dur} min` : "informe a duração"}
                   </span>
                 </span>
                 <span className="flex items-center gap-1">

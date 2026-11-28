@@ -42,7 +42,7 @@ export type SemanaPrevia = {
 
 const um = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
 
-export async function semanaParaPrevia(data: string, ignorarConsultaId?: string): Promise<SemanaPrevia | null> {
+export async function semanaParaPrevia(data: string, ignorarId?: string): Promise<SemanaPrevia | null> {
   const user = await usuarioAtual();
   if (!user || !dataUtil(data)) return null;
   const supabase = await createClient();
@@ -81,7 +81,7 @@ export async function semanaParaPrevia(data: string, ignorarConsultaId?: string)
   const aniversarios: Record<string, string[]> = {};
 
   for (const c of consultas ?? []) {
-    if (c.id === ignorarConsultaId) continue;
+    if (c.id === ignorarId) continue;
     const ini = minutosNoDiaBR(c.inicio as string);
     const fim = minutosNoDiaBR(c.fim as string);
     itens.push({
@@ -94,6 +94,7 @@ export async function semanaParaPrevia(data: string, ignorarConsultaId?: string)
     });
   }
   for (const b of bloqueios ?? []) {
+    if (b.id === ignorarId) continue;
     const motivo = (b.motivo as string | null) || "Evento";
     if (b.dia_inteiro) {
       for (const d of diasDoBloqueio(b as { inicio: string; fim: string })) if (semana.includes(d)) diasBloqueados[d] = motivo;

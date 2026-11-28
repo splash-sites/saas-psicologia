@@ -316,6 +316,21 @@ test("horário vago: menu com Novo evento; evento com link, painel, editar e rem
   await expect(page.locator('[name="data"]')).toHaveValue(amanha);
   await expect(page.locator('[name="hora_inicio"]')).toHaveValue("15:00");
   await expect(page.locator('[name="hora_fim"]')).toHaveValue("16:00");
+  // Prévia da semana (como em Nova consulta): escolher um horário preenche início e fim (1 hora).
+  await page.getByRole("button", { name: "Ver horários livres" }).click();
+  // Próxima semana: a desta pode já ter passado (o teste roda em qualquer dia).
+  await page.getByRole("region", { name: "Horários livres" }).getByRole("button", { name: "Próxima semana" }).click();
+  const livres = page.getByRole("region", { name: "Horários livres" }).getByRole("button", { name: /^\d{2}:\d{2}$/ });
+  await livres.first().waitFor();
+  const escolhido = (await livres.first().textContent())!.trim();
+  await livres.first().click();
+  await expect(page.locator('[name="hora_inicio"]')).toHaveValue(escolhido);
+  const [hh, mm] = escolhido.split(":").map(Number);
+  await expect(page.locator('[name="hora_fim"]')).toHaveValue(`${String(hh + 1).padStart(2, "0")}:${String(mm).padStart(2, "0")}`);
+  // Volta ao horário do clique para o resto do teste.
+  await page.locator('[name="data"]').fill(amanha);
+  await page.locator('[name="hora_inicio"]').fill("15:00");
+  await page.locator('[name="hora_fim"]').fill("16:00");
   const meet = page.getByRole("checkbox", { name: "Gerar link do Meet" });
   await expect(meet).not.toBeChecked();
   await meet.check();

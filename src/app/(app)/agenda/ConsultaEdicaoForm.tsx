@@ -115,7 +115,7 @@ export function ConsultaEdicaoForm({ action, defaults, cancelHref, consultaId, f
         data={dataUtil(data) ? data : defaults.data}
         hora={hora}
         duracao={duracao}
-        ignorarConsultaId={consultaId}
+        ignorarId={consultaId}
         abertoInicial={false}
         onEscolher={(d, h) => {
           if (dataRef.current) dataRef.current.value = d;
